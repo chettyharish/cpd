@@ -4,8 +4,7 @@
 #include <unistd.h>
 
 
-#define printInfo 0
-
+#define printInfo 1
 
 struct userinput {
 	char mf_name[1000];
@@ -19,8 +18,8 @@ void printStatement(char * buffer_temp){
 		printf("%s\n" , buffer_temp);
 }
 
-int main(int argc, char *argv[]) {
-	int num_machines = 0 ,stat = 0;
+int main(int argc, char **argv) {
+	int num_machines = 0 ;
 	char buffer_temp[1000];
 	char *exec_args[100];
 
@@ -46,14 +45,14 @@ int main(int argc, char *argv[]) {
 	}
 
 	if (strcmp(ui.p_name, "NULL") == 0) {
-		printf("Please pass a C program to execute\n");
+		printf("Please pass a correct C program to execute\n");
 		return 0;
 	}
 
 	FILE *file = fopen(ui.mf_name, "r");
 	if (file == NULL) {
-		perror("Error");
-		exit(1);
+		printf("Please pass a correct machinefile to execute\n");
+		return 0;
 	}
 
 	while (fgets(buffer_temp, sizeof buffer_temp, file)) {
@@ -93,7 +92,7 @@ int main(int argc, char *argv[]) {
 			}
 		}
 	}
-	while (wait(&stat) > 0);
+	while (wait(NULL) > 0);
 
 	for (int i = 0; i < ui.np; i++) {
 		int counter = 0;
@@ -150,12 +149,17 @@ int main(int argc, char *argv[]) {
 	}
 	while (wait(NULL) > 0);
 
+
+
+	/*Handles the clearing after we are done with the program*/
 	for (int i = 0; i < ui.np; i++) {
 		int counter = 0;
 
-		/*Handles the directory removal*/
 		if ((fork()) == 0) {
-			sprintf(buffer_temp, "/usr/bin/ssh %s -q rm -rf temp%d > /dev/null",
+			sprintf(buffer_temp, "/usr/bin/ssh %s -q rm -rf temp%d > /dev/null "
+					"&& unsetenv TSIZE "
+					"&& unsetenv MYID "
+					"&& setenv PATH ${PATH}:/usr/sfw/bin ",
 					mac_list[i % num_machines], i);
 			printStatement(buffer_temp);
 
