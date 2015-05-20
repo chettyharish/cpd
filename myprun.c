@@ -1,6 +1,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
+
+
+#define printInfo 0
+
 
 struct userinput {
 	char mf_name[1000];
@@ -9,9 +14,15 @@ struct userinput {
 
 } ui;
 
+void printStatement(char * buffer_temp){
+	if( printInfo == 1)
+		printf("%s\n" , buffer_temp);
+}
+
 int main(int argc, char *argv[]) {
-	int num_machines = 0;
-	char buffer[1000];
+	int num_machines = 0 ,stat = 0;
+	char buffer_temp[1000];
+	char *exec_args[100];
 
 	strcpy(ui.mf_name, "machinefile");
 	strcpy(ui.p_name, "NULL");
@@ -39,17 +50,13 @@ int main(int argc, char *argv[]) {
 		return 0;
 	}
 
-//	printf("%s\n", ui.mf_name);
-//	printf("%s\n", ui.p_name);
-//	printf("%d\n", ui.np);
-
 	FILE *file = fopen(ui.mf_name, "r");
 	if (file == NULL) {
 		perror("Error");
 		exit(1);
 	}
 
-	while (fgets(buffer, sizeof buffer, file)) {
+	while (fgets(buffer_temp, sizeof buffer_temp, file)) {
 		/*Detect the number of machines in the file*/
 		++num_machines;
 	}
@@ -66,14 +73,12 @@ int main(int argc, char *argv[]) {
 
 	for (int i = 0; i < ui.np; i++) {
 		int counter = 0;
-		char buffer_temp[1000];
-		char *exec_args[100];
 
 		/*Handles the directory removal*/
 		if ((fork()) == 0) {
 			sprintf(buffer_temp, "/usr/bin/ssh %s -q mkdir temp%d > /dev/null",
 					mac_list[i % num_machines], i);
-			printf("%s\n", buffer_temp);
+			printStatement(buffer_temp);
 
 			char *token = strtok(buffer_temp, " ");
 			while (token != NULL) {
@@ -88,19 +93,16 @@ int main(int argc, char *argv[]) {
 			}
 		}
 	}
-	while (wait(NULL) > 0);
-
+	while (wait(&stat) > 0);
 
 	for (int i = 0; i < ui.np; i++) {
 		int counter = 0;
-		char buffer_temp[1000];
-		char *exec_args[100];
 
 		/*Handles the directory removal*/
 		if ((fork()) == 0) {
-			sprintf(buffer_temp, "/usr/bin/scp -q %s %s:temp%d",
-					ui.p_name,mac_list[i % num_machines], i);
-			printf("%s\n", buffer_temp);
+			sprintf(buffer_temp, "/usr/bin/scp -q %s %s:temp%d", ui.p_name,
+					mac_list[i % num_machines], i);
+			printStatement(buffer_temp);
 
 			char *token = strtok(buffer_temp, " ");
 			while (token != NULL) {
@@ -119,8 +121,6 @@ int main(int argc, char *argv[]) {
 
 	for (int i = 0; i < ui.np; i++) {
 		int counter = 0;
-		char buffer_temp[1000];
-		char *exec_args[100];
 
 		/*Handles the execution*/
 		if ((fork()) == 0) {
@@ -132,7 +132,7 @@ int main(int argc, char *argv[]) {
 					"&& gcc %s "
 					"&& ./a.out ", mac_list[i % num_machines], ui.np, i, i,
 					ui.p_name);
-			printf("%s\n", buffer_temp);
+			printStatement(buffer_temp);
 
 			char *token = strtok(buffer_temp, " ");
 			while (token != NULL) {
@@ -152,14 +152,12 @@ int main(int argc, char *argv[]) {
 
 	for (int i = 0; i < ui.np; i++) {
 		int counter = 0;
-		char buffer_temp[1000];
-		char *exec_args[100];
 
 		/*Handles the directory removal*/
 		if ((fork()) == 0) {
 			sprintf(buffer_temp, "/usr/bin/ssh %s -q rm -rf temp%d > /dev/null",
 					mac_list[i % num_machines], i);
-			printf("%s\n", buffer_temp);
+			printStatement(buffer_temp);
 
 			char *token = strtok(buffer_temp, " ");
 			while (token != NULL) {
