@@ -64,62 +64,62 @@ int main(int argc, char *argv[]) {
 
 	}
 
+	for (int i = 0; i < ui.np; ++i) {
+		/*Copying the file to remote PC by creating a directory*/
 
-	for (int i = 0; i < num_machines; ++i) {
-		/*scp the executable if the file doesnt exist on the remote server*/
-		sprintf(buffer, "ssh %s -q test -e %s > /dev/null", mac_list[i], ui.p_name);
+		sprintf(buffer, "ssh %s -q mkdir temp%d > /dev/null", mac_list[i % num_machines], i);
 		printf("%s\n", buffer);
-		int ret = system(buffer);
-		if (ret != 0) {
-			/*The file does not exist, so scp it*/
-			sprintf(buffer, "scp %s %s: > /dev/null", ui.p_name, mac_list[i]);
-			printf("%s\n", buffer);
-			system(buffer);
-
-		}
-	}
-
-
-	printf("\n\n");
-
-	/*Run the jobs on the machines*/
-	for (int i = 0; i < ui.np; i++) {
-		sprintf(buffer, "ssh %s -q "
-				"\"setenv PATH $PATH:/usr/sfw/bin "
-				"&& setenv TSIZE %d "
-				"&& setenv MYID %d "
-				"&& gcc %s && ./a.out\"", mac_list[i % num_machines], ui.np, i,
-				ui.p_name);
+		system(buffer);
+		sprintf(buffer, "scp -q %s %s:temp%d > /dev/null", ui.p_name,
+				mac_list[i % num_machines], i);
 		printf("%s\n", buffer);
 		system(buffer);
 	}
 
 	printf("\n\n");
 
-	for (int i = 0; i < num_machines; ++i) {
-		/*Remove the executable which was copied to the remote server!*/
-		sprintf(buffer, "ssh %s -q test -e %s > /dev/null", mac_list[i], ui.p_name);
-		printf("%s\n", buffer);
-		int ret = system(buffer);
-		if (ret == 0) {
-			/*The file exists, so remove it*/
-			sprintf(buffer, "ssh %s -q rm %s > /dev/null", mac_list[i], ui.p_name);
-			printf("%s\n", buffer);
-			system(buffer);
+	for (int i = 0; i < ui.np; i++) {
+		if ((fork()) == 0) {
+			int counter = 0;
+			char buffer_temp[1000];
+			char *exec_args[100];
+			sprintf(buffer_temp, "/usr/bin/ssh %s -q "
+					"setenv PATH ${PATH}:/usr/sfw/bin "
+					"&& setenv TSIZE %d "
+					"&& setenv MYID %d "
+					"&& cd temp%d "
+					"&& gcc %s "
+					"&& ./a.out ", mac_list[i % num_machines], ui.np, i, i,
+					ui.p_name);
+			printf("%s\n", buffer_temp);
 
+			char *token = strtok(buffer_temp, " ");
+			while (token != NULL) {
+				exec_args[counter] = token;
+				counter++;
+				token = strtok(NULL, " ");
+			}
+			exec_args[counter] = NULL;
+
+			if (execv(exec_args[0], exec_args) == -1) {
+				printf("Command execution error!\n");
+			}
+			break;
 		}
 	}
-	/*system("scp test.c linprog1:");
-	 system("scp test.c linprog2:");
-	 system("scp test.c linprog3:");
-	 system("scp test.c linprog4:");
-	 system("ssh linprog1 \"setenv TSIZE 5 && setenv MYID 3 && gcc -o test test.c && ./test\"");
-	 system("ssh linprog2 \"setenv TSIZE 5 && setenv MYID 3 && gcc -o test test.c && ./test\"");
-	 system("ssh linprog3 \"setenv TSIZE 5 && setenv MYID 3 && gcc -o test test.c && ./test\"");
-	 system("ssh linprog4 \"setenv TSIZE 5 && setenv MYID 3 && gcc -o test test.c && ./test\"");
 
-	 getchar();
-	 system("ssh linprog1 \"unsetenv TSIZE && unsetenv MYID && rm test.c\"");
-	 */
+	while (wait(NULL) > 0);
+
+
+	for (int i = 0; i < ui.np; ++i) {
+		/*Copying the file to remote PC by creating a directory*/
+
+		sprintf(buffer, "ssh %s -q rm -rf temp%d > /dev/null", mac_list[i % num_machines], i);
+		printf("%s\n", buffer);
+		system(buffer);
+	}
+
+	printf("\n\n");
+
 	return 0;
 }
