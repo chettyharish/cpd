@@ -64,25 +64,66 @@ int main(int argc, char *argv[]) {
 
 	}
 
-	for (int i = 0; i < ui.np; ++i) {
-		/*Copying the file to remote PC by creating a directory*/
+	for (int i = 0; i < ui.np; i++) {
+		int counter = 0;
+		char buffer_temp[1000];
+		char *exec_args[100];
 
-		sprintf(buffer, "ssh %s -q mkdir temp%d > /dev/null", mac_list[i % num_machines], i);
-		printf("%s\n", buffer);
-		system(buffer);
-		sprintf(buffer, "scp -q %s %s:temp%d > /dev/null", ui.p_name,
-				mac_list[i % num_machines], i);
-		printf("%s\n", buffer);
-		system(buffer);
+		/*Handles the directory removal*/
+		if ((fork()) == 0) {
+			sprintf(buffer_temp, "/usr/bin/ssh %s -q mkdir temp%d > /dev/null",
+					mac_list[i % num_machines], i);
+			printf("%s\n", buffer_temp);
+
+			char *token = strtok(buffer_temp, " ");
+			while (token != NULL) {
+				exec_args[counter] = token;
+				counter++;
+				token = strtok(NULL, " ");
+			}
+			exec_args[counter] = NULL;
+
+			if (execv(exec_args[0], exec_args) == -1) {
+				printf("Command execution error!\n");
+			}
+		}
 	}
+	while (wait(NULL) > 0);
 
-	printf("\n\n");
 
 	for (int i = 0; i < ui.np; i++) {
+		int counter = 0;
+		char buffer_temp[1000];
+		char *exec_args[100];
+
+		/*Handles the directory removal*/
 		if ((fork()) == 0) {
-			int counter = 0;
-			char buffer_temp[1000];
-			char *exec_args[100];
+			sprintf(buffer_temp, "/usr/bin/scp -q %s %s:temp%d",
+					ui.p_name,mac_list[i % num_machines], i);
+			printf("%s\n", buffer_temp);
+
+			char *token = strtok(buffer_temp, " ");
+			while (token != NULL) {
+				exec_args[counter] = token;
+				counter++;
+				token = strtok(NULL, " ");
+			}
+			exec_args[counter] = NULL;
+
+			if (execv(exec_args[0], exec_args) == -1) {
+				printf("Command execution error!\n");
+			}
+		}
+	}
+	while (wait(NULL) > 0);
+
+	for (int i = 0; i < ui.np; i++) {
+		int counter = 0;
+		char buffer_temp[1000];
+		char *exec_args[100];
+
+		/*Handles the execution*/
+		if ((fork()) == 0) {
 			sprintf(buffer_temp, "/usr/bin/ssh %s -q "
 					"setenv PATH ${PATH}:/usr/sfw/bin "
 					"&& setenv TSIZE %d "
@@ -104,22 +145,36 @@ int main(int argc, char *argv[]) {
 			if (execv(exec_args[0], exec_args) == -1) {
 				printf("Command execution error!\n");
 			}
-			break;
 		}
-	}
 
+	}
 	while (wait(NULL) > 0);
 
+	for (int i = 0; i < ui.np; i++) {
+		int counter = 0;
+		char buffer_temp[1000];
+		char *exec_args[100];
 
-	for (int i = 0; i < ui.np; ++i) {
-		/*Copying the file to remote PC by creating a directory*/
+		/*Handles the directory removal*/
+		if ((fork()) == 0) {
+			sprintf(buffer_temp, "/usr/bin/ssh %s -q rm -rf temp%d > /dev/null",
+					mac_list[i % num_machines], i);
+			printf("%s\n", buffer_temp);
 
-		sprintf(buffer, "ssh %s -q rm -rf temp%d > /dev/null", mac_list[i % num_machines], i);
-		printf("%s\n", buffer);
-		system(buffer);
+			char *token = strtok(buffer_temp, " ");
+			while (token != NULL) {
+				exec_args[counter] = token;
+				counter++;
+				token = strtok(NULL, " ");
+			}
+			exec_args[counter] = NULL;
+
+			if (execv(exec_args[0], exec_args) == -1) {
+				printf("Command execution error!\n");
+			}
+		}
 	}
-
-	printf("\n\n");
+	while (wait(NULL) > 0);
 
 	return 0;
 }
