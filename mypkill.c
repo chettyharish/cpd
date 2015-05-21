@@ -2,8 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-
-
+#include <sys/wait.h>
 #define printInfo 1
 
 
@@ -19,8 +18,24 @@ void printStatement(char * buffer_temp){
 		printf("%s\n" , buffer_temp);
 }
 
+void wait_all_children() {
+	while (wait(NULL) > 0);
+}
+
+void tokenize(char *buffer_temp,char *exec_args[]){
+	int counter = 0;
+	char *token = strtok(buffer_temp, " ");
+	while (token != NULL) {
+		exec_args[counter] = token;
+		counter++;
+		token = strtok(NULL, " ");
+	}
+	exec_args[counter] = NULL;
+
+}
+
 int main(int argc, char *argv[]) {
-	int num_machines = 0 ;
+	int num_machines = 0, pid = -1 ;
 	char buffer_temp[1000];
 	char *exec_args[100];
 
@@ -71,28 +86,21 @@ int main(int argc, char *argv[]) {
 
 
 	for (int i = 0; i < num_machines; i++) {
-		int counter = 0;
-
 		/*Handles the directory removal*/
-		if ((fork()) == 0) {
+		if ((pid = fork()) == 0) {
 			sprintf(buffer_temp, "/usr/bin/ssh %s -q pkill %s > /dev/null",
 					mac_list[i], ui.p_name);
 			printStatement(buffer_temp);
-
-			char *token = strtok(buffer_temp, " ");
-			while (token != NULL) {
-				exec_args[counter] = token;
-				counter++;
-				token = strtok(NULL, " ");
-			}
-			exec_args[counter] = NULL;
+			tokenize(buffer_temp,exec_args);
 
 			if (execv(exec_args[0], exec_args) == -1) {
 				printf("Command execution error!\n");
 			}
+		}else if (pid < 0) {
+			printf("Child creation error!\n");
 		}
 	}
-	while (wait(NULL) > 0);
+	wait_all_children();
 
 	return 0;
 }
