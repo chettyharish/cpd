@@ -3,7 +3,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <sys/wait.h>
-#define printInfo 1
+#define printInfo 0
 
 
 struct userinput {
@@ -69,6 +69,7 @@ int main(int argc, char *argv[]) {
 		return 0;
 	}
 
+	printf("Run command 'mypkill -f %s %s'\n",ui.mf_name  , ui.p_name);
 	while (fgets(buffer_temp, sizeof buffer_temp, file)) {
 		/*Detect the number of machines in the file*/
 		++num_machines;

@@ -3,7 +3,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <sys/wait.h>
-#define printInfo 1
+#define printInfo 0
 
 struct userinput {
 	char mf_name[1000];
@@ -43,7 +43,7 @@ int main(int argc, char **argv) {
 	ui.np = 1;
 
 	if (argc == 1) {
-		printf("Please pass the correct arguments\n");
+		printf("Usage: myprun [-f machinefile]|[-np #] cmd\n");
 		return 0;
 	}
 
@@ -70,6 +70,7 @@ int main(int argc, char **argv) {
 		return 0;
 	}
 
+	printf("Launching 'myprun -f %s -np %d %s'\n",ui.mf_name , ui.np , ui.p_name);
 	while (fgets(buffer_temp, sizeof buffer_temp, file)) {
 		/*Detect the number of machines in the file*/
 		++num_machines;

@@ -1,6 +1,19 @@
+CC=gcc
+FLAG=-Wall -std=c99 -pedantic
+
 all:
-	gcc -o myprun myprun.c -Wall -std=c99 -pedantic
-	gcc -o mypkill mypkill.c -Wall -std=c99 -pedantic
+	$(CC) -o myprun myprun.c $(FLAG)
+	$(CC) -o mypkill mypkill.c $(FLAG)
+	
+demo: myprun mypkill
+	./myprun -f machinefile -np 12 test.c
+
+myprun : myprun.c
+	$(CC) -o myprun myprun.c $(FLAG)
+	
+mypkill:
+	$(CC) -o mypkill mypkill.c $(FLAG)
+	
 
 clean:
-	rm myprun mypkill
+	rm -f myprun mypkill myprun.o mypkill.o
