@@ -3,7 +3,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <sys/wait.h>
-#define printInfo 1
+#define printInfo 0
 
 struct userinput {
 	char mf_name[1000];
@@ -36,6 +36,8 @@ void tokenize(char *buffer_temp, char *exec_args[]) {
 int main(int argc, char **argv) {
 	int num_machines = 0, pid = -1;
 	char buffer_temp[1000];
+	char ssh_path[1000];
+	char scp_path[1000];
 	char *exec_args[100];
 
 	strcpy(ui.mf_name, "machinefile");
@@ -64,6 +66,13 @@ int main(int argc, char **argv) {
 		return 0;
 	}
 
+
+	/* Getting all the paths of executables*/
+	fgets(buffer_temp, sizeof(buffer_temp), popen("which ssh", "r"));
+	sscanf(buffer_temp, "%s\n", ssh_path);
+	fgets(buffer_temp, sizeof(buffer_temp), popen("which scp", "r"));
+	sscanf(buffer_temp, "%s\n", scp_path);
+
 	FILE *file = fopen(ui.mf_name, "r");
 	if (file == NULL) {
 		printf("Please pass a correct machinefile to execute\n");
@@ -90,7 +99,7 @@ int main(int argc, char **argv) {
 	for (int i = 0; i < ui.np; i++) {
 		/*Handles the directory creation*/
 		if ((pid = fork()) == 0) {
-			sprintf(buffer_temp, "/usr/bin/ssh %s -q mkdir temp%d",
+			sprintf(buffer_temp, "%s %s -q mkdir temp%d", ssh_path,
 					mac_list[i % num_machines], i);
 			printStatement(buffer_temp);
 			tokenize(buffer_temp, exec_args);
@@ -107,7 +116,7 @@ int main(int argc, char **argv) {
 	for (int i = 0; i < ui.np; i++) {
 		/*Handles the directory removal*/
 		if ((pid = fork()) == 0) {
-			sprintf(buffer_temp, "/usr/bin/scp -q %s %s:temp%d", ui.p_name,
+			sprintf(buffer_temp, "%s -q %s %s:temp%d", scp_path,ui.p_name,
 					mac_list[i % num_machines], i);
 			printStatement(buffer_temp);
 			tokenize(buffer_temp, exec_args);
@@ -124,14 +133,14 @@ int main(int argc, char **argv) {
 	for (int i = 0; i < ui.np; i++) {
 		/*Handles the execution*/
 		if ((pid = fork()) == 0) {
-			sprintf(buffer_temp, "/usr/bin/ssh %s -q "
+			sprintf(buffer_temp, "%s %s -q "
 					"setenv PATH ${PATH}:/usr/sfw/bin "
 					"&& setenv TSIZE %d "
 					"&& setenv MYID %d "
 					"&& cd temp%d "
 					"&& gcc %s "
-					"&& ./a.out ", mac_list[i % num_machines], ui.np, i, i,
-					ui.p_name);
+					"&& ./a.out ", ssh_path, mac_list[i % num_machines], ui.np,
+					i, i, ui.p_name);
 			printStatement(buffer_temp);
 			tokenize(buffer_temp, exec_args);
 
@@ -148,10 +157,10 @@ int main(int argc, char **argv) {
 	for (int i = 0; i < ui.np; i++) {
 		/*Handles the clearing after we are done with the program*/
 		if ((pid = fork()) == 0) {
-			sprintf(buffer_temp, "/usr/bin/ssh %s -q rm -rf temp%d > /dev/null "
+			sprintf(buffer_temp, "%s %s -q rm -rf temp%d > /dev/null "
 					"&& unsetenv TSIZE "
 					"&& unsetenv MYID "
-					"&& setenv PATH ${PATH}:/usr/sfw/bin ",
+					"&& setenv PATH ${PATH}:/usr/sfw/bin ", ssh_path,
 					mac_list[i % num_machines], i);
 			printStatement(buffer_temp);
 			tokenize(buffer_temp, exec_args);

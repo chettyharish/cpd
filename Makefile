@@ -1,5 +1,5 @@
 CC=gcc
-FLAG=-Wall -std=c99 -pedantic
+FLAG=-Wall -std=gnu99 -pedantic
 
 all:
 	$(CC) -o myprun myprun.c $(FLAG)
