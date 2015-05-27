@@ -1,0 +1,29 @@
+##README
+
+#To Make
+make : 		To compile myprun and mypkill
+make demo : 	To compile myprun and mypkill if not already compiled and
+	    	exeuting ./myprun -f machinefile -np 12 test.c
+make clean : 	Remove myprun and mypkill
+
+#To Run
+./myprun -np NumProcesses -f Machinefile ProgramToExecute
+./mypkill -np -f Machinefile PatternToKill
+
+
+#Details
+myprun : 	Uses execve to create child processes and runs the program
+		passed in the arguments	on the machines listed in the machinefile.
+		Arguments: 1] -np Number of Processes (default = 1)
+			   2] -f Machinefile (default = machinefile)
+			   3] Program to execute
+
+mypkill:	Uses execve to create child processes and kill the programs
+		matching the pattern passed in the arguments the machines 
+		listed in the machinefile.
+		Arguments: 1] -f Machinefile (default = machinefile)
+			   2] pattern to kill
+
+To see a demo of mypkill, run myprun with ptest.c (A program which executes pause()
+and never completes). Open another terminal and run mypkill which will terminate the
+incomplete processes executed by myprun.

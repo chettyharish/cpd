@@ -5,24 +5,23 @@
 #include <sys/wait.h>
 #define printInfo 0
 
-
 struct userinput {
 	char mf_name[1000];
 	char p_name[1000];
 
 } ui;
 
-
-void printStatement(char * buffer_temp){
-	if( printInfo == 1)
-		printf("%s\n" , buffer_temp);
+void printStatement(char * buffer_temp) {
+	if ( printInfo == 1)
+		printf("%s\n", buffer_temp);
 }
 
 void wait_all_children() {
-	while (wait(NULL) > 0);
+	while (wait(NULL) > 0)
+		;
 }
 
-void tokenize(char *buffer_temp,char *exec_args[]){
+void tokenize(char *buffer_temp, char *exec_args[]) {
 	int counter = 0;
 	char *token = strtok(buffer_temp, " ");
 	while (token != NULL) {
@@ -35,10 +34,9 @@ void tokenize(char *buffer_temp,char *exec_args[]){
 }
 
 int main(int argc, char *argv[]) {
-	int num_machines = 0, pid = -1 ;
+	int num_machines = 0, pid = -1;
 	char buffer_temp[1000];
 	char *exec_args[100];
-
 
 	strcpy(ui.mf_name, "machinefile");
 	strcpy(ui.p_name, "NULL");
@@ -49,13 +47,11 @@ int main(int argc, char *argv[]) {
 	}
 
 	for (int i = 1; i < argc; i++) {
-
 		if (strcmp(argv[i], "-f") == 0) {
 			strcpy(ui.mf_name, argv[++i]);
 		} else {
 			strcpy(ui.p_name, argv[i]);
 		}
-
 	}
 
 	if (strcmp(ui.p_name, "NULL") == 0) {
@@ -69,7 +65,7 @@ int main(int argc, char *argv[]) {
 		return 0;
 	}
 
-	printf("Run command 'mypkill -f %s %s'\n",ui.mf_name  , ui.p_name);
+	printf("Run command 'mypkill -f %s %s'\n", ui.mf_name, ui.p_name);
 	while (fgets(buffer_temp, sizeof buffer_temp, file)) {
 		/*Detect the number of machines in the file*/
 		++num_machines;
@@ -85,19 +81,18 @@ int main(int argc, char *argv[]) {
 
 	}
 
-
 	for (int i = 0; i < num_machines; i++) {
 		/*Handles the directory removal*/
 		if ((pid = fork()) == 0) {
 			sprintf(buffer_temp, "/usr/bin/ssh %s -q pkill %s > /dev/null",
 					mac_list[i], ui.p_name);
 			printStatement(buffer_temp);
-			tokenize(buffer_temp,exec_args);
+			tokenize(buffer_temp, exec_args);
 
 			if (execv(exec_args[0], exec_args) == -1) {
 				printf("Command execution error!\n");
 			}
-		}else if (pid < 0) {
+		} else if (pid < 0) {
 			printf("Child creation error!\n");
 		}
 	}

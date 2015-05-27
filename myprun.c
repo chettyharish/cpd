@@ -3,7 +3,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <sys/wait.h>
-#define printInfo 0
+#define printInfo 1
 
 struct userinput {
 	char mf_name[1000];
@@ -18,10 +18,11 @@ void printStatement(char * buffer_temp) {
 }
 
 void wait_all_children() {
-	while (wait(NULL) > 0);
+	while (wait(NULL) > 0)
+		;
 }
 
-void tokenize(char *buffer_temp,char *exec_args[]){
+void tokenize(char *buffer_temp, char *exec_args[]) {
 	int counter = 0;
 	char *token = strtok(buffer_temp, " ");
 	while (token != NULL) {
@@ -30,7 +31,6 @@ void tokenize(char *buffer_temp,char *exec_args[]){
 		token = strtok(NULL, " ");
 	}
 	exec_args[counter] = NULL;
-
 }
 
 int main(int argc, char **argv) {
@@ -70,7 +70,8 @@ int main(int argc, char **argv) {
 		return 0;
 	}
 
-	printf("Launching 'myprun -f %s -np %d %s'\n",ui.mf_name , ui.np , ui.p_name);
+	printf("Launching 'myprun -f %s -np %d %s'\n", ui.mf_name, ui.np,
+			ui.p_name);
 	while (fgets(buffer_temp, sizeof buffer_temp, file)) {
 		/*Detect the number of machines in the file*/
 		++num_machines;
@@ -87,12 +88,12 @@ int main(int argc, char **argv) {
 	}
 
 	for (int i = 0; i < ui.np; i++) {
-		/*Handles the directory removal*/
+		/*Handles the directory creation*/
 		if ((pid = fork()) == 0) {
-			sprintf(buffer_temp, "/usr/bin/ssh %s -q mkdir temp%d > /dev/null",
+			sprintf(buffer_temp, "/usr/bin/ssh %s -q mkdir temp%d",
 					mac_list[i % num_machines], i);
 			printStatement(buffer_temp);
-			tokenize(buffer_temp,exec_args);
+			tokenize(buffer_temp, exec_args);
 			if (execv(exec_args[0], exec_args) == -1) {
 				printf("execv execution error!\n");
 			}
@@ -109,12 +110,12 @@ int main(int argc, char **argv) {
 			sprintf(buffer_temp, "/usr/bin/scp -q %s %s:temp%d", ui.p_name,
 					mac_list[i % num_machines], i);
 			printStatement(buffer_temp);
-			tokenize(buffer_temp,exec_args);
+			tokenize(buffer_temp, exec_args);
 
 			if (execv(exec_args[0], exec_args) == -1) {
 				printf("Command execution error!\n");
 			}
-		}else if (pid < 0) {
+		} else if (pid < 0) {
 			printf("Child creation error!\n");
 		}
 	}
@@ -132,20 +133,20 @@ int main(int argc, char **argv) {
 					"&& ./a.out ", mac_list[i % num_machines], ui.np, i, i,
 					ui.p_name);
 			printStatement(buffer_temp);
-			tokenize(buffer_temp,exec_args);
+			tokenize(buffer_temp, exec_args);
 
 			if (execv(exec_args[0], exec_args) == -1) {
 				printf("Command execution error!\n");
 			}
-		}else if (pid < 0) {
+		} else if (pid < 0) {
 			printf("Child creation error!\n");
 		}
 
 	}
 	wait_all_children();
 
-	/*Handles the clearing after we are done with the program*/
 	for (int i = 0; i < ui.np; i++) {
+		/*Handles the clearing after we are done with the program*/
 		if ((pid = fork()) == 0) {
 			sprintf(buffer_temp, "/usr/bin/ssh %s -q rm -rf temp%d > /dev/null "
 					"&& unsetenv TSIZE "
@@ -153,12 +154,12 @@ int main(int argc, char **argv) {
 					"&& setenv PATH ${PATH}:/usr/sfw/bin ",
 					mac_list[i % num_machines], i);
 			printStatement(buffer_temp);
-			tokenize(buffer_temp,exec_args);
+			tokenize(buffer_temp, exec_args);
 
 			if (execv(exec_args[0], exec_args) == -1) {
 				printf("Command execution error!\n");
 			}
-		}else if (pid < 0) {
+		} else if (pid < 0) {
 			printf("Child creation error!\n");
 		}
 	}

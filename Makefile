@@ -11,7 +11,7 @@ demo: myprun mypkill
 myprun : myprun.c
 	$(CC) -o myprun myprun.c $(FLAG)
 	
-mypkill:
+mypkill: mypkill.c
 	$(CC) -o mypkill mypkill.c $(FLAG)
 	
 
