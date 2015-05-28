@@ -3,13 +3,16 @@
 #To Make
 make : 		To compile myprun and mypkill
 make demo : 	To compile myprun and mypkill if not already compiled and
-	    	exeuting ./myprun -f machinefile -np 12 test.c
+	    	executing ./myprun -f machinefile -np 12 test.c
 make clean : 	Remove myprun and mypkill
 
 #To Run
 ./myprun -np NumProcesses -f Machinefile ProgramToExecute
 ./mypkill -np -f Machinefile PatternToKill
 
+# Programs
+test.c : A basic program which displays the TSIZE and MYID environment variables
+ptest.c : A program with pause() function call to simulate a program which has hung.
 
 #Details
 myprun : 	Uses execve to create child processes and runs the program
@@ -18,12 +21,16 @@ myprun : 	Uses execve to create child processes and runs the program
 			   2] -f Machinefile (default = machinefile)
 			   3] Program to execute
 
-mypkill:	Uses execve to create child processes and kill the programs
+mypkill:	Uses execve to create child processes and kills the programs
 		matching the pattern passed in the arguments the machines 
 		listed in the machinefile.
 		Arguments: 1] -f Machinefile (default = machinefile)
 			   2] pattern to kill
 
-To see a demo of mypkill, run myprun with ptest.c (A program which executes pause()
-and never completes). Open another terminal and run mypkill which will terminate the
-incomplete processes executed by myprun.
+#Demo
+myprun :  To see a demo of myprun , just run it using similar syntax as
+	  ./myprun -f machinefile -np 12 test.c
+
+mypkill : To see a demo of mypkill, run myprun with ptest.c (A program which executes pause()
+	  and never completes). Open another terminal and run mypkill which will terminate the
+	  incomplete processes executed by myprun.

@@ -1,5 +1,5 @@
 CC=gcc
-FLAG=-Wall -std=gnu99 -pedantic
+FLAG=-Wall -std=c99 -pedantic
 
 all:
 	$(CC) -o myprun myprun.c $(FLAG)
@@ -16,4 +16,4 @@ mypkill: mypkill.c
 	
 
 clean:
-	rm -f myprun mypkill myprun.o mypkill.o
+	rm -f myprun mypkill

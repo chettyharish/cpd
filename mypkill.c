@@ -5,6 +5,9 @@
 #include <sys/wait.h>
 #define printInfo 0
 
+extern FILE *popen( const char *command, const char *modes);
+extern int pclose(FILE *stream);
+
 struct userinput {
 	char mf_name[1000];
 	char p_name[1000];
@@ -17,8 +20,7 @@ void printStatement(char * buffer_temp) {
 }
 
 void wait_all_children() {
-	while (wait(NULL) > 0)
-		;
+	while (wait(NULL) > 0);
 }
 
 void tokenize(char *buffer_temp, char *exec_args[]) {
@@ -36,6 +38,7 @@ void tokenize(char *buffer_temp, char *exec_args[]) {
 int main(int argc, char *argv[]) {
 	int num_machines = 0, pid = -1;
 	char buffer_temp[1000];
+	char ssh_path[1000];
 	char *exec_args[100];
 
 	strcpy(ui.mf_name, "machinefile");
@@ -58,6 +61,9 @@ int main(int argc, char *argv[]) {
 		printf("Please pass a pattern to kill\n");
 		return 0;
 	}
+
+	fgets(buffer_temp, sizeof(buffer_temp), popen("which ssh", "r"));
+	sscanf(buffer_temp, "%s\n", ssh_path);
 
 	FILE *file = fopen(ui.mf_name, "r");
 	if (file == NULL) {
@@ -84,7 +90,7 @@ int main(int argc, char *argv[]) {
 	for (int i = 0; i < num_machines; i++) {
 		/*Handles the directory removal*/
 		if ((pid = fork()) == 0) {
-			sprintf(buffer_temp, "/usr/bin/ssh %s -q pkill %s > /dev/null",
+			sprintf(buffer_temp, "%s %s -q pkill %s >& /dev/null",ssh_path,
 					mac_list[i], ui.p_name);
 			printStatement(buffer_temp);
 			tokenize(buffer_temp, exec_args);

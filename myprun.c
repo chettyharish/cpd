@@ -5,6 +5,9 @@
 #include <sys/wait.h>
 #define printInfo 0
 
+extern FILE *popen( const char *command, const char *modes);
+extern int pclose(FILE *stream);
+
 struct userinput {
 	char mf_name[1000];
 	int np;
@@ -18,8 +21,7 @@ void printStatement(char * buffer_temp) {
 }
 
 void wait_all_children() {
-	while (wait(NULL) > 0)
-		;
+	while (wait(NULL) > 0);
 }
 
 void tokenize(char *buffer_temp, char *exec_args[]) {
