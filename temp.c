@@ -2,9 +2,6 @@
 #include <stdio.h>
 
 int main() {
-	char buf[1000];
-	fgets(buf, sizeof(buf), popen("which ssh", "r"));
-	sscanf(buf,"%s\n",buf);
-	printf("PATH IS %s", buf);
+	system("ssh program1 \"setenv MYID Hello; setenv MYID $MYID:Cat;\"");
 
 }

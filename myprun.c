@@ -3,7 +3,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <sys/wait.h>
-#define printInfo 1
+#define printInfo 0
 
 extern FILE *popen( const char *command, const char *modes);
 extern int pclose(FILE *stream);
