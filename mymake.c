@@ -7,9 +7,12 @@
 #include <unistd.h>
 #include <stdbool.h>
 
+#define STLEN 100
+#define NUMELE 20
+
 struct userinput {
-	char make_file_name[1000];
-	char target[1000];
+	char make_file_name[STLEN];
+	char target[STLEN];
 	bool print;
 	bool force;
 	bool debug;
@@ -26,33 +29,60 @@ struct print_counters {
 } print_counters;
 
 struct commands {
-	char com[1000][1000];
+	char com[NUMELE][STLEN];
+	int command_count;
 };
 
 struct targets {
-	char target_name[1000];
-	char dependecies[1000][1000];
+	char target_name[STLEN];
+	int dependency_count;
+	char dependecies[NUMELE][STLEN];
 	struct commands commands;
 };
 
 struct macros {
-	char macro[1000];
-	char macro_replace[1000];
+	char macro[STLEN];
+	char macro_replace[STLEN];
 };
 
-struct targets target_arr[1000];
-struct macros macro_arr[1000];
+struct targets target_arr[NUMELE];
+struct macros macro_arr[NUMELE];
 
 void get_macro(char *buffer_temp, int macro_pos) {
+	char *macro = strtok(buffer_temp, "=");
+	char *macro_replace = strtok(NULL, "\n");
+
+	strcpy(macro_arr[macro_pos].macro, macro);
+	strcpy(macro_arr[macro_pos].macro_replace, macro_replace);
+	printf("POS = %d\t\tMacro = %s\t\tMacro_Replace = %s\n", macro_pos,
+			macro_arr[macro_pos].macro, macro_arr[macro_pos].macro_replace);
 }
 
 void get_target(char *buffer_temp, int target_pos) {
+	char *target = strtok(buffer_temp, ":");
+	strcpy(target_arr[target_pos].target_name, target);
+	char *dependencies = strtok(NULL, " ");
+
+	printf("\nTarget Name : %s\n", target_arr[target_pos].target_name);
+
+	while (dependencies != NULL) {
+		strcpy(
+				target_arr[target_pos].dependecies[target_arr[target_pos].dependency_count++],
+				dependencies);
+		dependencies = strtok(NULL, " ");
+	}
+
+	for (int i = 0; i < target_arr[target_pos].dependency_count; ++i) {
+		printf("Dependency Name : %s\n", target_arr[target_pos].dependecies[i]);
+	}
 }
 
-void get_cmd(char *buffer_temp, int target_pos, int cmd_pos) {
-	sprintf(target_arr[target_pos].commands.com[cmd_pos], "%s", buffer_temp);
-	printf("TNUM = %d    CNUM = %d    CMD = %s\n", target_pos, cmd_pos,
-			target_arr[target_pos].commands.com[cmd_pos]);
+void get_cmd(char *buffer_temp, int target_pos) {
+	strcpy(target_arr[target_pos].commands.com[target_arr[target_pos].commands.command_count], buffer_temp);
+	printf("TNUM = %d    CNUM = %d    CMD = %s", target_pos, target_arr[target_pos].commands.command_count,
+			target_arr[target_pos].commands.com[target_arr[target_pos].commands.command_count]);
+	target_arr[target_pos].commands.command_count++;
+
 }
 
 void get_default_make() {
@@ -85,19 +115,6 @@ void get_default_make() {
 	}
 }
 
-void tokenize(char *buffer_temp, char *exec_args[]) {
-	int counter = 0;
-	char *token = strtok(buffer_temp, " ");
-	while (token != NULL) {
-		exec_args[counter] = token;
-		printf("<%s>", exec_args[counter]);
-		counter++;
-		token = strtok(NULL, " ");
-	}
-	printf("\n");
-	exec_args[counter] = NULL;
-}
-
 int main(int argc, char **argv) {
 
 	if (argc == 1) {
@@ -119,7 +136,12 @@ int main(int argc, char **argv) {
 	print_counters.names = 0;
 	print_counters.commands = 0;
 
-	char buffer_temp[1000];
+	for (int i = 0; i < NUMELE; ++i){
+		target_arr[i].dependency_count = 0;
+		target_arr[i].commands.command_count = 0;
+	}
+
+	char buffer_temp[STLEN];
 	bool start = true; //Start ensures that we only match macros at the beginning
 
 	for (int i = 1; i < argc; i++) {
@@ -151,7 +173,6 @@ int main(int argc, char **argv) {
 //	printf("interrupt = %d\n", ui.interrupt);
 //	printf("time = %d\n", ui.time);
 
-	int command_counter = 0;
 	FILE *file = fopen(ui.make_file_name, "r");
 	while (fgets(buffer_temp, sizeof buffer_temp, file)) {
 //		printf("%s", buffer_temp);
@@ -165,14 +186,11 @@ int main(int argc, char **argv) {
 			start = false;
 			get_target(buffer_temp, print_counters.targets);
 			print_counters.targets++;
-			command_counter = 0;
 		} else if (start == false) {
 			/* The condition ensures that we count empty lines in targets not macros*/
-			get_cmd(buffer_temp, print_counters.targets - 1, command_counter);
-			command_counter++;
+			get_cmd(buffer_temp, print_counters.targets - 1);
 		}
 
-		printf("\n");
 	}
 
 	return 0;
