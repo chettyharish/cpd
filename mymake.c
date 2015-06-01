@@ -15,8 +15,7 @@
 #define cdir_cmd 4
 #define back_cmd 5
 #define norm_target 0
-#define infr_target_one 1
-#define infr_target_two 2
+#define infr_target 1
 
 struct userinput {
 	char make_file_name[STLEN];
@@ -47,6 +46,8 @@ struct targets {
 	int dependency_count;
 	char dependecies[NUMELE][STLEN];
 	int target_type;
+	char inference_from[STLEN];
+	char inference_to[STLEN];
 	struct commands commands;
 };
 
@@ -99,9 +100,9 @@ int test_targ_type(char *t_name) {
 			}
 
 			if (dot_count == 1) {
-				return infr_target_one;
+				return 1;
 			} else if (dot_count == 2) {
-				return infr_target_two;
+				return 2;
 			} else {
 				printf("Wrong Inference Target\n");
 			}
@@ -156,12 +157,28 @@ void get_target(char *buffer_temp, int target_pos) {
 	/*Have to set type of Target here*/
 	if (test_targ_type(target_arr[target_pos].target_name) == norm_target) {
 		target_arr[target_pos].target_type = norm_target;
-	} else if (test_targ_type(target_arr[target_pos].target_name) == infr_target_one) {
-		target_arr[target_pos].target_type = infr_target_one;
-	} else if (test_targ_type(target_arr[target_pos].target_name) == infr_target_two) {
-		target_arr[target_pos].target_type = infr_target_two;
+		strcpy(target_arr[target_pos].inference_from, "\0");
+		strcpy(target_arr[target_pos].inference_to, "\0");
+	} else if (test_targ_type(target_arr[target_pos].target_name) == 1) {
+		char temp[STLEN];
+		strcpy(temp, target_arr[target_pos].target_name);
+		char *from = strtok(temp, ".");
+		char *to = strtok(NULL, " :");
+		strcpy(target_arr[target_pos].inference_from, from);
+		strcpy(target_arr[target_pos].inference_to, "\0");
+		target_arr[target_pos].target_type = infr_target;
+	} else if (test_targ_type(target_arr[target_pos].target_name) == 2) {
+		char temp[STLEN];
+		strcpy(temp, target_arr[target_pos].target_name);
+		char *from = strtok(temp, ".");
+		char *to = strtok(NULL, " :");
+		strcpy(target_arr[target_pos].inference_from, from);
+		strcpy(target_arr[target_pos].inference_to, to);
+		target_arr[target_pos].target_type = infr_target;
 	}
 	printf("Target type = %d\n", target_arr[target_pos].target_type);
+	printf("From = %s\n" , target_arr[target_pos].inference_from);
+	printf("To = %s\n" , target_arr[target_pos].inference_to);
 	for (int i = 0; i < target_arr[target_pos].dependency_count; ++i) {
 		printf("Dependency Name : %s\n", target_arr[target_pos].dependecies[i]);
 	}
