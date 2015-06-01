@@ -14,6 +14,7 @@
 #define redr_cmd 3
 #define cdir_cmd 4
 #define back_cmd 5
+#define mult_cmd 6
 #define norm_target 0
 #define infr_target 1
 
@@ -35,10 +36,14 @@ struct print_counters {
 	int commands;
 } print_counters;
 
-struct commands {
-	char com[NUMELE][STLEN];
-	int command_count;
+struct command_line{
+	char com[STLEN];
 	int command_type;
+};
+
+struct command_list {
+	struct command_line list[NUMELE];
+	int command_count;
 };
 
 struct targets {
@@ -48,7 +53,7 @@ struct targets {
 	int target_type;
 	char inference_from[STLEN];
 	char inference_to[STLEN];
-	struct commands commands;
+	struct command_list commands;
 };
 
 struct macros {
@@ -163,9 +168,9 @@ void get_target(char *buffer_temp, int target_pos) {
 		char temp[STLEN];
 		strcpy(temp, target_arr[target_pos].target_name);
 		char *from = strtok(temp, ".");
-		char *to = strtok(NULL, " :");
+		char *to = "\0";
 		strcpy(target_arr[target_pos].inference_from, from);
-		strcpy(target_arr[target_pos].inference_to, "\0");
+		strcpy(target_arr[target_pos].inference_to, to);
 		target_arr[target_pos].target_type = infr_target;
 	} else if (test_targ_type(target_arr[target_pos].target_name) == 2) {
 		char temp[STLEN];
@@ -177,8 +182,8 @@ void get_target(char *buffer_temp, int target_pos) {
 		target_arr[target_pos].target_type = infr_target;
 	}
 	printf("Target type = %d\n", target_arr[target_pos].target_type);
-	printf("From = %s\n" , target_arr[target_pos].inference_from);
-	printf("To = %s\n" , target_arr[target_pos].inference_to);
+	printf("From = %s\n", target_arr[target_pos].inference_from);
+	printf("To = %s\n", target_arr[target_pos].inference_to);
 	for (int i = 0; i < target_arr[target_pos].dependency_count; ++i) {
 		printf("Dependency Name : %s\n", target_arr[target_pos].dependecies[i]);
 	}
@@ -219,38 +224,86 @@ void replace_macros(char *buffer_temp) {
 }
 
 void get_cmd(char *buffer_temp, int target_pos) {
-	strcpy(target_arr[target_pos].commands.com[target_arr[target_pos].commands.command_count], buffer_temp);
-
-	printf("TNUM = %d    CNUM = %d    CMD = %s", target_pos, target_arr[target_pos].commands.command_count, target_arr[target_pos].commands.com[target_arr[target_pos].commands.command_count]);
-
-	replace_macros(buffer_temp);
-	strcpy(target_arr[target_pos].commands.com[target_arr[target_pos].commands.command_count], buffer_temp);
-
-	printf("TNUM = %d    CNUM = %d    CMD = %s", target_pos, target_arr[target_pos].commands.command_count, target_arr[target_pos].commands.com[target_arr[target_pos].commands.command_count]);
-
 	/*Have to set type of Target here*/
 	if (strchr(buffer_temp, ';')) {
 		/*Multiple commands in a single line need to split*/
 		/*Will need to do everything done below too!*/
+
+		int command_number = target_arr[target_pos].commands.command_count;
+		printf("TNUM = %d    CNUM = %d    CMD = %s" , target_pos, command_number , buffer_temp);
+		replace_macros(buffer_temp);
+		strcpy(target_arr[target_pos].commands.list[command_number].com ,buffer_temp);
+		printf("TNUM = %d    CNUM = %d    CMD = %s" , target_pos, command_number , buffer_temp);
+
+
+		target_arr[target_pos].commands.command_count++;
+
 		printf("Multiple Command\n");
 	} else if (strchr(buffer_temp, '|')) {
 		/*Piped commands*/
+
+		int command_number = target_arr[target_pos].commands.command_count;
+		printf("TNUM = %d    CNUM = %d    CMD = %s" , target_pos, command_number , buffer_temp);
+		replace_macros(buffer_temp);
+		strcpy(target_arr[target_pos].commands.list[command_number].com ,buffer_temp);
+		printf("TNUM = %d    CNUM = %d    CMD = %s" , target_pos, command_number , buffer_temp);
+
+
+		target_arr[target_pos].commands.command_count++;
+
 		printf("Piped command\n");
 	} else if (test_last_char(buffer_temp, '&')) {
 		/*Background command*/
+
+		int command_number = target_arr[target_pos].commands.command_count;
+		printf("TNUM = %d    CNUM = %d    CMD = %s" , target_pos, command_number , buffer_temp);
+		replace_macros(buffer_temp);
+		strcpy(target_arr[target_pos].commands.list[command_number].com ,buffer_temp);
+		printf("TNUM = %d    CNUM = %d    CMD = %s" , target_pos, command_number , buffer_temp);
+
+
+		target_arr[target_pos].commands.command_count++;
+
 		printf("Background command\n");
 	} else if (strchr(buffer_temp, '<') || strchr(buffer_temp, '>')) {
 		/*IO Redirection command*/
+
+		int command_number = target_arr[target_pos].commands.command_count;
+		printf("TNUM = %d    CNUM = %d    CMD = %s" , target_pos, command_number , buffer_temp);
+		replace_macros(buffer_temp);
+		strcpy(target_arr[target_pos].commands.list[command_number].com ,buffer_temp);
+		printf("TNUM = %d    CNUM = %d    CMD = %s" , target_pos, command_number , buffer_temp);
+
+
+		target_arr[target_pos].commands.command_count++;
 		printf("IO Redirection command\n");
 	} else if (strstr(buffer_temp, "cd ")) {
 		/*CD command*/
+
+		int command_number = target_arr[target_pos].commands.command_count;
+		printf("TNUM = %d    CNUM = %d    CMD = %s" , target_pos, command_number , buffer_temp);
+		replace_macros(buffer_temp);
+		strcpy(target_arr[target_pos].commands.list[command_number].com ,buffer_temp);
+		printf("TNUM = %d    CNUM = %d    CMD = %s" , target_pos, command_number , buffer_temp);
+
+
+		target_arr[target_pos].commands.command_count++;
+
 		printf("CD command\n");
 	} else {
 		/*Normal command*/
+
+		int command_number = target_arr[target_pos].commands.command_count;
+		printf("TNUM = %d    CNUM = %d    CMD = %s" , target_pos, command_number , buffer_temp);
+		replace_macros(buffer_temp);
+		strcpy(target_arr[target_pos].commands.list[command_number].com ,buffer_temp);
+		printf("TNUM = %d    CNUM = %d    CMD = %s" , target_pos, command_number , buffer_temp);
+
+
+		target_arr[target_pos].commands.command_count++;
+
 		printf("Normal command\n");
 	}
-
-	target_arr[target_pos].commands.command_count++;
 
 }
 
