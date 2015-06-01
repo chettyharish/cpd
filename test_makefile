@@ -1,9 +1,10 @@
-
+CC=GCC
+FLAG=-W -stdio -crap
 all:
-	gcc temp
+	$(CC) tempx
 	top|norm
-	hello & 
-	hello && mello 
-	top ; norm ; car ; bat
-	cat hello > bat
+	$FLAG & 
+	$FLAGhello && mello $(CC)
+	top ; $(CC)norm ; car ; bat
+	cat h$(CC)ello > bat
 	cat hello < bat

@@ -11,9 +11,10 @@
 #define NUMELE 20
 #define norm_cmd 0
 #define pipe_cmd 1
-#define redr_cmd 2
-#define cdir_cmd 3
-#define back_cmd 4
+#define pipe_final 2
+#define redr_cmd 3
+#define cdir_cmd 4
+#define back_cmd 5
 #define norm_target 0
 #define infr_target_one 1
 #define infr_target_two 2
@@ -58,14 +59,24 @@ struct macros {
 struct targets target_arr[NUMELE];
 struct macros macro_arr[NUMELE];
 
-void get_macro(char *buffer_temp, int macro_pos) {
+void get_macro(char *buffer_temp) {
 	char *macro = strtok(buffer_temp, "=");
 	char *macro_replace = strtok(NULL, "\n");
 
-	strcpy(macro_arr[macro_pos].macro, macro);
-	strcpy(macro_arr[macro_pos].macro_replace, macro_replace);
-	printf("POS = %d\t\tMacro = %s\t\tMacro_Replace = %s\n", macro_pos,
-			macro_arr[macro_pos].macro, macro_arr[macro_pos].macro_replace);
+	sprintf(macro_arr[print_counters.macros].macro, "$(%s)", macro);
+	sprintf(macro_arr[print_counters.macros].macro_replace, "%s",
+			macro_replace);
+	printf("POS = %d\t\tMacro = %s\t\tMacro_Replace = %s\n",
+			print_counters.macros, macro_arr[print_counters.macros].macro,
+			macro_arr[print_counters.macros].macro_replace);
+	print_counters.macros++;
+	sprintf(macro_arr[print_counters.macros].macro, "$%s", macro);
+	sprintf(macro_arr[print_counters.macros].macro_replace, "%s",
+			macro_replace);
+	printf("POS = %d\t\tMacro = %s\t\tMacro_Replace = %s\n",
+			print_counters.macros, macro_arr[print_counters.macros].macro,
+			macro_arr[print_counters.macros].macro_replace);
+	print_counters.macros++;
 }
 
 void get_target(char *buffer_temp, int target_pos) {
@@ -105,7 +116,31 @@ bool test_last_char(char *buffer_temp, char val) {
 	return false;
 }
 
+void replace_macros(char *buffer_temp) {
+	char buffer[STLEN];
+	char *pos;
+	for (int i = 0; i < print_counters.macros; i++) {
+		/*Testing each macro whether it exists or not*/
+		if (pos = strstr(buffer_temp, macro_arr[i].macro)) {
+			strncpy(buffer, buffer_temp, pos - buffer_temp);
+			sprintf(buffer + (pos - buffer_temp), "%s%s",
+					macro_arr[i].macro_replace,
+					pos + strlen(macro_arr[i].macro));
+			strcpy(buffer_temp, buffer);
+		}
+	}
+}
+
 void get_cmd(char *buffer_temp, int target_pos) {
+	strcpy(
+			target_arr[target_pos].commands.com[target_arr[target_pos].commands.command_count],
+			buffer_temp);
+
+	printf("TNUM = %d    CNUM = %d    CMD = %s", target_pos,
+			target_arr[target_pos].commands.command_count,
+			target_arr[target_pos].commands.com[target_arr[target_pos].commands.command_count]);
+
+	replace_macros(buffer_temp);
 	strcpy(
 			target_arr[target_pos].commands.com[target_arr[target_pos].commands.command_count],
 			buffer_temp);
@@ -220,13 +255,13 @@ int main(int argc, char **argv) {
 
 	get_default_make();
 
-	printf("Make file = %s\n", ui.make_file_name);
-	printf("Target = %s\n", ui.target);
-	printf("print = %d\n", ui.print);
-	printf("force = %d\n", ui.force);
-	printf("debug = %d\n", ui.debug);
-	printf("interrupt = %d\n", ui.interrupt);
-	printf("time = %d\n", ui.time);
+//	printf("Make file = %s\n", ui.make_file_name);
+//	printf("Target = %s\n", ui.target);
+//	printf("print = %d\n", ui.print);
+//	printf("force = %d\n", ui.force);
+//	printf("debug = %d\n", ui.debug);
+//	printf("interrupt = %d\n", ui.interrupt);
+//	printf("time = %d\n", ui.time);
 
 	FILE *file = fopen(ui.make_file_name, "r");
 	while (fgets(buffer_temp, sizeof buffer_temp, file)) {
@@ -234,8 +269,7 @@ int main(int argc, char **argv) {
 
 		if (strchr(buffer_temp, '=') && start == true) {
 			/*Type macro*/
-			get_macro(buffer_temp, print_counters.macros);
-			print_counters.macros++;
+			get_macro(buffer_temp);
 		} else if (strchr(buffer_temp, ':')) {
 			/*Type target*/
 			start = false;
