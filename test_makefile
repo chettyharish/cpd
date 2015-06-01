@@ -11,3 +11,9 @@ all:
 
 newall : bat cat mat
 	$@ < $< I have no idea!;Oo yeah;
+
+.c.o :
+	gcc $<
+
+.c :
+	gcc $<

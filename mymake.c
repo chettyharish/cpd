@@ -11,7 +11,6 @@
 #define NUMELE 20
 #define norm_cmd 0
 #define pipe_cmd 1
-#define pipe_final 2
 #define redr_cmd 3
 #define cdir_cmd 4
 #define back_cmd 5
@@ -59,23 +58,86 @@ struct macros {
 struct targets target_arr[NUMELE];
 struct macros macro_arr[NUMELE];
 
+void trim_string(char *temp) {
+	int front_spaces = 0;
+	int back_spaces = 0;
+	char new_str[STLEN];
+
+	for (int i = 0; i < strlen(temp); i++) {
+		if (temp[i] == ' ') {
+			front_spaces++;
+		} else {
+			break;
+		}
+	}
+
+	for (int i = strlen(temp); i > 0; i--) {
+		if (temp[i] == '\0' || temp[i] == ' ' || temp[i] == '\n') {
+			back_spaces++;
+		} else {
+			break;
+		}
+	}
+	strncpy(new_str, temp + front_spaces, strlen(temp) - front_spaces - back_spaces + 1);
+	new_str[strlen(temp) - front_spaces - back_spaces + 1] = '\0';
+	strcpy(temp, new_str);
+}
+
+int test_targ_type(char *t_name) {
+	char temp[STLEN];
+	char *pos;
+	int dot_count = 0;
+	strcpy(temp, t_name);
+	trim_string(temp);
+	if ((pos = strchr(temp, '.'))) {
+		if (pos - temp == 0) {
+			/*Inference found as the rule starts with a '.'*/
+			for (int i = 0; i < strlen(temp); i++) {
+				if (temp[i] == '.') {
+					dot_count++;
+				}
+			}
+
+			if (dot_count == 1) {
+				return infr_target_one;
+			} else if (dot_count == 2) {
+				return infr_target_two;
+			} else {
+				printf("Wrong Inference Target\n");
+			}
+		} else {
+			/*Since there are stuff before '.' , it is not inference*/
+			return norm_target;
+		}
+	} else {
+		/*Since target doesn't have '.' , it cannot be inference*/
+		return norm_target;
+	}
+
+	return norm_target;
+}
+
+bool test_last_char(char *buffer_temp, char val) {
+	/*Trying to test if last char is required char*/
+	char temp[STLEN];
+	strcpy(temp, buffer_temp);
+	trim_string(temp);
+	if (temp[strlen(temp) - 1] == val)
+		return true;
+	return false;
+}
+
 void get_macro(char *buffer_temp) {
 	char *macro = strtok(buffer_temp, "=");
 	char *macro_replace = strtok(NULL, "\n");
 
 	sprintf(macro_arr[print_counters.macros].macro, "$(%s)", macro);
-	sprintf(macro_arr[print_counters.macros].macro_replace, "%s",
-			macro_replace);
-	printf("POS = %d\t\tMacro = %s\t\tMacro_Replace = %s\n",
-			print_counters.macros, macro_arr[print_counters.macros].macro,
-			macro_arr[print_counters.macros].macro_replace);
+	sprintf(macro_arr[print_counters.macros].macro_replace, "%s", macro_replace);
+//	printf("POS = %d\t\tMacro = %s\t\tMacro_Replace = %s\n", print_counters.macros, macro_arr[print_counters.macros].macro, macro_arr[print_counters.macros].macro_replace);
 	print_counters.macros++;
 	sprintf(macro_arr[print_counters.macros].macro, "$%s", macro);
-	sprintf(macro_arr[print_counters.macros].macro_replace, "%s",
-			macro_replace);
-	printf("POS = %d\t\tMacro = %s\t\tMacro_Replace = %s\n",
-			print_counters.macros, macro_arr[print_counters.macros].macro,
-			macro_arr[print_counters.macros].macro_replace);
+	sprintf(macro_arr[print_counters.macros].macro_replace, "%s", macro_replace);
+//	printf("POS = %d\t\tMacro = %s\t\tMacro_Replace = %s\n", print_counters.macros, macro_arr[print_counters.macros].macro, macro_arr[print_counters.macros].macro_replace);
 	print_counters.macros++;
 }
 
@@ -87,33 +149,22 @@ void get_target(char *buffer_temp, int target_pos) {
 	printf("\nTarget Name : %s\n", target_arr[target_pos].target_name);
 
 	while (dependencies != NULL) {
-		strcpy(
-				target_arr[target_pos].dependecies[target_arr[target_pos].dependency_count++],
-				dependencies);
+		strcpy(target_arr[target_pos].dependecies[target_arr[target_pos].dependency_count++], dependencies);
 		dependencies = strtok(NULL, " ");
 	}
 
 	/*Have to set type of Target here*/
-	target_arr[target_pos].target_type = norm_target;
-
+	if (test_targ_type(target_arr[target_pos].target_name) == norm_target) {
+		target_arr[target_pos].target_type = norm_target;
+	} else if (test_targ_type(target_arr[target_pos].target_name) == infr_target_one) {
+		target_arr[target_pos].target_type = infr_target_one;
+	} else if (test_targ_type(target_arr[target_pos].target_name) == infr_target_two) {
+		target_arr[target_pos].target_type = infr_target_two;
+	}
+	printf("Target type = %d\n", target_arr[target_pos].target_type);
 	for (int i = 0; i < target_arr[target_pos].dependency_count; ++i) {
 		printf("Dependency Name : %s\n", target_arr[target_pos].dependecies[i]);
 	}
-}
-
-bool test_last_char(char *buffer_temp, char val) {
-	/*Trying to test if last char is required char*/
-	char temp[STLEN];
-	strcpy(temp, buffer_temp);
-	for (int i = strlen(temp); i > 0; i--) {
-		if (temp[i] == '\0' || temp[i] == ' ' || temp[i] == '\n')
-			temp[i] = '\0';
-		else
-			break;
-	}
-	if (temp[strlen(temp) - 1] == val)
-		return true;
-	return false;
 }
 
 void replace_macros(char *buffer_temp) {
@@ -123,52 +174,42 @@ void replace_macros(char *buffer_temp) {
 		/*Testing each macro whether it exists or not*/
 		while ((pos = strstr(buffer_temp, macro_arr[i].macro))) {
 			strncpy(buffer, buffer_temp, pos - buffer_temp);
-			sprintf(buffer + (pos - buffer_temp), "%s%s",
-					macro_arr[i].macro_replace,
-					pos + strlen(macro_arr[i].macro));
+			sprintf(buffer + (pos - buffer_temp), "%s%s", macro_arr[i].macro_replace, pos + strlen(macro_arr[i].macro));
 			strcpy(buffer_temp, buffer);
 		}
 	}
 
-	/*Need to resolve macros for $@ and $<*/
-	while ((pos = strstr(buffer_temp, "$@"))) {
-		strncpy(buffer, buffer_temp, pos - buffer_temp);
-		sprintf(buffer + (pos - buffer_temp), "%s%s",
-				target_arr[print_counters.targets - 1].target_name,
-				pos + strlen("$@"));
-		strcpy(buffer_temp, buffer);
-	}
-
-	while ((pos = strstr(buffer_temp, "$<"))) {
-		strncpy(buffer, buffer_temp, pos - buffer_temp);
-		if (target_arr[print_counters.targets - 1].dependency_count != 0) {
-			sprintf(buffer + (pos - buffer_temp), "%s%s",
-					target_arr[print_counters.targets - 1].dependecies[0],
-					pos + strlen("$<"));
-		}else{
-			printf("Makefile error $<");
+	/*Do the replacements only for non inference targets*/
+	/*Need to resolve inference ones at execution*/
+	if (target_arr[print_counters.targets - 1].target_type == norm_target) {
+		/*Need to resolve macros for $@ and $<*/
+		while ((pos = strstr(buffer_temp, "$@"))) {
+			strncpy(buffer, buffer_temp, pos - buffer_temp);
+			sprintf(buffer + (pos - buffer_temp), "%s%s", target_arr[print_counters.targets - 1].target_name, pos + strlen("$@"));
+			strcpy(buffer_temp, buffer);
 		}
-		strcpy(buffer_temp, buffer);
+
+		while ((pos = strstr(buffer_temp, "$<"))) {
+			strncpy(buffer, buffer_temp, pos - buffer_temp);
+			if (target_arr[print_counters.targets - 1].dependency_count != 0) {
+				sprintf(buffer + (pos - buffer_temp), "%s%s", target_arr[print_counters.targets - 1].dependecies[0], pos + strlen("$<"));
+			} else {
+				printf("Makefile error $<");
+			}
+			strcpy(buffer_temp, buffer);
+		}
 	}
 }
 
 void get_cmd(char *buffer_temp, int target_pos) {
-	strcpy(
-			target_arr[target_pos].commands.com[target_arr[target_pos].commands.command_count],
-			buffer_temp);
+	strcpy(target_arr[target_pos].commands.com[target_arr[target_pos].commands.command_count], buffer_temp);
 
-	printf("TNUM = %d    CNUM = %d    CMD = %s", target_pos,
-			target_arr[target_pos].commands.command_count,
-			target_arr[target_pos].commands.com[target_arr[target_pos].commands.command_count]);
+	printf("TNUM = %d    CNUM = %d    CMD = %s", target_pos, target_arr[target_pos].commands.command_count, target_arr[target_pos].commands.com[target_arr[target_pos].commands.command_count]);
 
 	replace_macros(buffer_temp);
-	strcpy(
-			target_arr[target_pos].commands.com[target_arr[target_pos].commands.command_count],
-			buffer_temp);
+	strcpy(target_arr[target_pos].commands.com[target_arr[target_pos].commands.command_count], buffer_temp);
 
-	printf("TNUM = %d    CNUM = %d    CMD = %s", target_pos,
-			target_arr[target_pos].commands.command_count,
-			target_arr[target_pos].commands.com[target_arr[target_pos].commands.command_count]);
+	printf("TNUM = %d    CNUM = %d    CMD = %s", target_pos, target_arr[target_pos].commands.command_count, target_arr[target_pos].commands.com[target_arr[target_pos].commands.command_count]);
 
 	/*Have to set type of Target here*/
 	if (strchr(buffer_temp, ';')) {
