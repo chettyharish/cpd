@@ -8,12 +8,9 @@ all:
 	top ; $(CC)norm ; car ; b$(CC)$(FLAG)($FLAG)at
 	cat h$(CC)ello(CC)$(FLAG)($FLAG) > bat
 	cat he(CC)$(FLAG)($FLAG)llo < bat
-
 newall : bat cat mat
 	$@ < $< I have no idea!;Oo yeah;
-
 .c.o :
 	gcc $<
-
 .c :
 	gcc $<

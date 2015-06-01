@@ -6,3 +6,5 @@ all:
 demo :
 	$(CC) -o mymake mymake.c $(FLAG)
 	./mymake -f test_makefile
+clean:
+	rm mymake
