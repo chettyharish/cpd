@@ -4,7 +4,10 @@ all:
 	$(CC) tempx
 	top|norm
 	$FLAG & 
-	$FLAGhello && mello $(CC)
-	top ; $(CC)norm ; car ; bat
-	cat h$(CC)ello > bat
-	cat hello < bat
+	$FLAGhello && mello $(CC) $(CC)
+	top ; $(CC)norm ; car ; b$(CC)$(FLAG)($FLAG)at
+	cat h$(CC)ello(CC)$(FLAG)($FLAG) > bat
+	cat he(CC)$(FLAG)($FLAG)llo < bat
+
+newall : bat cat mat
+	$@ < $< I have no idea!;Oo yeah;

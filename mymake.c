@@ -121,13 +121,34 @@ void replace_macros(char *buffer_temp) {
 	char *pos;
 	for (int i = 0; i < print_counters.macros; i++) {
 		/*Testing each macro whether it exists or not*/
-		if (pos = strstr(buffer_temp, macro_arr[i].macro)) {
+		while ((pos = strstr(buffer_temp, macro_arr[i].macro))) {
 			strncpy(buffer, buffer_temp, pos - buffer_temp);
 			sprintf(buffer + (pos - buffer_temp), "%s%s",
 					macro_arr[i].macro_replace,
 					pos + strlen(macro_arr[i].macro));
 			strcpy(buffer_temp, buffer);
 		}
+	}
+
+	/*Need to resolve macros for $@ and $<*/
+	while ((pos = strstr(buffer_temp, "$@"))) {
+		strncpy(buffer, buffer_temp, pos - buffer_temp);
+		sprintf(buffer + (pos - buffer_temp), "%s%s",
+				target_arr[print_counters.targets - 1].target_name,
+				pos + strlen("$@"));
+		strcpy(buffer_temp, buffer);
+	}
+
+	while ((pos = strstr(buffer_temp, "$<"))) {
+		strncpy(buffer, buffer_temp, pos - buffer_temp);
+		if (target_arr[print_counters.targets - 1].dependency_count != 0) {
+			sprintf(buffer + (pos - buffer_temp), "%s%s",
+					target_arr[print_counters.targets - 1].dependecies[0],
+					pos + strlen("$<"));
+		}else{
+			printf("Makefile error $<");
+		}
+		strcpy(buffer_temp, buffer);
 	}
 }
 
