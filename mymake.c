@@ -9,6 +9,14 @@
 
 #define STLEN 100
 #define NUMELE 20
+#define norm_cmd 0
+#define pipe_cmd 1
+#define redr_cmd 2
+#define cdir_cmd 3
+#define back_cmd 4
+#define norm_target 0
+#define infr_target_one 1
+#define infr_target_two 2
 
 struct userinput {
 	char make_file_name[STLEN];
@@ -31,12 +39,14 @@ struct print_counters {
 struct commands {
 	char com[NUMELE][STLEN];
 	int command_count;
+	int command_type;
 };
 
 struct targets {
 	char target_name[STLEN];
 	int dependency_count;
 	char dependecies[NUMELE][STLEN];
+	int target_type;
 	struct commands commands;
 };
 
@@ -72,15 +82,60 @@ void get_target(char *buffer_temp, int target_pos) {
 		dependencies = strtok(NULL, " ");
 	}
 
+	/*Have to set type of Target here*/
+	target_arr[target_pos].target_type = norm_target;
+
 	for (int i = 0; i < target_arr[target_pos].dependency_count; ++i) {
 		printf("Dependency Name : %s\n", target_arr[target_pos].dependecies[i]);
 	}
 }
 
+bool test_last_char(char *buffer_temp, char val) {
+	/*Trying to test if last char is required char*/
+	char temp[STLEN];
+	strcpy(temp, buffer_temp);
+	for (int i = strlen(temp); i > 0; i--) {
+		if (temp[i] == '\0' || temp[i] == ' ' || temp[i] == '\n')
+			temp[i] = '\0';
+		else
+			break;
+	}
+	if (temp[strlen(temp) - 1] == val)
+		return true;
+	return false;
+}
+
 void get_cmd(char *buffer_temp, int target_pos) {
-	strcpy(target_arr[target_pos].commands.com[target_arr[target_pos].commands.command_count], buffer_temp);
-	printf("TNUM = %d    CNUM = %d    CMD = %s", target_pos, target_arr[target_pos].commands.command_count,
+	strcpy(
+			target_arr[target_pos].commands.com[target_arr[target_pos].commands.command_count],
+			buffer_temp);
+
+	printf("TNUM = %d    CNUM = %d    CMD = %s", target_pos,
+			target_arr[target_pos].commands.command_count,
 			target_arr[target_pos].commands.com[target_arr[target_pos].commands.command_count]);
+
+	/*Have to set type of Target here*/
+	if (strchr(buffer_temp, ';')) {
+		/*Multiple commands in a single line need to split*/
+		/*Will need to do everything done below too!*/
+		printf("Multiple Command\n");
+	} else if (strchr(buffer_temp, '|')) {
+		/*Piped commands*/
+		printf("Piped command\n");
+	} else if (test_last_char(buffer_temp, '&')) {
+		/*Background command*/
+		printf("Background command\n");
+	} else if (strchr(buffer_temp, '<') || strchr(buffer_temp, '>')) {
+		/*IO Redirection command*/
+		printf("IO Redirection command\n");
+	} else if (strstr(buffer_temp, "cd ")) {
+		/*CD command*/
+		printf("CD command\n");
+	} else {
+		/*Normal command*/
+		printf("Normal command\n");
+	}
+
 	target_arr[target_pos].commands.command_count++;
 
 }
@@ -136,7 +191,7 @@ int main(int argc, char **argv) {
 	print_counters.names = 0;
 	print_counters.commands = 0;
 
-	for (int i = 0; i < NUMELE; ++i){
+	for (int i = 0; i < NUMELE; ++i) {
 		target_arr[i].dependency_count = 0;
 		target_arr[i].commands.command_count = 0;
 	}
@@ -165,13 +220,13 @@ int main(int argc, char **argv) {
 
 	get_default_make();
 
-//	printf("Make file = %s\n", ui.make_file_name);
-//	printf("Target = %s\n", ui.target);
-//	printf("print = %d\n", ui.print);
-//	printf("force = %d\n", ui.force);
-//	printf("debug = %d\n", ui.debug);
-//	printf("interrupt = %d\n", ui.interrupt);
-//	printf("time = %d\n", ui.time);
+	printf("Make file = %s\n", ui.make_file_name);
+	printf("Target = %s\n", ui.target);
+	printf("print = %d\n", ui.print);
+	printf("force = %d\n", ui.force);
+	printf("debug = %d\n", ui.debug);
+	printf("interrupt = %d\n", ui.interrupt);
+	printf("time = %d\n", ui.time);
 
 	FILE *file = fopen(ui.make_file_name, "r");
 	while (fgets(buffer_temp, sizeof buffer_temp, file)) {
@@ -189,6 +244,7 @@ int main(int argc, char **argv) {
 		} else if (start == false) {
 			/* The condition ensures that we count empty lines in targets not macros*/
 			get_cmd(buffer_temp, print_counters.targets - 1);
+			print_counters.commands++;
 		}
 
 	}

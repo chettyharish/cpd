@@ -1,0 +1,9 @@
+
+all:
+	gcc temp
+	top|norm
+	hello & 
+	hello && mello 
+	top ; norm ; car ; bat
+	cat hello > bat
+	cat hello < bat
