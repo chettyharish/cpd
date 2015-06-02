@@ -10,11 +10,13 @@
 #define STLEN 100
 #define NUMELE 20
 #define norm_cmd 0
-#define pipe_cmd 1
-#define redr_cmd 3
-#define cdir_cmd 4
-#define back_cmd 5
-#define mult_cmd 6
+#define pipe_cmd 2
+#define redr_cmd 4
+#define cdir_cmd 5
+#define back_cmd 16
+#define mult_cmd 32
+#define pipe_cmd_last 64
+#define mult_cmd_last 128
 #define norm_target 0
 #define infr_target 1
 
@@ -74,6 +76,16 @@ struct macros {
 
 struct targets target_arr[NUMELE];
 struct macros macro_arr[NUMELE];
+
+//void eliminate_comments(char *buffer_temp) {
+//
+//	char temp[STLEN];
+//	char *pos = strchr(buffer_temp, "#");
+//	int len = strlen()
+//	for (int i = (pos - buffer_temp) ; i < strlen(buffer_temp) ; i++) {
+//		as
+//	}
+//}
 
 void trim_string(char *temp) {
 	int front_spaces = 0;
@@ -159,11 +171,9 @@ void get_macro(char *buffer_temp) {
 
 	sprintf(macro_arr[counters.macros].macro, "$(%s)", macro);
 	sprintf(macro_arr[counters.macros].macro_replace, "%s", macro_replace);
-//	printf("POS = %d\t\tMacro = %s\t\tMacro_Replace = %s\n", counters.macros, macro_arr[counters.macros].macro, macro_arr[counters.macros].macro_replace);
 	counters.macros++;
 	sprintf(macro_arr[counters.macros].macro, "$%s", macro);
 	sprintf(macro_arr[counters.macros].macro_replace, "%s", macro_replace);
-//	printf("POS = %d\t\tMacro = %s\t\tMacro_Replace = %s\n", counters.macros, macro_arr[counters.macros].macro, macro_arr[counters.macros].macro_replace);
 	counters.macros++;
 }
 
@@ -184,10 +194,12 @@ void get_target(char *buffer_temp, int target_pos) {
 
 	/*Have to set type of Target here*/
 	if (test_targ_type(target_arr[target_pos].target_name) == norm_target) {
+		print_counter.targets++;
 		target_arr[target_pos].target_type = norm_target;
 		strcpy(target_arr[target_pos].inference_from, "\0");
 		strcpy(target_arr[target_pos].inference_to, "\0");
 	} else if (test_targ_type(target_arr[target_pos].target_name) == 1) {
+		print_counter.inferences++;
 		char temp[STLEN];
 		strcpy(temp, target_arr[target_pos].target_name);
 		char *from = strtok(temp, ".");
@@ -196,6 +208,7 @@ void get_target(char *buffer_temp, int target_pos) {
 		strcpy(target_arr[target_pos].inference_to, to);
 		target_arr[target_pos].target_type = infr_target;
 	} else if (test_targ_type(target_arr[target_pos].target_name) == 2) {
+		print_counter.inferences++;
 		char temp[STLEN];
 		strcpy(temp, target_arr[target_pos].target_name);
 		char *from = strtok(temp, ".");
@@ -247,7 +260,7 @@ void replace_macros(char *buffer_temp) {
 			} else {
 				printf("Makefile error $<");
 			}
-		}else if (target_arr[counters.targets - 1].target_type == infr_target) {
+		} else if (target_arr[counters.targets - 1].target_type == infr_target) {
 			/*Changing the inference symbols to something else
 			 * to ensure that char '<' does not end up matching redr_cmd*/
 			sprintf(buffer + (pos - buffer_temp), "%s%s", "$(DEP)", pos + strlen("$<"));
@@ -265,21 +278,33 @@ void get_cmd(char *buffer_temp, int target_pos) {
 		/*Multiple commands in a single line need to split*/
 		/*Will need to do everything done below too!*/
 
-		int command_number = target_arr[target_pos].commands.command_count;
-		strcpy(target_arr[target_pos].commands.list[command_number].com, buffer_temp);
+		int command_number;
 
-		target_arr[target_pos].commands.list[command_number].command_type = mult_cmd;
-		target_arr[target_pos].commands.command_count++;
+		char *cmd = strtok(buffer_temp, ";");
+		while (cmd != NULL) {
+			command_number = target_arr[target_pos].commands.command_count;
+			strcpy(target_arr[target_pos].commands.list[command_number].com, cmd);
+			target_arr[target_pos].commands.list[command_number].command_type = mult_cmd;
+			target_arr[target_pos].commands.command_count++;
+			cmd = strtok(NULL, ";");
+		}
+		target_arr[target_pos].commands.list[command_number].command_type = mult_cmd_last;
 
 		printf("Multiple Command\n");
 	} else if (strchr(buffer_temp, '|')) {
 		/*Piped commands*/
 
-		int command_number = target_arr[target_pos].commands.command_count;
-		strcpy(target_arr[target_pos].commands.list[command_number].com, buffer_temp);
+		int command_number;
 
-		target_arr[target_pos].commands.list[command_number].command_type = pipe_cmd;
-		target_arr[target_pos].commands.command_count++;
+		char *cmd = strtok(buffer_temp, "|");
+		while (cmd != NULL) {
+			command_number = target_arr[target_pos].commands.command_count;
+			strcpy(target_arr[target_pos].commands.list[command_number].com, cmd);
+			target_arr[target_pos].commands.list[command_number].command_type = pipe_cmd;
+			target_arr[target_pos].commands.command_count++;
+			cmd = strtok(NULL, "|");
+		}
+		target_arr[target_pos].commands.list[command_number].command_type = pipe_cmd_last;
 
 		printf("Piped command\n");
 	} else if (test_last_char(buffer_temp, '&')) {
@@ -420,6 +445,17 @@ int main(int argc, char **argv) {
 
 	FILE *file = fopen(ui.make_file_name, "r");
 	while (fgets(buffer_temp, sizeof buffer_temp, file)) {
+		char *pos;
+		if ((pos = strchr(buffer_temp, '#'))) {
+			/*Comments are present, so need to remove them*/
+			printf("ELIM \t\t %s\n" , buffer_temp);
+			buffer_temp[pos - buffer_temp] = '\0';
+			printf("ELIM \t\t %s\n" , buffer_temp);
+			if (strlen(buffer_temp) == 0) {
+				/* If all the characters are comments, then eliminate the line.*/
+				continue;
+			}
+		}
 
 		if (strchr(buffer_temp, '=') && start == true) {
 			/*Type macro*/
@@ -429,7 +465,7 @@ int main(int argc, char **argv) {
 			/*Type target*/
 			start = false;
 			get_target(buffer_temp, counters.targets);
-			print_counter.targets++;
+//			print_counter.targets++;
 		} else if (start == false) {
 			/* The condition ensures that we count empty lines in targets not macros*/
 			get_cmd(buffer_temp, counters.targets - 1);
@@ -454,7 +490,7 @@ int main(int argc, char **argv) {
 
 		printf("Commands : \n");
 		for (int j = 0; j < target_arr[i].commands.command_count; j++) {
-			printf("CMD =  %s       Protocol = %d \n", target_arr[i].commands.list[j].com, target_arr[i].commands.list[j].command_type);
+			printf("CMD =  %-100sProtocol = %d \n", target_arr[i].commands.list[j].com, target_arr[i].commands.list[j].command_type);
 		}
 		printf("\n");
 

@@ -1,15 +1,18 @@
 CC=GCC
 FLAG=-W -stdio -crap
 all:
+#Hello
+# bar
 	$(CC) tempx
-	top|norm
+	top|norm|car|ball|man
 	$FLAG & 
 	$FLAGhello && mello $(CC) $(CC)
 	top ; $(CC)norm ; car ; b$(CC)$(FLAG)($FLAG)at
-	cat h$(CC)ello(CC)$(FLAG)($FLAG) > bat
-	cat he(CC)$(FLAG)($FLAG)llo < bat
-newall : bat cat mat
+	cat h$(CC)ello(CC)$(FLAG)($FLAG) > bat#fat
+	cat he(CC)$(FLAG)($FLAG)llo < bat#mat
+newall : bat cat mat#hello
 	$@ < $< I have no idea!;Oo yeah;
+#newcom
 .c.o :
 	gcc $<
 .c :
