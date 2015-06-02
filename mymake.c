@@ -144,9 +144,9 @@ bool test_last_char(char *buffer_temp, char val) {
 	return false;
 }
 
-void remove_newline(char *temp){
+void remove_newline(char *temp) {
 	char *pos;
-	if((pos = strchr(temp , '\n'))){
+	if ((pos = strchr(temp, '\n'))) {
 		/*To remove \n !*/
 		*pos = '\0';
 	}
@@ -226,24 +226,35 @@ void replace_macros(char *buffer_temp) {
 
 	/*Do the replacements only for non inference targets*/
 	/*Need to resolve inference ones at execution*/
-	if (target_arr[counters.targets - 1].target_type == norm_target) {
-		/*Need to resolve macros for $@ and $<*/
-		while ((pos = strstr(buffer_temp, "$@"))) {
-			strncpy(buffer, buffer_temp, pos - buffer_temp);
+	/*Need to resolve macros for $@ and $<*/
+	while ((pos = strstr(buffer_temp, "$@"))) {
+		strncpy(buffer, buffer_temp, pos - buffer_temp);
+		if (target_arr[counters.targets - 1].target_type == norm_target) {
 			sprintf(buffer + (pos - buffer_temp), "%s%s", target_arr[counters.targets - 1].target_name, pos + strlen("$@"));
-			strcpy(buffer_temp, buffer);
+		} else if (target_arr[counters.targets - 1].target_type == infr_target) {
+			/*Changing the inference symbols to something else
+			 * to ensure that char '<' does not end up matching redr_cmd*/
+			sprintf(buffer + (pos - buffer_temp), "%s%s", "$(TARGET)", pos + strlen("$@"));
 		}
+		strcpy(buffer_temp, buffer);
+	}
 
-		while ((pos = strstr(buffer_temp, "$<"))) {
-			strncpy(buffer, buffer_temp, pos - buffer_temp);
+	while ((pos = strstr(buffer_temp, "$<"))) {
+		strncpy(buffer, buffer_temp, pos - buffer_temp);
+		if (target_arr[counters.targets - 1].target_type == norm_target) {
 			if (target_arr[counters.targets - 1].dependency_count != 0) {
 				sprintf(buffer + (pos - buffer_temp), "%s%s", target_arr[counters.targets - 1].dependecies[0], pos + strlen("$<"));
 			} else {
 				printf("Makefile error $<");
 			}
-			strcpy(buffer_temp, buffer);
+		}else if (target_arr[counters.targets - 1].target_type == infr_target) {
+			/*Changing the inference symbols to something else
+			 * to ensure that char '<' does not end up matching redr_cmd*/
+			sprintf(buffer + (pos - buffer_temp), "%s%s", "$(DEP)", pos + strlen("$<"));
 		}
+		strcpy(buffer_temp, buffer);
 	}
+
 }
 
 void get_cmd(char *buffer_temp, int target_pos) {
@@ -257,7 +268,6 @@ void get_cmd(char *buffer_temp, int target_pos) {
 		int command_number = target_arr[target_pos].commands.command_count;
 		strcpy(target_arr[target_pos].commands.list[command_number].com, buffer_temp);
 
-
 		target_arr[target_pos].commands.list[command_number].command_type = mult_cmd;
 		target_arr[target_pos].commands.command_count++;
 
@@ -267,7 +277,6 @@ void get_cmd(char *buffer_temp, int target_pos) {
 
 		int command_number = target_arr[target_pos].commands.command_count;
 		strcpy(target_arr[target_pos].commands.list[command_number].com, buffer_temp);
-
 
 		target_arr[target_pos].commands.list[command_number].command_type = pipe_cmd;
 		target_arr[target_pos].commands.command_count++;
@@ -279,7 +288,6 @@ void get_cmd(char *buffer_temp, int target_pos) {
 		int command_number = target_arr[target_pos].commands.command_count;
 		strcpy(target_arr[target_pos].commands.list[command_number].com, buffer_temp);
 
-
 		target_arr[target_pos].commands.list[command_number].command_type = back_cmd;
 		target_arr[target_pos].commands.command_count++;
 
@@ -290,7 +298,6 @@ void get_cmd(char *buffer_temp, int target_pos) {
 		int command_number = target_arr[target_pos].commands.command_count;
 		strcpy(target_arr[target_pos].commands.list[command_number].com, buffer_temp);
 
-
 		target_arr[target_pos].commands.list[command_number].command_type = redr_cmd;
 		target_arr[target_pos].commands.command_count++;
 		printf("IO Redirection command\n");
@@ -299,7 +306,6 @@ void get_cmd(char *buffer_temp, int target_pos) {
 
 		int command_number = target_arr[target_pos].commands.command_count;
 		strcpy(target_arr[target_pos].commands.list[command_number].com, buffer_temp);
-
 
 		target_arr[target_pos].commands.list[command_number].command_type = cdir_cmd;
 		target_arr[target_pos].commands.command_count++;
@@ -310,7 +316,6 @@ void get_cmd(char *buffer_temp, int target_pos) {
 
 		int command_number = target_arr[target_pos].commands.command_count;
 		strcpy(target_arr[target_pos].commands.list[command_number].com, buffer_temp);
-
 
 		target_arr[target_pos].commands.list[command_number].command_type = norm_cmd;
 		target_arr[target_pos].commands.command_count++;
@@ -415,7 +420,6 @@ int main(int argc, char **argv) {
 
 	FILE *file = fopen(ui.make_file_name, "r");
 	while (fgets(buffer_temp, sizeof buffer_temp, file)) {
-//		printf("%s", buffer_temp);
 
 		if (strchr(buffer_temp, '=') && start == true) {
 			/*Type macro*/
@@ -444,13 +448,13 @@ int main(int argc, char **argv) {
 		printf("Target %s \n", target_arr[i].target_name);
 		printf("Dependencies : ");
 		for (int j = 0; j < target_arr[i].dependency_count; j++) {
-			printf(" %s " , target_arr[i].dependecies[j]);
+			printf(" %s ", target_arr[i].dependecies[j]);
 		}
 		printf("\n");
 
 		printf("Commands : \n");
 		for (int j = 0; j < target_arr[i].commands.command_count; j++) {
-			printf("CMD =  %s       Protocol = %d \n" , target_arr[i].commands.list[j].com , target_arr[i].commands.list[j].command_type );
+			printf("CMD =  %s       Protocol = %d \n", target_arr[i].commands.list[j].com, target_arr[i].commands.list[j].command_type);
 		}
 		printf("\n");
 
