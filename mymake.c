@@ -181,6 +181,7 @@ void get_target(char *buffer_temp, int target_pos) {
 
 	counters.targets++;
 	char *target = strtok(buffer_temp, ":");
+	trim_string(target);
 	strcpy(target_arr[target_pos].target_name, target);
 	char *dependencies = strtok(NULL, " ");
 
@@ -353,7 +354,7 @@ void get_cmd(char *buffer_temp, int target_pos) {
 void get_default_make() {
 	/*Set default only if makefile not supplied*/
 	struct stat buf;
-	if (strcmp(ui.make_file_name, "NULL") == 0) {
+	if (strcmp(ui.make_file_name, "\0") == 0) {
 
 		if (stat("mymake1.mk", &buf) == 0) {
 			/*mymake1.mk found, so set it as default*/
@@ -388,8 +389,8 @@ int main(int argc, char **argv) {
 	}
 
 	/*Default values initialized here */
-	strcpy(ui.make_file_name, "NULL");
-	strcpy(ui.target, "NULL");
+	strcpy(ui.make_file_name, "\0");
+	strcpy(ui.target, "\0");
 	ui.print = false;
 	ui.force = false;
 	ui.debug = false;
@@ -435,22 +436,12 @@ int main(int argc, char **argv) {
 
 	get_default_make();
 
-//	printf("Make file = %s\n", ui.make_file_name);
-//	printf("Target = %s\n", ui.target);
-//	printf("print = %d\n", ui.print);
-//	printf("force = %d\n", ui.force);
-//	printf("debug = %d\n", ui.debug);
-//	printf("interrupt = %d\n", ui.interrupt);
-//	printf("time = %d\n", ui.time);
-
 	FILE *file = fopen(ui.make_file_name, "r");
 	while (fgets(buffer_temp, sizeof buffer_temp, file)) {
 		char *pos;
 		if ((pos = strchr(buffer_temp, '#'))) {
 			/*Comments are present, so need to remove them*/
-			printf("ELIM \t\t %s\n" , buffer_temp);
-			buffer_temp[pos - buffer_temp] = '\0';
-			printf("ELIM \t\t %s\n" , buffer_temp);
+			*pos = '\0';
 			if (strlen(buffer_temp) == 0) {
 				/* If all the characters are comments, then eliminate the line.*/
 				continue;
@@ -465,7 +456,6 @@ int main(int argc, char **argv) {
 			/*Type target*/
 			start = false;
 			get_target(buffer_temp, counters.targets);
-//			print_counter.targets++;
 		} else if (start == false) {
 			/* The condition ensures that we count empty lines in targets not macros*/
 			get_cmd(buffer_temp, counters.targets - 1);
@@ -473,27 +463,73 @@ int main(int argc, char **argv) {
 		}
 
 	}
+//
+//	printf("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n");
+//
+//	printf("Macros : %d    Commands : %d    Targets : %d    Inferences : %d    Names : %d\n", print_counter.macros, print_counter.commands, print_counter.targets, print_counter.inferences,
+//			print_counter.names);
+//
+//	for (int i = 0; i < counters.targets; i++) {
+//		printf("\n\n");
+//		printf("Target %s \n", target_arr[i].target_name);
+//		printf("Dependencies : ");
+//		for (int j = 0; j < target_arr[i].dependency_count; j++) {
+//			printf(" %s ", target_arr[i].dependecies[j]);
+//		}
+//		printf("\n");
+//
+//		printf("Commands : \n");
+//		for (int j = 0; j < target_arr[i].commands.command_count; j++) {
+//			printf("CMD =  %-100sProtocol = %d \n", target_arr[i].commands.list[j].com, target_arr[i].commands.list[j].command_type);
+//		}
+//		printf("\n");
+//
+//	}
 
-	printf("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n");
+	/*Selecting first target if target is missing*/
+	if (strcmp(ui.target, "\0") == 0) {
+		/*Missing target , so use the first one*/
+		strcpy(ui.target, target_arr[0].target_name);
+	}
 
-	printf("Macros : %d    Commands : %d    Targets : %d    Inferences : %d    Names : %d\n", print_counter.macros, print_counter.commands, print_counter.targets, print_counter.inferences,
-			print_counter.names);
+	printf("Make file = %s\n", ui.make_file_name);
+	printf("Target = %s\n", ui.target);
+	printf("print = %d\n", ui.print);
+	printf("force = %d\n", ui.force);
+	printf("debug = %d\n", ui.debug);
+	printf("interrupt = %d\n", ui.interrupt);
+	printf("time = %d\n", ui.time);
 
+	/*Trying to find the matching target*/
+	int matched_target = -1;
 	for (int i = 0; i < counters.targets; i++) {
-		printf("\n\n");
-		printf("Target %s \n", target_arr[i].target_name);
-		printf("Dependencies : ");
-		for (int j = 0; j < target_arr[i].dependency_count; j++) {
-			printf(" %s ", target_arr[i].dependecies[j]);
+		if (strcmp(ui.target, target_arr[i].target_name)==0) {
+			matched_target = i;
+			printf("%s MATCH FOUND %s \n", ui.target, target_arr[i].target_name);
+			break;
 		}
-		printf("\n");
+	}
 
-		printf("Commands : \n");
-		for (int j = 0; j < target_arr[i].commands.command_count; j++) {
-			printf("CMD =  %-100sProtocol = %d \n", target_arr[i].commands.list[j].com, target_arr[i].commands.list[j].command_type);
+	if (matched_target == -1) {
+		/*Search for matching inference rules*/
+		for (int i = 0; i < counters.targets; i++) {
+			if (target_arr[i].target_type == infr_target) {
+				char f_name[STLEN];
+				struct stat buf;
+				sprintf(f_name, "%s%c%s", ui.target, '.', target_arr[i].inference_from);
+
+				if (stat(f_name, &buf) == 0) {
+					matched_target = i;
+					printf("%s \t\tMATCH FOUND %s \n", ui.target, target_arr[i].target_name);
+					break;
+				}
+			}
 		}
-		printf("\n");
+	}
 
+	if(matched_target == -1){
+		printf("Make ***No targets found\n");
+		return(1);
 	}
 
 	return 0;

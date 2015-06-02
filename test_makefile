@@ -15,5 +15,5 @@ newall : bat cat mat#hello
 #newcom
 .c.o :
 	gcc $<
-.c :
+.cpp :
 	gcc $<
