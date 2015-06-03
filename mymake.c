@@ -85,6 +85,7 @@ struct stack {
 
 struct targets target_arr[NUMELE];
 struct macros macro_arr[NUMELE];
+struct command_line *cmd_list;
 
 void trim_string(char *temp) {
 	int front_spaces = 0;
@@ -162,6 +163,14 @@ void remove_newline(char *temp) {
 		*pos = '\0';
 	}
 
+}
+
+void remove_tab(char *temp){
+	/*Removes the leading Tab character*/
+	if (temp[0] == '\t'){
+		temp[0] = ' ';
+	}
+	trim_string(temp);
 }
 
 int find_target_idx(char *target) {
@@ -329,6 +338,7 @@ void get_cmd(char *buffer_temp, int target_pos) {
 	/*Have to set type of Target here*/
 	replace_macros(buffer_temp);
 	remove_newline(buffer_temp);
+	remove_tab(buffer_temp);
 	if (strchr(buffer_temp, ';')) {
 		/*Multiple commands in a single line need to split*/
 		/*Will need to do everything done below too!*/
@@ -340,12 +350,12 @@ void get_cmd(char *buffer_temp, int target_pos) {
 			command_number = target_arr[target_pos].commands.command_count;
 			strcpy(target_arr[target_pos].commands.list[command_number].com, cmd);
 			target_arr[target_pos].commands.list[command_number].command_type = mult_cmd;
-
-			if (test_last_char(buffer_temp, '&')) {
+			trim_string(cmd);
+			if (test_last_char(cmd, '&')) {
 				target_arr[target_pos].commands.list[command_number].sp_command_type = back_cmd;
-			} else if (strchr(buffer_temp, '<') || strchr(buffer_temp, '>')) {
+			} else if (strchr(cmd, '<') || strchr(buffer_temp, '>')) {
 				target_arr[target_pos].commands.list[command_number].sp_command_type = redr_cmd;
-			} else if (strstr(buffer_temp, "cd ")) {
+			} else if (strstr(cmd, "cd ")) {
 				target_arr[target_pos].commands.list[command_number].sp_command_type = cdir_cmd;
 			} else {
 				target_arr[target_pos].commands.list[command_number].sp_command_type = norm_cmd;
@@ -367,12 +377,13 @@ void get_cmd(char *buffer_temp, int target_pos) {
 			command_number = target_arr[target_pos].commands.command_count;
 			strcpy(target_arr[target_pos].commands.list[command_number].com, cmd);
 			target_arr[target_pos].commands.list[command_number].command_type = pipe_cmd;
+			trim_string(cmd);
 
-			if (test_last_char(buffer_temp, '&')) {
+			if (test_last_char(cmd, '&')) {
 				target_arr[target_pos].commands.list[command_number].sp_command_type = back_cmd;
-			} else if (strchr(buffer_temp, '<') || strchr(buffer_temp, '>')) {
+			} else if (strchr(cmd, '<') || strchr(buffer_temp, '>')) {
 				target_arr[target_pos].commands.list[command_number].sp_command_type = redr_cmd;
-			} else if (strstr(buffer_temp, "cd ")) {
+			} else if (strstr(cmd, "cd ")) {
 				target_arr[target_pos].commands.list[command_number].sp_command_type = cdir_cmd;
 			} else {
 				target_arr[target_pos].commands.list[command_number].sp_command_type = norm_cmd;
@@ -465,6 +476,7 @@ int main(int argc, char **argv) {
 	}
 
 	/*Default values initialized here */
+	cmd_list = malloc(sizeof(struct command_line)*NUMELE*NUMELE);
 	strcpy(ui.make_file_name, "\0");
 	strcpy(ui.target, "\0");
 	ui.print = false;
@@ -596,6 +608,23 @@ int main(int argc, char **argv) {
 
 	for (int i = 0; i < stack.stack_top; i++) {
 		printf("STACK %d %s\n", i, stack.st[i]);
+	}
+
+	printf("%d\n", stack.stack_top);
+	int k = 0;
+	for(int i = stack.stack_top - 1 ; i >= 0 ;i--){
+		int idx = find_target_idx(stack.st[i]);
+		if(idx == -1){
+			/*It's a file*/
+			continue;
+		}
+		for(int j = 0 ; j < target_arr[i].commands.command_count ; j++){
+			cmd_list[k++] = target_arr[i].commands.list[j];
+		}
+	}
+
+	for(int i = 0 ; i < k ; i++){
+		printf("COMMAND : %-80s \n" , cmd_list[i].com);
 	}
 
 	return 0;

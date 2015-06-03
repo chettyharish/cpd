@@ -10,7 +10,7 @@ all:
 	top ; $(CC)norm ; car ; b$(CC)$(FLAG)($FLAG)at
 	cat h$(CC)ello(CC)$(FLAG)($FLAG) > bat#fat
 	cat he(CC)$(FLAG)($FLAG)llo < bat#mat
-newall : bat cat mat#hello
+newall : all
 	$@ < $< I have no idea!;Oo yeah;
 #newcom
 .c.o :
