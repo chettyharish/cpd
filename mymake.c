@@ -7,16 +7,18 @@
 #include <unistd.h>
 #include <stdbool.h>
 
-#define STLEN 100
-#define NUMELE 20
+#define STLEN 200
+#define NUMELE 50
+#define empty_target -2
+#define empty_cmd -1
 #define norm_cmd 0
-#define pipe_cmd 2
-#define redr_cmd 4
-#define cdir_cmd 5
-#define back_cmd 16
-#define mult_cmd 32
-#define pipe_cmd_last 64
-#define mult_cmd_last 128
+#define pipe_cmd 1
+#define redr_cmd 2
+#define cdir_cmd 3
+#define back_cmd 4
+#define mult_cmd 5
+#define pipe_cmd_last 6
+#define mult_cmd_last 7
 #define norm_target 0
 #define infr_target 1
 
@@ -52,6 +54,7 @@ struct print_counter {
 struct command_line {
 	char com[STLEN];
 	int command_type;
+	int sp_command_type; // Backup for multiline OR piped commands
 };
 
 struct command_list {
@@ -74,18 +77,14 @@ struct macros {
 	char macro_replace[STLEN];
 };
 
+struct stack {
+	char st[NUMELE][STLEN];
+	bool visited[NUMELE];
+	int stack_top;
+} stack;
+
 struct targets target_arr[NUMELE];
 struct macros macro_arr[NUMELE];
-
-//void eliminate_comments(char *buffer_temp) {
-//
-//	char temp[STLEN];
-//	char *pos = strchr(buffer_temp, "#");
-//	int len = strlen()
-//	for (int i = (pos - buffer_temp) ; i < strlen(buffer_temp) ; i++) {
-//		as
-//	}
-//}
 
 void trim_string(char *temp) {
 	int front_spaces = 0;
@@ -163,6 +162,61 @@ void remove_newline(char *temp) {
 		*pos = '\0';
 	}
 
+}
+
+int find_target_idx(char *target) {
+	int matched_target = -1;
+	for (int i = 0; i < counters.targets; i++) {
+		if (strcmp(target, target_arr[i].target_name) == 0) {
+			matched_target = i;
+			printf("%s MATCH FOUND %s \n", target, target_arr[i].target_name);
+			return matched_target;
+		}
+	}
+
+	if (matched_target == -1) {
+		/*Search for matching inference rules*/
+		for (int i = 0; i < counters.targets; i++) {
+			if (target_arr[i].target_type == infr_target) {
+				char f_name[STLEN];
+				struct stat buf;
+				sprintf(f_name, "%s%c%s", target, '.', target_arr[i].inference_from);
+
+				if (stat(f_name, &buf) == 0) {
+					matched_target = i;
+					printf("%s \t\tMATCH FOUND %s \n", target, target_arr[i].target_name);
+					return matched_target;
+				}
+			}
+		}
+	}
+
+	return -1;
+}
+
+
+void dfs(char *target) {
+	int idx = find_target_idx(target);
+	if (idx == -1) {
+		/*Test if it is a file in the current directory*/
+		struct stat buf;
+		if (stat(target, &buf) == 0) {
+			strcpy(stack.st[stack.stack_top++] , target);
+		} else {
+			printf("Missing Target : %s\n", target);
+		}
+		return;
+	}
+
+	if (stack.visited[idx] == false) {
+		stack.visited[idx] = true;
+		strcpy(stack.st[stack.stack_top++] , target_arr[idx].target_name);
+
+		for (int i = 0; i < target_arr[idx].dependency_count; i++) {
+			dfs(target_arr[idx].dependecies[i]);
+		}
+
+	}
 }
 
 void get_macro(char *buffer_temp) {
@@ -286,6 +340,17 @@ void get_cmd(char *buffer_temp, int target_pos) {
 			command_number = target_arr[target_pos].commands.command_count;
 			strcpy(target_arr[target_pos].commands.list[command_number].com, cmd);
 			target_arr[target_pos].commands.list[command_number].command_type = mult_cmd;
+
+			if (test_last_char(buffer_temp, '&')) {
+				target_arr[target_pos].commands.list[command_number].sp_command_type = back_cmd;
+			} else if (strchr(buffer_temp, '<') || strchr(buffer_temp, '>')) {
+				target_arr[target_pos].commands.list[command_number].sp_command_type = redr_cmd;
+			} else if (strstr(buffer_temp, "cd ")) {
+				target_arr[target_pos].commands.list[command_number].sp_command_type = cdir_cmd;
+			} else {
+				target_arr[target_pos].commands.list[command_number].sp_command_type = norm_cmd;
+			}
+
 			target_arr[target_pos].commands.command_count++;
 			cmd = strtok(NULL, ";");
 		}
@@ -302,6 +367,17 @@ void get_cmd(char *buffer_temp, int target_pos) {
 			command_number = target_arr[target_pos].commands.command_count;
 			strcpy(target_arr[target_pos].commands.list[command_number].com, cmd);
 			target_arr[target_pos].commands.list[command_number].command_type = pipe_cmd;
+
+			if (test_last_char(buffer_temp, '&')) {
+				target_arr[target_pos].commands.list[command_number].sp_command_type = back_cmd;
+			} else if (strchr(buffer_temp, '<') || strchr(buffer_temp, '>')) {
+				target_arr[target_pos].commands.list[command_number].sp_command_type = redr_cmd;
+			} else if (strstr(buffer_temp, "cd ")) {
+				target_arr[target_pos].commands.list[command_number].sp_command_type = cdir_cmd;
+			} else {
+				target_arr[target_pos].commands.list[command_number].sp_command_type = norm_cmd;
+			}
+
 			target_arr[target_pos].commands.command_count++;
 			cmd = strtok(NULL, "|");
 		}
@@ -406,10 +482,17 @@ int main(int argc, char **argv) {
 	print_counter.inferences = 0;
 	print_counter.names = 0;
 	print_counter.commands = 0;
+	stack.stack_top = 0;
 
-	for (int i = 0; i < NUMELE; ++i) {
+	for (int i = 0; i < NUMELE; i++) {
 		target_arr[i].dependency_count = 0;
 		target_arr[i].commands.command_count = 0;
+		target_arr[i].target_type = empty_target;
+		for (int j = 0; j < NUMELE; j++) {
+			target_arr[i].commands.list[NUMELE].command_type = empty_cmd;
+			target_arr[i].commands.list[NUMELE].sp_command_type = empty_cmd;
+		}
+		stack.visited[i] = false;
 	}
 
 	char buffer_temp[STLEN];
@@ -463,28 +546,28 @@ int main(int argc, char **argv) {
 		}
 
 	}
-//
-//	printf("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n");
-//
-//	printf("Macros : %d    Commands : %d    Targets : %d    Inferences : %d    Names : %d\n", print_counter.macros, print_counter.commands, print_counter.targets, print_counter.inferences,
-//			print_counter.names);
-//
-//	for (int i = 0; i < counters.targets; i++) {
-//		printf("\n\n");
-//		printf("Target %s \n", target_arr[i].target_name);
-//		printf("Dependencies : ");
-//		for (int j = 0; j < target_arr[i].dependency_count; j++) {
-//			printf(" %s ", target_arr[i].dependecies[j]);
-//		}
-//		printf("\n");
-//
-//		printf("Commands : \n");
-//		for (int j = 0; j < target_arr[i].commands.command_count; j++) {
-//			printf("CMD =  %-100sProtocol = %d \n", target_arr[i].commands.list[j].com, target_arr[i].commands.list[j].command_type);
-//		}
-//		printf("\n");
-//
-//	}
+
+	printf("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n");
+
+	printf("Macros : %d    Commands : %d    Targets : %d    Inferences : %d    Names : %d\n", print_counter.macros, print_counter.commands, print_counter.targets, print_counter.inferences,
+			print_counter.names);
+
+	for (int i = 0; i < counters.targets; i++) {
+		printf("\n\n");
+		printf("Target %s \n", target_arr[i].target_name);
+		printf("Dependencies : ");
+		for (int j = 0; j < target_arr[i].dependency_count; j++) {
+			printf(" %s ", target_arr[i].dependecies[j]);
+		}
+		printf("\n");
+
+		printf("Commands : \n");
+		for (int j = 0; j < target_arr[i].commands.command_count; j++) {
+			printf("CMD =  %-100sProtocol = %-3d SP_PROTOCOL %d\n", target_arr[i].commands.list[j].com, target_arr[i].commands.list[j].command_type, target_arr[i].commands.list[j].sp_command_type);
+		}
+		printf("\n");
+
+	}
 
 	/*Selecting first target if target is missing*/
 	if (strcmp(ui.target, "\0") == 0) {
@@ -500,36 +583,19 @@ int main(int argc, char **argv) {
 	printf("interrupt = %d\n", ui.interrupt);
 	printf("time = %d\n", ui.time);
 
+	/*Will need to modify here based on the flags!*/
 	/*Trying to find the matching target*/
-	int matched_target = -1;
-	for (int i = 0; i < counters.targets; i++) {
-		if (strcmp(ui.target, target_arr[i].target_name)==0) {
-			matched_target = i;
-			printf("%s MATCH FOUND %s \n", ui.target, target_arr[i].target_name);
-			break;
-		}
-	}
+	int matched_target = find_target_idx(ui.target);
 
 	if (matched_target == -1) {
-		/*Search for matching inference rules*/
-		for (int i = 0; i < counters.targets; i++) {
-			if (target_arr[i].target_type == infr_target) {
-				char f_name[STLEN];
-				struct stat buf;
-				sprintf(f_name, "%s%c%s", ui.target, '.', target_arr[i].inference_from);
-
-				if (stat(f_name, &buf) == 0) {
-					matched_target = i;
-					printf("%s \t\tMATCH FOUND %s \n", ui.target, target_arr[i].target_name);
-					break;
-				}
-			}
-		}
+		printf("Make ***No targets found\n");
+		return (1);
 	}
 
-	if(matched_target == -1){
-		printf("Make ***No targets found\n");
-		return(1);
+	dfs(ui.target);
+
+	for (int i = 0; i < stack.stack_top; i++) {
+		printf("STACK %d %s\n", i, stack.st[i]);
 	}
 
 	return 0;
