@@ -83,8 +83,8 @@ struct stack {
 	int stack_top;
 } stack;
 
-struct targets target_arr[NUMELE];
-struct macros macro_arr[NUMELE];
+struct targets *target_arr;
+struct macros *macro_arr;
 struct command_line *cmd_list;
 
 void trim_string(char *temp) {
@@ -110,6 +110,44 @@ void trim_string(char *temp) {
 	strncpy(new_str, temp + front_spaces, strlen(temp) - front_spaces - back_spaces + 1);
 	new_str[strlen(temp) - front_spaces - back_spaces + 1] = '\0';
 	strcpy(temp, new_str);
+}
+
+int find_file(char *env_path, char* cmd) {
+	/*Returns 0 if succesful else 1*/
+	struct stat buf;
+	char file_path[STLEN];
+	char temp_env[STLEN];
+	char temp_cmd[STLEN];
+	char buffer[STLEN];
+	char *pos;
+
+	strcpy(temp_env, env_path);
+	strcpy(temp_cmd, cmd);
+	char *file_name = strtok(temp_cmd, " ");
+
+	if (file_name[0] == '/') {
+		/*Absolute path found dont change anything*/
+		return 0;
+	} else {
+		char *path = strtok(temp_env, ":");
+		while (path != NULL) {
+			/*Dynamic path probably, so search MYPATH*/
+			sprintf(file_path, "%s/%s", path, file_name);
+			if (stat(file_path, &buf) == 0) {
+
+				if ((pos = strstr(cmd, file_name))) {
+					strncpy(buffer, cmd, pos - cmd);
+					sprintf(buffer + (pos - cmd), "%s%s", file_path, pos + strlen(file_name));
+					strcpy(cmd, buffer);
+				}
+				return 0;
+			}
+			path = strtok(NULL, ":");
+		}
+	}
+
+	return 1;
+
 }
 
 int test_targ_type(char *t_name) {
@@ -165,9 +203,21 @@ void remove_newline(char *temp) {
 
 }
 
-void remove_tab(char *temp){
+void tokenize(char *buffer_temp, char *exec_args[]) {
+	int counter = 0;
+	char *token = strtok(buffer_temp, " ");
+	while (token != NULL) {
+		exec_args[counter] = token;
+		counter++;
+		token = strtok(NULL, " ");
+	}
+	exec_args[counter] = NULL;
+}
+
+
+void remove_tab(char *temp) {
 	/*Removes the leading Tab character*/
-	if (temp[0] == '\t'){
+	if (temp[0] == '\t') {
 		temp[0] = ' ';
 	}
 	trim_string(temp);
@@ -203,14 +253,13 @@ int find_target_idx(char *target) {
 	return -1;
 }
 
-
 void dfs(char *target) {
 	int idx = find_target_idx(target);
 	if (idx == -1) {
 		/*Test if it is a file in the current directory*/
 		struct stat buf;
 		if (stat(target, &buf) == 0) {
-			strcpy(stack.st[stack.stack_top++] , target);
+			strcpy(stack.st[stack.stack_top++], target);
 		} else {
 			printf("Missing Target : %s\n", target);
 		}
@@ -219,7 +268,7 @@ void dfs(char *target) {
 
 	if (stack.visited[idx] == false) {
 		stack.visited[idx] = true;
-		strcpy(stack.st[stack.stack_top++] , target_arr[idx].target_name);
+		strcpy(stack.st[stack.stack_top++], target_arr[idx].target_name);
 
 		for (int i = 0; i < target_arr[idx].dependency_count; i++) {
 			dfs(target_arr[idx].dependecies[i]);
@@ -438,6 +487,31 @@ void get_cmd(char *buffer_temp, int target_pos) {
 
 }
 
+void create_command_list() {
+	int k = 0;
+	for (int i = stack.stack_top - 1; i >= 0; i--) {
+		int idx = find_target_idx(stack.st[i]);
+		if (idx == -1) {
+			/*It's a file*/
+			continue;
+		}
+		for (int j = 0; j < target_arr[i].commands.command_count; j++) {
+			cmd_list[k++] = target_arr[i].commands.list[j];
+		}
+	}
+
+	char *env_path = getenv("PATH");
+
+	for (int i = 0; i < k; i++) {
+		printf("Original command %-50s\n", cmd_list[i].com);
+		if (find_file(env_path, cmd_list[i].com) == 1) {
+			printf("File not found\n");
+		} else {
+			printf("Changed command %-50s\n", cmd_list[i].com);
+		}
+	}
+}
+
 void get_default_make() {
 	/*Set default only if makefile not supplied*/
 	struct stat buf;
@@ -476,7 +550,10 @@ int main(int argc, char **argv) {
 	}
 
 	/*Default values initialized here */
-	cmd_list = malloc(sizeof(struct command_line)*NUMELE*NUMELE);
+	char *temp_exec_args[NUMELE];
+	macro_arr = malloc(sizeof(struct macros) * NUMELE);
+	target_arr = malloc(sizeof(struct targets) * NUMELE);
+	cmd_list = malloc(sizeof(struct command_line) * NUMELE * NUMELE);
 	strcpy(ui.make_file_name, "\0");
 	strcpy(ui.target, "\0");
 	ui.print = false;
@@ -500,6 +577,7 @@ int main(int argc, char **argv) {
 		target_arr[i].dependency_count = 0;
 		target_arr[i].commands.command_count = 0;
 		target_arr[i].target_type = empty_target;
+		cmd_list[i].command_type = empty_cmd;
 		for (int j = 0; j < NUMELE; j++) {
 			target_arr[i].commands.list[NUMELE].command_type = empty_cmd;
 			target_arr[i].commands.list[NUMELE].sp_command_type = empty_cmd;
@@ -605,27 +683,27 @@ int main(int argc, char **argv) {
 	}
 
 	dfs(ui.target);
-
 	for (int i = 0; i < stack.stack_top; i++) {
 		printf("STACK %d %s\n", i, stack.st[i]);
 	}
-
 	printf("%d\n", stack.stack_top);
-	int k = 0;
-	for(int i = stack.stack_top - 1 ; i >= 0 ;i--){
-		int idx = find_target_idx(stack.st[i]);
-		if(idx == -1){
-			/*It's a file*/
-			continue;
+	create_command_list();
+
+	int k = 0 ;
+	while(cmd_list[k].command_type != empty_cmd){
+		tokenize(cmd_list[k].com , temp_exec_args);
+		int counter = 0;
+		while(1){
+			printf("TEMP : %-20s" , temp_exec_args[counter]);
+			if(temp_exec_args[counter] == '\0')
+				break;
+			counter++;
 		}
-		for(int j = 0 ; j < target_arr[i].commands.command_count ; j++){
-			cmd_list[k++] = target_arr[i].commands.list[j];
-		}
+		printf("\n");
+
+		k++;
 	}
 
-	for(int i = 0 ; i < k ; i++){
-		printf("COMMAND : %-80s \n" , cmd_list[i].com);
-	}
 
 	return 0;
 }

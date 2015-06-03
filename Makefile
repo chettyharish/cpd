@@ -5,6 +5,6 @@ all:
 	$(CC) -o mymake mymake.c $(FLAG)
 demo :
 	$(CC) -o mymake mymake.c $(FLAG)
-	./mymake -f test_makefile
+	./mymake -f new_test_makefile
 clean:
 	rm mymake
