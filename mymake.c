@@ -689,6 +689,7 @@ int main(int argc, char **argv) {
 	printf("%d\n", stack.stack_top);
 	create_command_list();
 
+
 	int k = 0 ;
 	while(cmd_list[k].command_type != empty_cmd){
 		tokenize(cmd_list[k].com , temp_exec_args);
@@ -703,6 +704,7 @@ int main(int argc, char **argv) {
 
 		k++;
 	}
+
 
 
 	return 0;
