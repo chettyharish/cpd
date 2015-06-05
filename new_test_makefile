@@ -2,4 +2,4 @@ CC=/usr/bin/gcc
 CFLAG=-g 
 
 all:
-	cat mymake.c | grep char | grep STLEN | nl -v0 | grep NUMELE | helloworld | /bin | /bat
+	cat mymake.c | grep char | grep STLEN | nl -v0 | grep NUMELE 

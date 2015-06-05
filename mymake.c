@@ -25,6 +25,7 @@
 struct userinput {
 	char make_file_name[STLEN];
 	char target[STLEN];
+	char cdir[STLEN];
 	bool print;
 	bool force;
 	bool debug;
@@ -213,7 +214,6 @@ void tokenize(char *buffer_temp, char *exec_args[]) {
 	}
 	exec_args[counter] = NULL;
 }
-
 
 void remove_tab(char *temp) {
 	/*Removes the leading Tab character*/
@@ -542,6 +542,42 @@ void get_default_make() {
 	}
 }
 
+void kill_everything() {
+	/*Kills everything in the same group*/
+	printf("Killing\n");
+	exit(1);
+}
+
+void handle_execution_error(int pos) {
+	/*Execution error handler
+	 * does stuff based on settings*/
+	if (ui.force == false) {
+		printf("Error due to instruction %s\n", cmd_list[pos].com);
+		kill_everything();
+	} else {
+		printf("Error due to instruction %s\n", cmd_list[pos].com);
+		/*Keep going*/
+	}
+}
+
+void execute_pipe_cmd(int start, int count) {
+}
+
+void execute_multiple_cmd(int start, int count) {
+}
+
+void execute_back_cmd(int start) {
+}
+
+void execute_redr_cmd(int start) {
+}
+
+void execute_cd_cmd(int start) {
+}
+
+void execute_norm_cmd(int start) {
+}
+
 int main(int argc, char **argv) {
 
 	if (argc == 1) {
@@ -604,8 +640,8 @@ int main(int argc, char **argv) {
 		} else {
 			strcpy(ui.target, argv[i]);
 		}
-
 	}
+	getcwd(ui.cdir, sizeof(ui.cdir));
 
 	get_default_make();
 
@@ -689,23 +725,59 @@ int main(int argc, char **argv) {
 	printf("%d\n", stack.stack_top);
 	create_command_list();
 
-
-	int k = 0 ;
-	while(cmd_list[k].command_type != empty_cmd){
-		tokenize(cmd_list[k].com , temp_exec_args);
-		int counter = 0;
-		while(1){
-			printf("TEMP : %-20s" , temp_exec_args[counter]);
-			if(temp_exec_args[counter] == '\0')
-				break;
+	/*Executing all of them from here*/
+	int k = 0;
+	while (cmd_list[k].command_type != empty_cmd) {
+		if (cmd_list[k].command_type == pipe_cmd) {
+			int counter = 0;
+			int start = k;
+			while (cmd_list[k].command_type != pipe_cmd_last) {
+				counter++;
+				k++;
+			}
 			counter++;
+			k++;
+			execute_pipe_cmd(start, counter);
+		} else if (cmd_list[k].command_type == mult_cmd) {
+			int counter = 0;
+			int start = k;
+			while (cmd_list[k].command_type != mult_cmd_last) {
+				counter++;
+				k++;
+			}
+			counter++;
+			k++;
+			execute_multiple_cmd(start, counter);
+
+		} else if (cmd_list[k].command_type == redr_cmd) {
+			execute_redr_cmd(k);
+			k++;
+		} else if (cmd_list[k].command_type == back_cmd) {
+			execute_back_cmd(k);
+			k++;
+		} else if (cmd_list[k].command_type == cdir_cmd) {
+			/*Useless command probably does nothing*/
+			execute_cd_cmd(k);
+			k++;
+		} else if (cmd_list[k].command_type == norm_cmd) {
+			execute_norm_cmd(k);
+			k++;
+		} else {
+			printf("This is not possible SOMETHING IS WRONG!%-50s%d\n", cmd_list[k].com, cmd_list[k].command_type);
+			k++;
 		}
-		printf("\n");
 
-		k++;
+//		tokenize(cmd_list[k].com , temp_exec_args);
+//		int counter = 0;
+//		while(1){
+//			printf("TEMP : %-20s" , temp_exec_args[counter]);
+//			if(temp_exec_args[counter] == '\0')
+//				break;
+//			counter++;
+//		}
+//		printf("\n");
+
 	}
-
-
 
 	return 0;
 }
