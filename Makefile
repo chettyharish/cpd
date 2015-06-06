@@ -1,5 +1,5 @@
 CC=gcc
-FLAG=-Wall -std=c99 -pedantic
+FLAG=-Wall -std=c99 -pedantic -D_POSIX_SOURCE
 
 all:
 	$(CC) -o mymake mymake.c $(FLAG)

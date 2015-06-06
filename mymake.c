@@ -6,6 +6,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <stdbool.h>
+#include <signal.h>
 
 #define STLEN 200
 #define NUMELE 50
@@ -552,7 +553,8 @@ void get_default_make() {
 void kill_everything() {
 	/*Kills everything in the same group*/
 	printf("Killing\n");
-	exit(1);
+	fflush(0);
+	kill(0,SIGINT);
 }
 
 void handle_execution_error(int pos) {
@@ -787,11 +789,22 @@ int main(int argc, char **argv) {
 			k++;
 		}
 
+
 		/*Reset back to original directory after everything is done in a command*/
 		chdir(ui.cdir);
-
-
 	}
+	char *newargv[] = { "/bin/sleep", "20", NULL };
+	for(int i = 0 ; i < 100 ; i++){
+
+
+		if(fork() == 0)
+			execv( newargv[0] , newargv);
+	}
+
+	printf("Sleeping\n");
+	char *newargv2[] = { "/bin/sleep", "3", NULL };
+	system( "sleep 3");
+	kill_everything();
 
 	return 0;
 }
