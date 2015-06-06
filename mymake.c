@@ -121,12 +121,14 @@ int find_file(char *env_path, char* cmd) {
 	char temp_cmd[STLEN];
 	char buffer[STLEN];
 	char *pos;
-
 	strcpy(temp_env, env_path);
 	strcpy(temp_cmd, cmd);
 	char *file_name = strtok(temp_cmd, " ");
 
-	if (file_name[0] == '/') {
+	if (strlen(cmd) == 0) {
+		/*Empty line so don't do anything*/
+		return 0;
+	} else if (file_name[0] == '/') {
 		/*Absolute path found dont change anything*/
 		return 0;
 	} else {
@@ -270,9 +272,13 @@ void dfs(char *target) {
 		stack.visited[idx] = true;
 		strcpy(stack.st[stack.stack_top++], target_arr[idx].target_name);
 
-		for (int i = 0; i < target_arr[idx].dependency_count; i++) {
+		for (int i = target_arr[idx].dependency_count - 1; i >= 0; i--) {
 			dfs(target_arr[idx].dependecies[i]);
 		}
+
+//		for (int i = 0; i < target_arr[idx].dependency_count; i++) {
+//			dfs(target_arr[idx].dependecies[i]);
+//		}
 
 	}
 }
@@ -489,7 +495,7 @@ void get_cmd(char *buffer_temp, int target_pos) {
 
 void create_command_list() {
 	int k = 0;
-	for (int i = stack.stack_top - 1; i >= 0; i--) {
+	for (int i = stack.stack_top; i >= 0; i--) {
 		int idx = find_target_idx(stack.st[i]);
 		if (idx == -1) {
 			/*It's a file*/
@@ -504,6 +510,7 @@ void create_command_list() {
 
 	for (int i = 0; i < k; i++) {
 		printf("Original command %-50s\n", cmd_list[i].com);
+//		remove_newline(cmd_list[i].com);
 		if (find_file(env_path, cmd_list[i].com) == 1) {
 			printf("File not found\n");
 		} else {
@@ -561,21 +568,31 @@ void handle_execution_error(int pos) {
 }
 
 void execute_pipe_cmd(int start, int count) {
+	for(int i = 0; i < count ; i++){
+		printf("%-20s : Command : %-50s\n",__func__ , cmd_list[start + i].com);
+	}
 }
 
-void execute_multiple_cmd(int start, int count) {
+void execute_mult_cmd(int start, int count) {
+	for(int i = 0; i < count ; i++){
+		printf("%-20s : Command : %-50s\n",__func__ , cmd_list[start + i].com);
+	}
 }
 
 void execute_back_cmd(int start) {
+	printf("%-20s : Command : %-50s\n",__func__ , cmd_list[start].com);
 }
 
 void execute_redr_cmd(int start) {
+	printf("%-20s : Command : %-50s\n",__func__ , cmd_list[start].com);
 }
 
-void execute_cd_cmd(int start) {
+void execute_cdir_cmd(int start) {
+	printf("%-20s : Command : %-50s\n",__func__ , cmd_list[start].com);
 }
 
 void execute_norm_cmd(int start) {
+	printf("%-20s : Command : %-50s\n",__func__ , cmd_list[start].com);
 }
 
 int main(int argc, char **argv) {
@@ -623,7 +640,6 @@ int main(int argc, char **argv) {
 
 	char buffer_temp[STLEN];
 	bool start = true; //Start ensures that we only match macros at the beginning
-
 	for (int i = 1; i < argc; i++) {
 		if (strcmp(argv[i], "-f") == 0) {
 			strcpy(ui.make_file_name, argv[++i]);
@@ -708,6 +724,7 @@ int main(int argc, char **argv) {
 	printf("debug = %d\n", ui.debug);
 	printf("interrupt = %d\n", ui.interrupt);
 	printf("time = %d\n", ui.time);
+	printf("cdir = %s\n", ui.cdir);
 
 	/*Will need to modify here based on the flags!*/
 	/*Trying to find the matching target*/
@@ -724,6 +741,8 @@ int main(int argc, char **argv) {
 	}
 	printf("%d\n", stack.stack_top);
 	create_command_list();
+
+
 
 	/*Executing all of them from here*/
 	int k = 0;
@@ -747,7 +766,7 @@ int main(int argc, char **argv) {
 			}
 			counter++;
 			k++;
-			execute_multiple_cmd(start, counter);
+			execute_mult_cmd(start, counter);
 
 		} else if (cmd_list[k].command_type == redr_cmd) {
 			execute_redr_cmd(k);
@@ -756,8 +775,9 @@ int main(int argc, char **argv) {
 			execute_back_cmd(k);
 			k++;
 		} else if (cmd_list[k].command_type == cdir_cmd) {
+			printf("%s\n",cmd_list[k].com);
 			/*Useless command probably does nothing*/
-			execute_cd_cmd(k);
+			execute_cdir_cmd(k);
 			k++;
 		} else if (cmd_list[k].command_type == norm_cmd) {
 			execute_norm_cmd(k);
@@ -767,15 +787,9 @@ int main(int argc, char **argv) {
 			k++;
 		}
 
-//		tokenize(cmd_list[k].com , temp_exec_args);
-//		int counter = 0;
-//		while(1){
-//			printf("TEMP : %-20s" , temp_exec_args[counter]);
-//			if(temp_exec_args[counter] == '\0')
-//				break;
-//			counter++;
-//		}
-//		printf("\n");
+		/*Reset back to original directory after everything is done in a command*/
+		chdir(ui.cdir);
+
 
 	}
 
