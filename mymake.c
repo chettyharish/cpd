@@ -258,8 +258,6 @@ int find_target_idx(char *target) {
 	return -1;
 }
 
-
-
 void dfs(char *target) {
 	int idx = find_target_idx(target);
 	if (idx == -1) {
@@ -600,42 +598,42 @@ void execute_pipe_cmd(int start, int count) {
 		printf("%-20s : Command : %-50s\n", __func__, cmd_list[start + i].com);
 	}
 }
-bool test_requirements(int pos){
+bool test_requirements(int pos) {
 	/*Testing if the requirements are satisfied or not
 	 * Returns true if it is satisfied else false*/
 
 	int idx = find_target_idx(queue.targ_queue[pos]);
 	struct stat tar;
 	struct stat dep;
-	if(idx == -1  ){
+	if (idx == -1) {
 		/*Since it is a file, we don't have to do anything with it
 		 * Target make rules only apply to Targets*/
-		printf("it is a file\n");
+		printf("TEST : it is a file\n");
 		return true;
 	}
 
-	if((stat(queue.targ_queue[pos], &tar) == -1)){
+	if ((stat(queue.targ_queue[pos], &tar) == -1)) {
 		/*Target doesn't exist, so we have to make it*/
-		printf("Target doesn't exist\n");
-		return true;
+		printf("TEST : Target doesn't exist we have to compile\n");
+		return false;
 	}
 
 	if (stat(queue.targ_queue[pos], &tar) == 0) {
 		/*Test if dependecy exists!*/
 
-		for(int i = 0 ; i < target_arr[idx].dependency_count ; i++){
-			if((stat(target_arr[idx].dependecies[i], &dep) == -1)){
+		for (int i = 0; i < target_arr[idx].dependency_count; i++) {
+			if ((stat(target_arr[idx].dependecies[i], &dep) == -1)) {
 				/*Dependency doesn't exist, so we have to make it*/
-				printf("Dependency doesn't exist\n");
-				return true;
-			}else if(tar.st_mtime < dep.st_mtime){
+				printf("TEST : Dependency doesn't exist we have to compile\n");
+				return false;
+			} else if (tar.st_mtime < dep.st_mtime) {
 				/*Dependency was made after the Target*/
-				printf("Dependency was made after the Target\n");
-				return true;
+				printf("TEST : Dependency was made after the Target\n");
+				return false;
 			}
 		}
 	}
-	printf("All's well\n");
+	printf("TEST : All's well\n");
 
 	return false;
 
@@ -747,7 +745,7 @@ int main(int argc, char **argv) {
 		for (int j = 0; j < target_arr[i].commands.command_count; j++) {
 			printf("CMD =  %-100sProtocol = %-3d SP_PROTOCOL %d\n", target_arr[i].commands.list[j].com, target_arr[i].commands.list[j].command_type, target_arr[i].commands.list[j].sp_command_type);
 		}
-		printf("Dependency Count : %d\n" ,target_arr[i].dependency_count);
+		printf("Dependency Count : %d\n", target_arr[i].dependency_count);
 		printf("\n");
 
 	}
@@ -776,15 +774,14 @@ int main(int argc, char **argv) {
 		return (1);
 	}
 
-//	create_replacement_table();
 	dfs(ui.target);
 	for (int i = 0; i < queue.queue_end; i++) {
 		printf("QUEUE %d %s\n", i, queue.targ_queue[i]);
 	}
 	printf("%d\n", queue.queue_end);
 
-	for (int i = queue.queue_end - 1; i >= 0; i--) {
-		if(test_requirements(i)== true){
+	for (int i = 0; i < queue.queue_end; i++) {
+		if (test_requirements(i) == true) {
 			/*All requirements are satisfied
 			 * so skip it*/
 			continue;
