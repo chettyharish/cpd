@@ -1,5 +1,3 @@
-#include <sys/types.h>
-#include <sys/stat.h>
 #include <time.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -7,6 +5,9 @@
 #include <unistd.h>
 #include <stdbool.h>
 #include <signal.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <sys/wait.h>
 
 #define STLEN 200
 #define NUMELE 50
@@ -71,6 +72,7 @@ struct targets {
 	int target_type;
 	char inference_from[STLEN];
 	char inference_to[STLEN];
+	char target_stacker[STLEN * NUMELE];
 	struct command_list commands;
 };
 
@@ -79,11 +81,11 @@ struct macros {
 	char macro_replace[STLEN];
 };
 
-struct stack {
-	char st[NUMELE][STLEN];
+struct queue {
+	char targ_queue[NUMELE][STLEN];
 	bool visited[NUMELE];
-	int stack_top;
-} stack;
+	int queue_end;
+} queue;
 
 struct targets *target_arr;
 struct macros *macro_arr;
@@ -231,7 +233,7 @@ int find_target_idx(char *target) {
 	for (int i = 0; i < counters.targets; i++) {
 		if (strcmp(target, target_arr[i].target_name) == 0) {
 			matched_target = i;
-			printf("%s MATCH FOUND %s \n", target, target_arr[i].target_name);
+//			printf("%s MATCH FOUND %s \n", target, target_arr[i].target_name);
 			return matched_target;
 		}
 	}
@@ -256,31 +258,28 @@ int find_target_idx(char *target) {
 	return -1;
 }
 
+
+
 void dfs(char *target) {
 	int idx = find_target_idx(target);
 	if (idx == -1) {
 		/*Test if it is a file in the current directory*/
 		struct stat buf;
 		if (stat(target, &buf) == 0) {
-			strcpy(stack.st[stack.stack_top++], target);
+			strcpy(queue.targ_queue[queue.queue_end++], target);
 		} else {
 			printf("Missing Target : %s\n", target);
 		}
 		return;
 	}
 
-	if (stack.visited[idx] == false) {
-		stack.visited[idx] = true;
-		strcpy(stack.st[stack.stack_top++], target_arr[idx].target_name);
+	if (queue.visited[idx] == false) {
+		queue.visited[idx] = true;
 
-		for (int i = target_arr[idx].dependency_count - 1; i >= 0; i--) {
+		for (int i = 0; i < target_arr[idx].dependency_count; i++) {
 			dfs(target_arr[idx].dependecies[i]);
 		}
-
-//		for (int i = 0; i < target_arr[idx].dependency_count; i++) {
-//			dfs(target_arr[idx].dependecies[i]);
-//		}
-
+		strcpy(queue.targ_queue[queue.queue_end++], target_arr[idx].target_name);
 	}
 }
 
@@ -422,7 +421,7 @@ void get_cmd(char *buffer_temp, int target_pos) {
 		}
 		target_arr[target_pos].commands.list[command_number].command_type = mult_cmd_last;
 
-		printf("Multiple Command\n");
+//		printf("Multiple Command\n");
 	} else if (strchr(buffer_temp, '|')) {
 		/*Piped commands*/
 
@@ -450,7 +449,7 @@ void get_cmd(char *buffer_temp, int target_pos) {
 		}
 		target_arr[target_pos].commands.list[command_number].command_type = pipe_cmd_last;
 
-		printf("Piped command\n");
+//		printf("Piped command\n");
 	} else if (test_last_char(buffer_temp, '&')) {
 		/*Background command*/
 
@@ -460,7 +459,7 @@ void get_cmd(char *buffer_temp, int target_pos) {
 		target_arr[target_pos].commands.list[command_number].command_type = back_cmd;
 		target_arr[target_pos].commands.command_count++;
 
-		printf("Background command\n");
+//		printf("Background command\n");
 	} else if (strchr(buffer_temp, '<') || strchr(buffer_temp, '>')) {
 		/*IO Redirection command*/
 
@@ -469,7 +468,7 @@ void get_cmd(char *buffer_temp, int target_pos) {
 
 		target_arr[target_pos].commands.list[command_number].command_type = redr_cmd;
 		target_arr[target_pos].commands.command_count++;
-		printf("IO Redirection command\n");
+//		printf("IO Redirection command\n");
 	} else if (strstr(buffer_temp, "cd ")) {
 		/*CD command*/
 
@@ -479,7 +478,7 @@ void get_cmd(char *buffer_temp, int target_pos) {
 		target_arr[target_pos].commands.list[command_number].command_type = cdir_cmd;
 		target_arr[target_pos].commands.command_count++;
 
-		printf("CD command\n");
+//		printf("CD command\n");
 	} else {
 		/*Normal command*/
 
@@ -489,29 +488,22 @@ void get_cmd(char *buffer_temp, int target_pos) {
 		target_arr[target_pos].commands.list[command_number].command_type = norm_cmd;
 		target_arr[target_pos].commands.command_count++;
 
-		printf("Normal command\n");
+//		printf("Normal command\n");
 	}
 
 }
 
-void create_command_list() {
+void create_command_list(int pos) {
 	int k = 0;
-	for (int i = stack.stack_top; i >= 0; i--) {
-		int idx = find_target_idx(stack.st[i]);
-		if (idx == -1) {
-			/*It's a file*/
-			continue;
-		}
-		for (int j = 0; j < target_arr[i].commands.command_count; j++) {
-			cmd_list[k++] = target_arr[i].commands.list[j];
-		}
+	int idx = find_target_idx(queue.targ_queue[pos]);
+	for (int j = 0; j < target_arr[idx].commands.command_count; j++) {
+		cmd_list[k++] = target_arr[idx].commands.list[j];
 	}
 
 	char *env_path = getenv("PATH");
 
 	for (int i = 0; i < k; i++) {
 		printf("Original command %-50s\n", cmd_list[i].com);
-//		remove_newline(cmd_list[i].com);
 		if (find_file(env_path, cmd_list[i].com) == 1) {
 			printf("File not found\n");
 		} else {
@@ -554,7 +546,7 @@ void kill_everything() {
 	/*Kills everything in the same group*/
 	printf("Killing\n");
 	fflush(0);
-	kill(0,SIGINT);
+	kill(0, SIGINT);
 }
 
 void handle_execution_error(int pos) {
@@ -569,34 +561,85 @@ void handle_execution_error(int pos) {
 	}
 }
 
-void execute_pipe_cmd(int start, int count) {
-	for(int i = 0; i < count ; i++){
-		printf("%-20s : Command : %-50s\n",__func__ , cmd_list[start + i].com);
-	}
-}
-
-void execute_mult_cmd(int start, int count) {
-	for(int i = 0; i < count ; i++){
-		printf("%-20s : Command : %-50s\n",__func__ , cmd_list[start + i].com);
-	}
-}
-
 void execute_back_cmd(int start) {
-	printf("%-20s : Command : %-50s\n",__func__ , cmd_list[start].com);
+	printf("%-20s : Command : %-50s\n", __func__, cmd_list[start].com);
 }
 
 void execute_redr_cmd(int start) {
-	printf("%-20s : Command : %-50s\n",__func__ , cmd_list[start].com);
+	printf("%-20s : Command : %-50s\n", __func__, cmd_list[start].com);
 }
 
 void execute_cdir_cmd(int start) {
-	printf("%-20s : Command : %-50s\n",__func__ , cmd_list[start].com);
+	printf("%-20s : Command : %-50s\n", __func__, cmd_list[start].com);
 }
 
 void execute_norm_cmd(int start) {
-	printf("%-20s : Command : %-50s\n",__func__ , cmd_list[start].com);
+	printf("%-20s : Command : %-50s\n", __func__, cmd_list[start].com);
 }
 
+void execute_mult_cmd(int start, int count) {
+	for (int i = start; i < start + count; i++) {
+		printf("%-20s : Command : %-50s\n", __func__, cmd_list[i].com);
+		if (cmd_list[i].sp_command_type == redr_cmd) {
+			execute_redr_cmd(i);
+		} else if (cmd_list[i].sp_command_type == back_cmd) {
+			execute_back_cmd(i);
+		} else if (cmd_list[i].sp_command_type == cdir_cmd) {
+			/*Useless command probably does nothing*/
+			execute_cdir_cmd(i);
+		} else if (cmd_list[i].sp_command_type == norm_cmd) {
+			execute_norm_cmd(i);
+		} else {
+			printf("This is not possible SOMETHING IS WRONG!%-50s%d\n", cmd_list[i].com, cmd_list[i].command_type);
+		}
+	}
+}
+
+void execute_pipe_cmd(int start, int count) {
+	for (int i = 0; i < count; i++) {
+		printf("%-20s : Command : %-50s\n", __func__, cmd_list[start + i].com);
+	}
+}
+bool test_requirements(int pos){
+	/*Testing if the requirements are satisfied or not
+	 * Returns true if it is satisfied else false*/
+
+	int idx = find_target_idx(queue.targ_queue[pos]);
+	struct stat tar;
+	struct stat dep;
+	if(idx == -1  ){
+		/*Since it is a file, we don't have to do anything with it
+		 * Target make rules only apply to Targets*/
+		printf("it is a file\n");
+		return true;
+	}
+
+	if((stat(queue.targ_queue[pos], &tar) == -1)){
+		/*Target doesn't exist, so we have to make it*/
+		printf("Target doesn't exist\n");
+		return true;
+	}
+
+	if (stat(queue.targ_queue[pos], &tar) == 0) {
+		/*Test if dependecy exists!*/
+
+		for(int i = 0 ; i < target_arr[idx].dependency_count ; i++){
+			if((stat(target_arr[idx].dependecies[i], &dep) == -1)){
+				/*Dependency doesn't exist, so we have to make it*/
+				printf("Dependency doesn't exist\n");
+				return true;
+			}else if(tar.st_mtime < dep.st_mtime){
+				/*Dependency was made after the Target*/
+				printf("Dependency was made after the Target\n");
+				return true;
+			}
+		}
+	}
+	printf("All's well\n");
+
+	return false;
+
+}
 int main(int argc, char **argv) {
 
 	if (argc == 1) {
@@ -605,10 +648,8 @@ int main(int argc, char **argv) {
 	}
 
 	/*Default values initialized here */
-	char *temp_exec_args[NUMELE];
 	macro_arr = malloc(sizeof(struct macros) * NUMELE);
 	target_arr = malloc(sizeof(struct targets) * NUMELE);
-	cmd_list = malloc(sizeof(struct command_line) * NUMELE * NUMELE);
 	strcpy(ui.make_file_name, "\0");
 	strcpy(ui.target, "\0");
 	ui.print = false;
@@ -626,18 +667,17 @@ int main(int argc, char **argv) {
 	print_counter.inferences = 0;
 	print_counter.names = 0;
 	print_counter.commands = 0;
-	stack.stack_top = 0;
+	queue.queue_end = 0;
 
 	for (int i = 0; i < NUMELE; i++) {
 		target_arr[i].dependency_count = 0;
 		target_arr[i].commands.command_count = 0;
 		target_arr[i].target_type = empty_target;
-		cmd_list[i].command_type = empty_cmd;
 		for (int j = 0; j < NUMELE; j++) {
 			target_arr[i].commands.list[NUMELE].command_type = empty_cmd;
 			target_arr[i].commands.list[NUMELE].sp_command_type = empty_cmd;
 		}
-		stack.visited[i] = false;
+		queue.visited[i] = false;
 	}
 
 	char buffer_temp[STLEN];
@@ -660,7 +700,6 @@ int main(int argc, char **argv) {
 		}
 	}
 	getcwd(ui.cdir, sizeof(ui.cdir));
-
 	get_default_make();
 
 	FILE *file = fopen(ui.make_file_name, "r");
@@ -697,7 +736,6 @@ int main(int argc, char **argv) {
 			print_counter.names);
 
 	for (int i = 0; i < counters.targets; i++) {
-		printf("\n\n");
 		printf("Target %s \n", target_arr[i].target_name);
 		printf("Dependencies : ");
 		for (int j = 0; j < target_arr[i].dependency_count; j++) {
@@ -709,6 +747,7 @@ int main(int argc, char **argv) {
 		for (int j = 0; j < target_arr[i].commands.command_count; j++) {
 			printf("CMD =  %-100sProtocol = %-3d SP_PROTOCOL %d\n", target_arr[i].commands.list[j].com, target_arr[i].commands.list[j].command_type, target_arr[i].commands.list[j].sp_command_type);
 		}
+		printf("Dependency Count : %d\n" ,target_arr[i].dependency_count);
 		printf("\n");
 
 	}
@@ -737,74 +776,78 @@ int main(int argc, char **argv) {
 		return (1);
 	}
 
+//	create_replacement_table();
 	dfs(ui.target);
-	for (int i = 0; i < stack.stack_top; i++) {
-		printf("STACK %d %s\n", i, stack.st[i]);
+	for (int i = 0; i < queue.queue_end; i++) {
+		printf("QUEUE %d %s\n", i, queue.targ_queue[i]);
 	}
-	printf("%d\n", stack.stack_top);
-	create_command_list();
+	printf("%d\n", queue.queue_end);
 
-
-
-	/*Executing all of them from here*/
-	int k = 0;
-	while (cmd_list[k].command_type != empty_cmd) {
-		if (cmd_list[k].command_type == pipe_cmd) {
-			int counter = 0;
-			int start = k;
-			while (cmd_list[k].command_type != pipe_cmd_last) {
-				counter++;
-				k++;
-			}
-			counter++;
-			k++;
-			execute_pipe_cmd(start, counter);
-		} else if (cmd_list[k].command_type == mult_cmd) {
-			int counter = 0;
-			int start = k;
-			while (cmd_list[k].command_type != mult_cmd_last) {
-				counter++;
-				k++;
-			}
-			counter++;
-			k++;
-			execute_mult_cmd(start, counter);
-
-		} else if (cmd_list[k].command_type == redr_cmd) {
-			execute_redr_cmd(k);
-			k++;
-		} else if (cmd_list[k].command_type == back_cmd) {
-			execute_back_cmd(k);
-			k++;
-		} else if (cmd_list[k].command_type == cdir_cmd) {
-			printf("%s\n",cmd_list[k].com);
-			/*Useless command probably does nothing*/
-			execute_cdir_cmd(k);
-			k++;
-		} else if (cmd_list[k].command_type == norm_cmd) {
-			execute_norm_cmd(k);
-			k++;
-		} else {
-			printf("This is not possible SOMETHING IS WRONG!%-50s%d\n", cmd_list[k].com, cmd_list[k].command_type);
-			k++;
+	for (int i = queue.queue_end - 1; i >= 0; i--) {
+		if(test_requirements(i)== true){
+			/*All requirements are satisfied
+			 * so skip it*/
+			continue;
 		}
 
+		cmd_list = malloc(sizeof(struct command_line) * NUMELE * NUMELE);
+		for (int i = 0; i < NUMELE; i++) {
+			cmd_list[i].command_type = empty_cmd;
+		}
 
-		/*Reset back to original directory after everything is done in a command*/
-		chdir(ui.cdir);
+		create_command_list(i);
+		/*Executing all of them from here*/
+		int k = 0;
+		while (cmd_list[k].command_type != empty_cmd) {
+			if (cmd_list[k].command_type == pipe_cmd) {
+				int counter = 0;
+				int start = k;
+				while (cmd_list[k].command_type != pipe_cmd_last) {
+					counter++;
+					k++;
+				}
+				counter++;
+				k++;
+				execute_pipe_cmd(start, counter);
+			} else if (cmd_list[k].command_type == mult_cmd) {
+				int counter = 0;
+				int start = k;
+				while (cmd_list[k].command_type != mult_cmd_last) {
+					counter++;
+					k++;
+				}
+				counter++;
+				k++;
+				execute_mult_cmd(start, counter);
+
+			} else if (cmd_list[k].command_type == redr_cmd) {
+				execute_redr_cmd(k);
+				k++;
+			} else if (cmd_list[k].command_type == back_cmd) {
+				execute_back_cmd(k);
+				k++;
+			} else if (cmd_list[k].command_type == cdir_cmd) {
+				/*Useless command probably does nothing*/
+				execute_cdir_cmd(k);
+				k++;
+			} else if (cmd_list[k].command_type == norm_cmd) {
+				execute_norm_cmd(k);
+				k++;
+			} else {
+				printf("This is not possible SOMETHING IS WRONG!%-50s%d\n", cmd_list[k].com, cmd_list[k].command_type);
+				k++;
+			}
+
+			/*Reset back to original directory after everything is done in a command*/
+			chdir(ui.cdir);
+		}
 	}
+
 	char *newargv[] = { "/bin/sleep", "20", NULL };
-	for(int i = 0 ; i < 100 ; i++){
+	for (int i = 0; i < 100; i++) {
 
-
-		if(fork() == 0)
-			execv( newargv[0] , newargv);
+		if (fork() == 0)
+			execv(newargv[0], newargv);
 	}
 
-	printf("Sleeping\n");
-	char *newargv2[] = { "/bin/sleep", "3", NULL };
-	system( "sleep 3");
-	kill_everything();
-
-	return 0;
 }
