@@ -5,7 +5,6 @@ all:
 	cat mymake.c | grep char | grep STLEN | nl -v0 | grep NUMELE 
 	cd tempor;cd new ; cat makefile
 
-.c.hello:
+.card.bard:
 	echo $<
 	echo $@
-	$(CC) -c $<

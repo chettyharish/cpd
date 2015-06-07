@@ -72,7 +72,6 @@ struct targets {
 	int target_type;
 	char inference_from[STLEN];
 	char inference_to[STLEN];
-	char target_stacker[STLEN * NUMELE];
 	struct command_list commands;
 };
 
@@ -114,6 +113,25 @@ void trim_string(char *temp) {
 	strncpy(new_str, temp + front_spaces, strlen(temp) - front_spaces - back_spaces + 1);
 	new_str[strlen(temp) - front_spaces - back_spaces + 1] = '\0';
 	strcpy(temp, new_str);
+}
+
+bool test_last_char(char *buffer_temp, char val) {
+	/*Trying to test if last char is required char*/
+	char temp[STLEN];
+	strcpy(temp, buffer_temp);
+	trim_string(temp);
+	if (temp[strlen(temp) - 1] == val)
+		return true;
+	return false;
+}
+
+void remove_newline(char *temp) {
+	char *pos;
+	if ((pos = strchr(temp, '\n'))) {
+		/*To remove \n !*/
+		*pos = '\0';
+	}
+
 }
 
 int find_file(char *env_path, char* cmd) {
@@ -188,25 +206,6 @@ int test_targ_type(char *t_name) {
 	}
 
 	return norm_target;
-}
-
-bool test_last_char(char *buffer_temp, char val) {
-	/*Trying to test if last char is required char*/
-	char temp[STLEN];
-	strcpy(temp, buffer_temp);
-	trim_string(temp);
-	if (temp[strlen(temp) - 1] == val)
-		return true;
-	return false;
-}
-
-void remove_newline(char *temp) {
-	char *pos;
-	if ((pos = strchr(temp, '\n'))) {
-		/*To remove \n !*/
-		*pos = '\0';
-	}
-
 }
 
 void tokenize(char *buffer_temp, char *exec_args[]) {
@@ -291,6 +290,12 @@ void get_macro(char *buffer_temp) {
 	sprintf(macro_arr[counters.macros].macro, "$%s", macro);
 	sprintf(macro_arr[counters.macros].macro_replace, "%s", macro_replace);
 	counters.macros++;
+}
+
+void wait_all_children() {
+
+//	while (wait(NULL) > 0)
+//		;
 }
 
 void get_target(char *buffer_temp, int target_pos) {
@@ -508,6 +513,41 @@ void create_command_list(int pos) {
 			printf("Changed command %-50s\n", cmd_list[i].com);
 		}
 	}
+
+	if (target_arr[idx].target_type == infr_target) {
+		char trg[STLEN];
+		char dep[STLEN];
+		if (target_arr[idx].inference_to == NULL) {
+			printf("Single Inference\n");
+			sprintf(trg, "%s", ui.target);
+			sprintf(dep, "%s.%s", ui.target, target_arr[idx].inference_from);
+		} else {
+			printf("Double Inference\n");
+			sprintf(trg, "%s.%s", ui.target, target_arr[idx].inference_to);
+			sprintf(dep, "%s.%s", ui.target, target_arr[idx].inference_from);
+		}
+
+		/*Change stuff here for inference targets*/
+		for (int i = 0; i < k; i++) {
+			printf("Original command %-50s\n", cmd_list[i].com);
+			char *pos;
+			while ((pos = strstr(cmd_list[i].com, "$(TARGET)"))) {
+				char buffer[STLEN];
+				strncpy(buffer, cmd_list[i].com, pos - cmd_list[i].com);
+				sprintf(buffer + (pos - cmd_list[i].com), "%s%s", trg, pos + strlen("$(TARGET)"));
+				strcpy(cmd_list[i].com, buffer);
+			}
+
+			while ((pos = strstr(cmd_list[i].com, "$(DEP)"))) {
+				char buffer[STLEN];
+				strncpy(buffer, cmd_list[i].com, pos - cmd_list[i].com);
+				sprintf(buffer + (pos - cmd_list[i].com), "%s%s", dep, pos + strlen("$(DEP)"));
+				strcpy(cmd_list[i].com, buffer);
+
+			}
+			printf("Changed command %-50s\n", cmd_list[i].com);
+		}
+	}
 }
 
 void get_default_make() {
@@ -569,6 +609,7 @@ void execute_redr_cmd(int start) {
 
 void execute_cdir_cmd(int start) {
 	printf("%-20s : Command : %-50s\n", __func__, cmd_list[start].com);
+//	chdir(cmd_list[start].com);
 }
 
 void execute_norm_cmd(int start) {
@@ -580,13 +621,17 @@ void execute_mult_cmd(int start, int count) {
 		printf("%-20s : Command : %-50s\n", __func__, cmd_list[i].com);
 		if (cmd_list[i].sp_command_type == redr_cmd) {
 			execute_redr_cmd(i);
+			wait_all_children();
 		} else if (cmd_list[i].sp_command_type == back_cmd) {
 			execute_back_cmd(i);
+			/*No waiting for background process*/
 		} else if (cmd_list[i].sp_command_type == cdir_cmd) {
 			/*Useless command probably does nothing*/
 			execute_cdir_cmd(i);
+			wait_all_children();
 		} else if (cmd_list[i].sp_command_type == norm_cmd) {
 			execute_norm_cmd(i);
+			wait_all_children();
 		} else {
 			printf("This is not possible SOMETHING IS WRONG!%-50s%d\n", cmd_list[i].com, cmd_list[i].command_type);
 		}
@@ -598,6 +643,7 @@ void execute_pipe_cmd(int start, int count) {
 		printf("%-20s : Command : %-50s\n", __func__, cmd_list[start + i].com);
 	}
 }
+
 bool test_requirements(int pos) {
 	/*Testing if the requirements are satisfied or not
 	 * Returns true if it is satisfied else false*/
@@ -806,6 +852,7 @@ int main(int argc, char **argv) {
 				counter++;
 				k++;
 				execute_pipe_cmd(start, counter);
+				wait_all_children();
 			} else if (cmd_list[k].command_type == mult_cmd) {
 				int counter = 0;
 				int start = k;
@@ -816,23 +863,29 @@ int main(int argc, char **argv) {
 				counter++;
 				k++;
 				execute_mult_cmd(start, counter);
+				wait_all_children();
 
 			} else if (cmd_list[k].command_type == redr_cmd) {
 				execute_redr_cmd(k);
 				k++;
+				wait_all_children();
 			} else if (cmd_list[k].command_type == back_cmd) {
 				execute_back_cmd(k);
 				k++;
+				/*No waitig for background process*/
 			} else if (cmd_list[k].command_type == cdir_cmd) {
 				/*Useless command probably does nothing*/
 				execute_cdir_cmd(k);
 				k++;
+				wait_all_children();
 			} else if (cmd_list[k].command_type == norm_cmd) {
 				execute_norm_cmd(k);
 				k++;
+				wait_all_children();
 			} else {
 				printf("This is not possible SOMETHING IS WRONG!%-50s%d\n", cmd_list[k].com, cmd_list[k].command_type);
 				k++;
+				wait_all_children();
 			}
 
 			/*Reset back to original directory after everything is done in a command*/
