@@ -208,13 +208,20 @@ int test_targ_type(char *t_name) {
 	return norm_target;
 }
 
-void tokenize(char *buffer_temp, char *exec_args[]) {
+void tokenize(char *buffer, char *exec_args[]) {
 	int counter = 0;
+	char buffer_temp[STLEN];
+	strcpy(buffer_temp, buffer);
 	char *token = strtok(buffer_temp, " ");
 	while (token != NULL) {
 		exec_args[counter] = token;
 		counter++;
 		token = strtok(NULL, " ");
+	}
+
+	if (test_last_char(buffer, '&')) {
+		/*This removes the &, so that it is not assumed as an argument*/
+		exec_args[counter - 1] = NULL;
 	}
 	exec_args[counter] = NULL;
 }
@@ -613,7 +620,15 @@ void signal_alarm(int signo) {
 }
 
 void execute_back_cmd(int start) {
-//	printf("%-20s : Command : %-50s\n", __func__, cmd_list[start].com);
+	printf("%-20s : Command : %-50s\n", __func__, cmd_list[start].com);
+	if (fork() == 0) {
+		/*Executing program in child process*/
+		char *exec_args[100];
+		tokenize(cmd_list[start].com, exec_args);
+		if (execv(exec_args[0], exec_args) == -1) {
+			handle_execution_error(start);
+		}
+	}
 }
 
 void execute_redr_cmd(int start) {
@@ -626,7 +641,6 @@ void execute_cdir_cmd(int start) {
 	strcpy(buffer_temp, cmd_list[start].com);
 	char *path = strtok(buffer_temp, " ");
 	path = strtok(NULL, " ");
-
 
 	char temp[100];
 	getcwd(temp, sizeof(temp));
