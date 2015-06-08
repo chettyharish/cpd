@@ -613,20 +613,41 @@ void signal_alarm(int signo) {
 }
 
 void execute_back_cmd(int start) {
-	printf("%-20s : Command : %-50s\n", __func__, cmd_list[start].com);
+//	printf("%-20s : Command : %-50s\n", __func__, cmd_list[start].com);
 }
 
 void execute_redr_cmd(int start) {
-	printf("%-20s : Command : %-50s\n", __func__, cmd_list[start].com);
+//	printf("%-20s : Command : %-50s\n", __func__, cmd_list[start].com);
 }
 
 void execute_cdir_cmd(int start) {
 	printf("%-20s : Command : %-50s\n", __func__, cmd_list[start].com);
-//	chdir(cmd_list[start].com);
+	char buffer_temp[STLEN];
+	strcpy(buffer_temp, cmd_list[start].com);
+	char *path = strtok(buffer_temp, " ");
+	path = strtok(NULL, " ");
+
+
+	char temp[100];
+	getcwd(temp, sizeof(temp));
+	printf("ADDRESS : %s\n", temp);
+
+	chdir(path);
+
+	getcwd(temp, sizeof(temp));
+	printf("ADDRESS : %s\n", temp);
 }
 
 void execute_norm_cmd(int start) {
 	printf("%-20s : Command : %-50s\n", __func__, cmd_list[start].com);
+	if (fork() == 0) {
+		/*Executing program in child process*/
+		char *exec_args[100];
+		tokenize(cmd_list[start].com, exec_args);
+		if (execv(exec_args[0], exec_args) == -1) {
+			handle_execution_error(start);
+		}
+	}
 }
 
 void execute_mult_cmd(int start, int count) {
@@ -653,7 +674,7 @@ void execute_mult_cmd(int start, int count) {
 
 void execute_pipe_cmd(int start, int count) {
 	for (int i = 0; i < count; i++) {
-		printf("%-20s : Command : %-50s\n", __func__, cmd_list[start + i].com);
+//		printf("%-20s : Command : %-50s\n", __func__, cmd_list[start + i].com);
 	}
 }
 
@@ -879,7 +900,10 @@ int main(int argc, char **argv) {
 		/*Executing all of them from here*/
 		int k = 0;
 		while (cmd_list[k].command_type != empty_cmd) {
-			if (cmd_list[k].command_type == pipe_cmd) {
+			if (strlen(cmd_list[k].com) == 0) {
+				/*Ignoring empty commands*/
+				k++;
+			} else if (cmd_list[k].command_type == pipe_cmd) {
 				int counter = 0;
 				int start = k;
 				while (cmd_list[k].command_type != pipe_cmd_last) {
