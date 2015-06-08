@@ -5,7 +5,9 @@ all:
 	cat mymake.c | grep char | grep STLEN | nl -v0 | grep NUMELE 
 	cd tempor;cd new ; cat makefile
 
-.c.hello:
+.c.o:
 	echo $<
 	echo $@
 	$(CC) -c $<
+alarm:
+	sleep 100

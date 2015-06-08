@@ -293,9 +293,8 @@ void get_macro(char *buffer_temp) {
 }
 
 void wait_all_children() {
-
-//	while (wait(NULL) > 0)
-//		;
+	while (wait(NULL) > 0)
+		;
 }
 
 void get_target(char *buffer_temp, int target_pos) {
@@ -599,6 +598,20 @@ void handle_execution_error(int pos) {
 	}
 }
 
+void signal_handler(int signo) {
+	if (ui.interrupt == true) {
+		/*Blocking all SIGINTS*/
+		printf("SIGINT caught\n");
+	} else {
+		kill_everything();
+	}
+}
+
+void signal_alarm(int signo) {
+	printf("Make Timed Out\n");
+	kill_everything();
+}
+
 void execute_back_cmd(int start) {
 	printf("%-20s : Command : %-50s\n", __func__, cmd_list[start].com);
 }
@@ -684,6 +697,7 @@ bool test_requirements(int pos) {
 	return false;
 
 }
+
 int main(int argc, char **argv) {
 
 	if (argc == 1) {
@@ -745,6 +759,29 @@ int main(int argc, char **argv) {
 	}
 	getcwd(ui.cdir, sizeof(ui.cdir));
 	get_default_make();
+	if (signal(SIGINT, signal_handler) == SIG_ERR) {
+		perror("signal");
+	}
+
+	if (ui.interrupt == true) {
+		sigset_t newmask, oldmask;
+		sigemptyset(&newmask);
+		sigaddset(&newmask, SIGINT);
+		if (sigprocmask(SIG_BLOCK, &newmask, &oldmask) < 0) {
+			perror("sigprocmask");
+		}
+	}
+
+	if (ui.time != -1) {
+		struct sigaction act;
+
+		act.sa_handler = signal_alarm;
+		sigemptyset(&act.sa_mask);
+		act.sa_flags = 0;
+
+		sigaction(SIGALRM, &act, 0);
+		alarm(ui.time);
+	}
 
 	FILE *file = fopen(ui.make_file_name, "r");
 	while (fgets(buffer_temp, sizeof buffer_temp, file)) {
@@ -899,5 +936,7 @@ int main(int argc, char **argv) {
 		if (fork() == 0)
 			execv(newargv[0], newargv);
 	}
+
+	wait_all_children();
 
 }
