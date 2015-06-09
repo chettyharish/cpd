@@ -2,8 +2,6 @@ CC=/usr/bin/gcc
 CPP=/usr/bin/g++
 CFLAG=-g 
 
-all : pipetest multiline redrdest bothredrtest
-	echo "Done"
 pipetest:
 	cat Makefile | grep CC
 	cat Makefile | grep CC | grep =
@@ -11,24 +9,3 @@ pipetest:
 	cat mymake.c | grep char | grep STLEN | nl -v0 | grep NUMELE 
 multiline:
 	cd tempor;cd new ; cat makefile
-
-backtest:
-	sleep 100 &
-	sleep 50
-
-.c.o:
-	echo $<
-	echo $@
-	$(CC) -c $<
-
-.cpp:
-	echo $<
-	$(CPP) -c $<
-alarmtest:
-	sleep 100
-
-redrtest:
-	cat Makefile > temp.txt
-	grep FLAG < Makefile
-bothredrtest:
-	sort < Makefile > temp.txt

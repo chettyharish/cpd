@@ -1,51 +1,65 @@
-#
-# Now, only the one file will be recompiled
-#
+2 macros, 15 target rules, 0 inf. rules, 29 names, 25 cmds
 CC=/usr/bin/gcc
 CFLAG=-g 
-a.out: myprog1.o myprog2.o myprog3.o 
+
+a.out : myprog1.o myprog2.o myprog3.o 
 	$(CC) $(CFLAG) myprog1.o myprog2.o myprog3.o
-myprog1.o: myprog1.c myprog.h
+
+myprog1.o : myprog1.c myprog.h 
 	echo "Hello World1"
 	$(CC) -c myprog1.c
-myprog2.o: myprog2.c myprog.h
+
+myprog2.o : myprog2.c myprog.h 
 	echo "Hello World2"
 	$(CC) -c myprog2.c
-myprog3.o: myprog3.c myprog.h
+
+myprog3.o : myprog3.c myprog.h 
 	echo "Hello World3"
 	$(CC) -c myprog3.c
-clean:
+
+clean : 
 	/bin/rm -f a.out
 	/bin/rm -f myprog1.o myprog2.o myprog3.o
 	/bin/rm -f myprog1.c~ myprog2.c~ myprog3.c~ myprog.h~
-demo: a.out
+
+demo : a.out 
 	./a.out
 
 .c.o :
 	echo "Hello World"
-test: 
+
+test : 
 	/bin/sleep 1000
 	/bin/sleep 1000	
-test0:
+
+test0 : 
 	/usr/bin/who
 	/bin/ls
-test1: 
+
+test1 : 
 	echo "run ./a.out"
 	./a.out
 	echo "pass ./a.out"
-test2: 
+
+test2 : 
 	echo "run /bin/asdfjh"
 	/bin/asdfjh
 	echo "pass /bin/asdfjh"
-test3: 
+
+test3 : 
 	echo "run ./myprog1.c"
 	./myprog1.c
 	echo "pass ./myprog1.c"
-test4: test5
+
+test4 : test5 
 	/bin/ls
-test5: test6
+
+test5 : test6 
 	/usr/bin/who
-test6: test4
+
+test6 : test4 
 	/usr/bin/whoami
-test7: test8
+
+test7 : test8 
 	/bin/ls
+

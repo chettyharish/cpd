@@ -10,6 +10,7 @@
 #include <sys/wait.h>
 #include <fcntl.h>
 
+#define search_path_env "PATH"
 #define STLEN 200
 #define NUMELE 50
 #define empty_target -2
@@ -23,8 +24,8 @@
 #define mult_cmd 5
 #define pipe_cmd_last 6
 #define mult_cmd_last 7
-#define norm_target 0
-#define infr_target 1
+#define norm_target 20
+#define infr_target 21
 
 struct userinput {
 	char make_file_name[STLEN];
@@ -91,7 +92,50 @@ struct queue {
 struct targets *target_arr;
 struct macros *macro_arr;
 struct command_line *cmd_list;
+char *s = "    ";
+char type_buf[STLEN];
 
+char* print_type(int type) {
+
+	switch (type) {
+	case empty_target:
+		strcpy(type_buf, "empty_target");
+		return type_buf;
+	case norm_target:
+		strcpy(type_buf, "empty_target");
+		return type_buf;
+	case infr_target:
+		strcpy(type_buf, "empty_target");
+		return type_buf;
+	case empty_cmd:
+		strcpy(type_buf, "empty_cmd");
+		return type_buf;
+	case norm_cmd:
+		strcpy(type_buf, "norm_cmd");
+		return type_buf;
+	case pipe_cmd:
+		strcpy(type_buf, "pipe_cmd");
+		return type_buf;
+	case redr_both_cmd:
+		strcpy(type_buf, "redr_both_cmd");
+		return type_buf;
+	case redr_cmd:
+		strcpy(type_buf, "redr_cmd");
+		return type_buf;
+	case cdir_cmd:
+		strcpy(type_buf, "cdir_cmd");
+		return type_buf;
+	case back_cmd:
+		strcpy(type_buf, "back_cmd");
+		return type_buf;
+	case mult_cmd:
+		strcpy(type_buf, "mult_cmd");
+		return type_buf;
+	}
+
+	strcpy(type_buf, "NEVER HAPPENS");
+	return type_buf;
+}
 void trim_string(char *temp) {
 	int front_spaces = 0;
 	int back_spaces = 0;
@@ -531,7 +575,7 @@ void create_command_list(int pos) {
 		cmd_list[k++] = target_arr[idx].commands.list[j];
 	}
 
-	char *env_path = getenv("PATH");
+	char *env_path = getenv(search_path_env);
 
 	for (int i = 0; i < k; i++) {
 //		printf("Original command %-50s\n", cmd_list[i].com);
@@ -1052,42 +1096,35 @@ int main(int argc, char **argv) {
 
 	}
 
-//	printf("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n");
-//
-//	printf("Macros : %d    Commands : %d    Targets : %d    Inferences : %d    Names : %d\n", print_counter.macros, print_counter.commands, print_counter.targets, print_counter.inferences,
-//			print_counter.names);
-//
-//	for (int i = 0; i < counters.targets; i++) {
-//		printf("Target %s \n", target_arr[i].target_name);
-//		printf("Dependencies : ");
-//		for (int j = 0; j < target_arr[i].dependency_count; j++) {
-//			printf(" %s ", target_arr[i].dependecies[j]);
-//		}
-//		printf("\n");
-//
-//		printf("Commands : \n");
-//		for (int j = 0; j < target_arr[i].commands.command_count; j++) {
-//			printf("CMD =  %-100sProtocol = %-3d SP_PROTOCOL %d\n", target_arr[i].commands.list[j].com, target_arr[i].commands.list[j].command_type, target_arr[i].commands.list[j].sp_command_type);
-//		}
-//		printf("Dependency Count : %d\n", target_arr[i].dependency_count);
-//		printf("\n");
-//
-//	}
+	rewind(file);
+	if (ui.print == true) {
+		printf("Macros : %d    Commands : %d    Targets : %d    Inferences : %d   \n", print_counter.macros, print_counter.commands, print_counter.targets, print_counter.inferences);
+		while (fgets(buffer_temp, sizeof buffer_temp, file)) {
+			char *pos;
+			if ((pos = strchr(buffer_temp, '#'))) {
+				/*Comments are present, so need to remove them*/
+				*pos = '\0';
+				if (strlen(buffer_temp) == 0) {
+					/* If all the characters are comments, then eliminate the line.*/
+					continue;
+				}
+			}
+			if (strchr(buffer_temp, ':')) {
+				printf("\n%s", buffer_temp);
+			} else {
+				printf("%s", buffer_temp);
+			}
+
+		}
+		return 0;
+
+	}
 
 	/*Selecting first target if target is missing*/
 	if (strcmp(ui.target, "\0") == 0) {
 		/*Missing target , so use the first one*/
 		strcpy(ui.target, target_arr[0].target_name);
 	}
-
-//	printf("Make file = %s\n", ui.make_file_name);
-//	printf("Target = %s\n", ui.target);
-//	printf("print = %d\n", ui.print);
-//	printf("force = %d\n", ui.force);
-//	printf("debug = %d\n", ui.debug);
-//	printf("interrupt = %d\n", ui.interrupt);
-//	printf("time = %d\n", ui.time);
-//	printf("cdir = %s\n", ui.cdir);
 
 	/*Will need to modify here based on the flags!*/
 	/*Trying to find the matching target*/
@@ -1098,16 +1135,29 @@ int main(int argc, char **argv) {
 		return (1);
 	}
 
+	if (ui.debug == true) {
+		printf("%sDBG : Making target %s\n", s, target_arr[matched_target].target_name);
+	}
 	dfs(ui.target);
-//	for (int i = 0; i < queue.queue_end; i++) {
-//		printf("QUEUE %d %s\n", i, queue.targ_queue[i]);
-//	}
-//	printf("%d\n", queue.queue_end);
+
+	if (ui.debug == true) {
+		printf("%sDBG : Dependency Queue : ", s);
+		for (int i = 0; i < queue.queue_end; i++) {
+			printf(" %s ", queue.targ_queue[i]);
+		}
+		printf("\n");
+	}
 
 	for (int i = 0; i < queue.queue_end; i++) {
+		if (ui.debug == true) {
+			printf("%s%sDBG : Making target %s\n", s, s, queue.targ_queue[i]);
+		}
 		if (test_requirements(i) == true) {
 			/*All requirements are satisfied
 			 * so skip it*/
+			if (ui.debug == true) {
+				printf("%s%sDBG : Already Satisfied\n", s, s);
+			}
 			continue;
 		}
 
@@ -1117,62 +1167,78 @@ int main(int argc, char **argv) {
 		}
 
 		create_command_list(i);
-		/*Executing all of them from here*/
+
 		int k = 0;
+
+		/*Executing all of them from here*/
 		while (cmd_list[k].command_type != empty_cmd) {
 			if (strlen(cmd_list[k].com) == 0) {
 				/*Ignoring empty commands*/
+				if (ui.debug == true) {
+					printf("%s%sDBG : CMD : %-80s\n TYPE : %s\n", s, s, cmd_list[k].com, print_type(cmd_list[k].command_type));
+				}
 				k++;
 			} else if (cmd_list[k].command_type == pipe_cmd) {
 				int counter = 0;
 				int start = k;
 				while (cmd_list[k].command_type != pipe_cmd_last) {
-					printf("%s |" ,cmd_list[k].com);
+					printf("%s |", cmd_list[k].com);
 					counter++;
 					k++;
 				}
 				counter++;
 				k++;
-				printf("%s \n" ,cmd_list[k].com);
+				printf("%s \n", cmd_list[k].com);
 				execute_pipe_cmd(start, counter);
 				wait_all_children();
 			} else if (cmd_list[k].command_type == mult_cmd) {
 				int counter = 0;
 				int start = k;
 				while (cmd_list[k].command_type != mult_cmd_last) {
-					printf("%s ;" ,cmd_list[k].com);
+					printf("%s ;", cmd_list[k].com);
 					counter++;
 					k++;
 				}
 				counter++;
 				k++;
-				printf("%s \n" ,cmd_list[k].com);
+				printf("%s \n", cmd_list[k].com);
 				execute_mult_cmd(start, counter);
 				wait_all_children();
 
 			} else if (cmd_list[k].command_type == redr_cmd) {
-				printf("%s \n" ,cmd_list[k].com);
+				if (ui.debug == true) {
+					printf("%s%sDBG : CMD : %-80s\n TYPE : %s\n", s, s, cmd_list[k].com, print_type(cmd_list[k].command_type));
+				}
 				execute_redr_cmd(k);
 				k++;
 				wait_all_children();
 			} else if (cmd_list[k].command_type == redr_both_cmd) {
-				printf("%s \n" ,cmd_list[k].com);
+				if (ui.debug == true) {
+					printf("%s%sDBG : CMD : %-80s\n TYPE : %s\n", s, s, cmd_list[k].com, print_type(cmd_list[k].command_type));
+				}
 				execute_redr_both_cmd(k);
 				k++;
 				wait_all_children();
 			} else if (cmd_list[k].command_type == back_cmd) {
-				printf("%s \n" ,cmd_list[k].com);
+				if (ui.debug == true) {
+					printf("%s%sDBG : CMD : %-80s\n TYPE : %s\n", s, s, cmd_list[k].com, print_type(cmd_list[k].command_type));
+				}
 				execute_back_cmd(k);
 				k++;
 				/*No waitig for background process*/
 			} else if (cmd_list[k].command_type == cdir_cmd) {
-				printf("%s \n" ,cmd_list[k].com);
+				if (ui.debug == true) {
+					printf("%s%sDBG : CMD : %-80s\n TYPE : %s\n", s, s, cmd_list[k].com, print_type(cmd_list[k].command_type));
+				}
 				/*Useless command probably does nothing*/
 				execute_cdir_cmd(k);
 				k++;
 				wait_all_children();
 			} else if (cmd_list[k].command_type == norm_cmd) {
-				printf("%s \n" ,cmd_list[k].com);
+				if (ui.debug == true) {
+					printf("%s%sDBG : CMD : %-80s\n TYPE : %s\n", s, s, cmd_list[k].com, print_type(cmd_list[k].command_type));
+				}
+				printf("%s \n", cmd_list[k].com);
 				execute_norm_cmd(k);
 				k++;
 				wait_all_children();
@@ -1184,6 +1250,10 @@ int main(int argc, char **argv) {
 
 			/*Reset back to original directory after everything is done in a command*/
 			chdir(ui.cdir);
+		}
+
+		if (ui.debug == true) {
+			printf("%s%sDBG : Completed Making target %s\n", s, s, queue.targ_queue[i]);
 		}
 	}
 
