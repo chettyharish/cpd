@@ -2,8 +2,12 @@ CC=/usr/bin/gcc
 CPP=/usr/bin/g++
 CFLAG=-g 
 
-all:
+pipetest:
+	cat Makefile | grep CC
+	cat Makefile | grep CC | grep =
+	cat mymake.c | grep char | grep STLEN | grep NUMELE| grep targ_queue
 	cat mymake.c | grep char | grep STLEN | nl -v0 | grep NUMELE 
+multiline:
 	cd tempor;cd new ; cat makefile
 
 backtest:

@@ -223,7 +223,6 @@ void tokenize(char *buffer, char *exec_args[]) {
 	char *token = strtok(buffer_temp, " ");
 	while (token != NULL) {
 		exec_args[counter] = token;
-		printf("TOKENIZE : %d\t%s\n", counter, exec_args[counter]);
 		counter++;
 		token = strtok(NULL, " ");
 	}
@@ -231,10 +230,8 @@ void tokenize(char *buffer, char *exec_args[]) {
 	if (test_last_char(buffer, '&')) {
 		/*This removes the &, so that it is not assumed as an argument*/
 		exec_args[counter - 1] = NULL;
-		printf("TOKENIZE : %d\t%s\n", counter - 1, exec_args[counter]);
 	}
 	exec_args[counter] = NULL;
-	printf("TOKENIZE : %d\t%s\n", counter, exec_args[counter]);
 }
 
 void remove_tab(char *temp) {
@@ -537,11 +534,11 @@ void create_command_list(int pos) {
 	char *env_path = getenv("PATH");
 
 	for (int i = 0; i < k; i++) {
-		printf("Original command %-50s\n", cmd_list[i].com);
+//		printf("Original command %-50s\n", cmd_list[i].com);
 		if (find_file(env_path, cmd_list[i].com) == 1) {
 			printf("File not found\n");
 		} else {
-			printf("Changed command %-50s\n", cmd_list[i].com);
+//			printf("Changed command %-50s\n", cmd_list[i].com);
 		}
 	}
 
@@ -687,16 +684,15 @@ void execute_redr_both_cmd(int start) {
 		close(STDIN_FILENO);
 		int f1 = open(file1, O_RDONLY);
 
-
 		close(STDOUT_FILENO);
-		int f2 = open(file2, O_WRONLY|O_CREAT|O_TRUNC, 0777);
+		int f2 = open(file2, O_WRONLY | O_CREAT | O_TRUNC, 0777);
 		if (fork() == 0) {
 			if (execv(exec_args[0], exec_args) == -1) {
 				perror("fork");
 				handle_execution_error(start);
 				exit(0);
 			}
-		}else{
+		} else {
 			wait_all_children();
 			close(f1);
 			dup(stdin);
@@ -823,13 +819,83 @@ void execute_mult_cmd(int start, int count) {
 }
 
 void execute_pipe_cmd(int start, int count) {
-	int pipe_lvl[count][2];
-	for (int i = 0; i < count; i++) {
+	int num_pipe = count - 1;
+	int pipe_lvl[num_pipe][2];
+	for (int i = 0; i < num_pipe; i++) {
 		pipe(pipe_lvl[i]);
 	}
+
 	for (int i = 0; i < count; i++) {
 //		printf("%-20s : Command : %-50s\n", __func__, cmd_list[start + i].com);
+		if (i == 0) {
+			/*The first process, so do not close STDIN!*/
+			if (fork() == 0) {
+				close(STDOUT_FILENO);
+				dup(pipe_lvl[i][1]);
+				/*Close everything after dup*/
+				for (int i = 0; i < num_pipe; i++) {
+					close(pipe_lvl[i][0]);
+					close(pipe_lvl[i][1]);
+				}
+
+				/*Executing program in child process*/
+				char *exec_args[100];
+				tokenize(cmd_list[start + i].com, exec_args);
+				if (execv(exec_args[0], exec_args) == -1) {
+					handle_execution_error(start);
+					exit(0);
+				}
+				exit(0);
+			}
+		} else if (i == count - 1) {
+			/*The last process so do not close STDOUT*/
+			if (fork() == 0) {
+				close(STDIN_FILENO);
+				dup(pipe_lvl[i - 1][0]);
+				/*Close everything after dup*/
+				for (int i = 0; i < num_pipe; i++) {
+					close(pipe_lvl[i][0]);
+					close(pipe_lvl[i][1]);
+				}
+
+				/*Executing program in child process*/
+				char *exec_args[100];
+				tokenize(cmd_list[start + i].com, exec_args);
+				if (execv(exec_args[0], exec_args) == -1) {
+					handle_execution_error(start);
+					exit(0);
+				}
+				exit(0);
+			}
+		} else {
+			/*Middle process, so close everything*/
+			if (fork() == 0) {
+				close(STDIN_FILENO);
+				dup(pipe_lvl[i - 1][0]);
+				close(STDOUT_FILENO);
+				dup(pipe_lvl[i][1]);
+				/*Close everything after dup*/
+				for (int i = 0; i < num_pipe; i++) {
+					close(pipe_lvl[i][0]);
+					close(pipe_lvl[i][1]);
+				}
+				/*Executing program in child process*/
+				char *exec_args[100];
+				tokenize(cmd_list[start + i].com, exec_args);
+				if (execv(exec_args[0], exec_args) == -1) {
+					handle_execution_error(start);
+					exit(0);
+				}
+				exit(0);
+			}
+		}
 	}
+
+	for (int i = 0; i < num_pipe; i++) {
+		close(pipe_lvl[i][0]);
+		close(pipe_lvl[i][1]);
+	}
+	wait_all_children();
 }
 
 bool test_requirements(int pos) {
@@ -842,13 +908,13 @@ bool test_requirements(int pos) {
 	if (idx == -1) {
 		/*Since it is a file, we don't have to do anything with it
 		 * Target make rules only apply to Targets*/
-		printf("TEST : it is a file\n");
+//		printf("TEST : it is a file\n");
 		return true;
 	}
 
 	if ((stat(queue.targ_queue[pos], &tar) == -1)) {
 		/*Target doesn't exist, so we have to make it*/
-		printf("TEST : Target doesn't exist we have to compile\n");
+//		printf("TEST : Target doesn't exist we have to compile\n");
 		return false;
 	}
 
@@ -1033,10 +1099,10 @@ int main(int argc, char **argv) {
 	}
 
 	dfs(ui.target);
-	for (int i = 0; i < queue.queue_end; i++) {
-		printf("QUEUE %d %s\n", i, queue.targ_queue[i]);
-	}
-	printf("%d\n", queue.queue_end);
+//	for (int i = 0; i < queue.queue_end; i++) {
+//		printf("QUEUE %d %s\n", i, queue.targ_queue[i]);
+//	}
+//	printf("%d\n", queue.queue_end);
 
 	for (int i = 0; i < queue.queue_end; i++) {
 		if (test_requirements(i) == true) {
@@ -1061,43 +1127,52 @@ int main(int argc, char **argv) {
 				int counter = 0;
 				int start = k;
 				while (cmd_list[k].command_type != pipe_cmd_last) {
+					printf("%s |" ,cmd_list[k].com);
 					counter++;
 					k++;
 				}
 				counter++;
 				k++;
+				printf("%s \n" ,cmd_list[k].com);
 				execute_pipe_cmd(start, counter);
 				wait_all_children();
 			} else if (cmd_list[k].command_type == mult_cmd) {
 				int counter = 0;
 				int start = k;
 				while (cmd_list[k].command_type != mult_cmd_last) {
+					printf("%s ;" ,cmd_list[k].com);
 					counter++;
 					k++;
 				}
 				counter++;
 				k++;
+				printf("%s \n" ,cmd_list[k].com);
 				execute_mult_cmd(start, counter);
 				wait_all_children();
 
 			} else if (cmd_list[k].command_type == redr_cmd) {
+				printf("%s \n" ,cmd_list[k].com);
 				execute_redr_cmd(k);
 				k++;
 				wait_all_children();
 			} else if (cmd_list[k].command_type == redr_both_cmd) {
+				printf("%s \n" ,cmd_list[k].com);
 				execute_redr_both_cmd(k);
 				k++;
 				wait_all_children();
 			} else if (cmd_list[k].command_type == back_cmd) {
+				printf("%s \n" ,cmd_list[k].com);
 				execute_back_cmd(k);
 				k++;
 				/*No waitig for background process*/
 			} else if (cmd_list[k].command_type == cdir_cmd) {
+				printf("%s \n" ,cmd_list[k].com);
 				/*Useless command probably does nothing*/
 				execute_cdir_cmd(k);
 				k++;
 				wait_all_children();
 			} else if (cmd_list[k].command_type == norm_cmd) {
+				printf("%s \n" ,cmd_list[k].com);
 				execute_norm_cmd(k);
 				k++;
 				wait_all_children();
