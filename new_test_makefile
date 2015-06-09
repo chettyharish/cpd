@@ -1,9 +1,12 @@
 CC=/usr/bin/gcc
+CPP=/usr/bin/g++
 CFLAG=-g 
 
 all:
 	cat mymake.c | grep char | grep STLEN | nl -v0 | grep NUMELE 
 	cd tempor;cd new ; cat makefile
+
+backtest:
 	sleep 100 &
 	sleep 50
 
@@ -11,5 +14,13 @@ all:
 	echo $<
 	echo $@
 	$(CC) -c $<
-alarm:
+
+.cpp:
+	echo $<
+	$(CPP) -c $<
+alarmtest:
 	sleep 100
+
+redrtest:
+	cat Makefile > temp.txt
+	grep FLAG < Makefile

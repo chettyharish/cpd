@@ -8,6 +8,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
+#include <fcntl.h>
 
 #define STLEN 200
 #define NUMELE 50
@@ -134,6 +135,12 @@ void remove_newline(char *temp) {
 
 }
 
+void print_dir() {
+	char temp[STLEN];
+	getcwd(temp, sizeof(temp));
+	printf("Directory : %s\n", temp);
+}
+
 int find_file(char *env_path, char* cmd) {
 	/*Returns 0 if succesful else 1*/
 	struct stat buf;
@@ -215,6 +222,7 @@ void tokenize(char *buffer, char *exec_args[]) {
 	char *token = strtok(buffer_temp, " ");
 	while (token != NULL) {
 		exec_args[counter] = token;
+		printf("TOKENIZE : %d\t%s\n",counter,exec_args[counter]);
 		counter++;
 		token = strtok(NULL, " ");
 	}
@@ -222,8 +230,10 @@ void tokenize(char *buffer, char *exec_args[]) {
 	if (test_last_char(buffer, '&')) {
 		/*This removes the &, so that it is not assumed as an argument*/
 		exec_args[counter - 1] = NULL;
+		printf("TOKENIZE : %d\t%s\n",counter - 1,exec_args[counter]);
 	}
 	exec_args[counter] = NULL;
+	printf("TOKENIZE : %d\t%s\n",counter,exec_args[counter]);
 }
 
 void remove_tab(char *temp) {
@@ -266,6 +276,8 @@ int find_target_idx(char *target) {
 
 void dfs(char *target) {
 	int idx = find_target_idx(target);
+	if(strlen(target) == 0)
+		return;
 	if (idx == -1) {
 		/*Test if it is a file in the current directory*/
 		struct stat buf;
@@ -312,7 +324,7 @@ void get_target(char *buffer_temp, int target_pos) {
 	strcpy(target_arr[target_pos].target_name, target);
 	char *dependencies = strtok(NULL, " ");
 
-	printf("\nTarget Name : %s\n", target_arr[target_pos].target_name);
+//	printf("\nTarget Name : %s\n", target_arr[target_pos].target_name);
 
 	while (dependencies != NULL) {
 		remove_newline(dependencies);
@@ -345,12 +357,12 @@ void get_target(char *buffer_temp, int target_pos) {
 		strcpy(target_arr[target_pos].inference_to, to);
 		target_arr[target_pos].target_type = infr_target;
 	}
-	printf("Target type = %d\n", target_arr[target_pos].target_type);
-	printf("From = %s\n", target_arr[target_pos].inference_from);
-	printf("To = %s\n", target_arr[target_pos].inference_to);
-	for (int i = 0; i < target_arr[target_pos].dependency_count; ++i) {
-		printf("Dependency Name : %s\n", target_arr[target_pos].dependecies[i]);
-	}
+//	printf("Target type = %d\n", target_arr[target_pos].target_type);
+//	printf("From = %s\n", target_arr[target_pos].inference_from);
+//	printf("To = %s\n", target_arr[target_pos].inference_to);
+//	for (int i = 0; i < target_arr[target_pos].dependency_count; ++i) {
+//		printf("Dependency Name : %s\n", target_arr[target_pos].dependecies[i]);
+//	}
 }
 
 void replace_macros(char *buffer_temp) {
@@ -588,19 +600,17 @@ void get_default_make() {
 
 void kill_everything() {
 	/*Kills everything in the same group*/
-	printf("Killing\n");
-	fflush(0);
-	kill(0, SIGINT);
+	kill(0, SIGKILL);
 }
 
 void handle_execution_error(int pos) {
 	/*Execution error handler
 	 * does stuff based on settings*/
 	if (ui.force == false) {
-		printf("Error due to instruction %s\n", cmd_list[pos].com);
+		fprintf(stderr, "Error due to instruction %s\n", cmd_list[pos].com);
 		kill_everything();
 	} else {
-		printf("Error due to instruction %s\n", cmd_list[pos].com);
+		fprintf(stderr, "Error due to instruction %s\n", cmd_list[pos].com);
 		/*Keep going*/
 	}
 }
@@ -621,18 +631,83 @@ void signal_alarm(int signo) {
 
 void execute_back_cmd(int start) {
 	printf("%-20s : Command : %-50s\n", __func__, cmd_list[start].com);
+	print_dir();
 	if (fork() == 0) {
 		/*Executing program in child process*/
-		char *exec_args[100];
+		char *exec_args[NUMELE];
 		tokenize(cmd_list[start].com, exec_args);
 		if (execv(exec_args[0], exec_args) == -1) {
 			handle_execution_error(start);
+			exit(0);
 		}
 	}
 }
 
 void execute_redr_cmd(int start) {
-//	printf("%-20s : Command : %-50s\n", __func__, cmd_list[start].com);
+	printf("%-20s : Command : %-50s\n", __func__, cmd_list[start].com);
+	char buffer_temp[NUMELE];
+	strcpy(buffer_temp, cmd_list[start].com);
+	int stdout = dup(STDOUT_FILENO);
+	int stdin = dup(STDIN_FILENO);
+	if (strchr(cmd_list[start].com, '>')) {
+		/*Forward redirection command*/
+		char *proc = strtok(buffer_temp, ">");
+		char *file = strtok(NULL, "\n");
+		char *exec_args[100];
+
+		trim_string(proc);
+		trim_string(file);
+		remove_newline(file);
+		tokenize(proc, exec_args);
+		close(STDOUT_FILENO);
+		int f1 = open(file, O_WRONLY|O_CREAT|O_TRUNC, 0777);
+		if (fork() == 0) {
+			if (execv(exec_args[0], exec_args) == -1) {
+				perror("fork");
+				handle_execution_error(start);
+				exit(0);
+			}
+		}else{
+			wait_all_children();
+			close(f1);
+			dup(stdout);
+		}
+
+	} else {
+		/*Backward redirection command*/
+		char *proc = strtok(buffer_temp, "<");
+		char *file = strtok(NULL, "\n");
+		char *exec_args[100];
+
+		trim_string(proc);
+		trim_string(file);
+		remove_newline(file);
+		tokenize(proc, exec_args);
+		close(STDIN_FILENO);
+
+		struct stat buf;
+		if (stat(file, &buf) < 0) {
+			/*make_file_name found, so set it as default*/
+			printf("Supplied file doesn't exist!\n");
+			handle_execution_error(start);
+		}
+		int f1 = open(file, O_RDONLY);
+		if (fork() == 0) {
+			if (execv(exec_args[0], exec_args) == -1) {
+				handle_execution_error(start);
+				exit(0);
+			}
+		}else{
+			wait_all_children();
+			close(f1);
+			dup(stdin);
+		}
+	}
+
+	close(stdout);
+	close(stdin);
+
+	print_dir();
 }
 
 void execute_cdir_cmd(int start) {
@@ -641,25 +716,22 @@ void execute_cdir_cmd(int start) {
 	strcpy(buffer_temp, cmd_list[start].com);
 	char *path = strtok(buffer_temp, " ");
 	path = strtok(NULL, " ");
-
-	char temp[100];
-	getcwd(temp, sizeof(temp));
-	printf("ADDRESS : %s\n", temp);
-
+	print_dir();
 	chdir(path);
-
-	getcwd(temp, sizeof(temp));
-	printf("ADDRESS : %s\n", temp);
+	print_dir();
 }
 
 void execute_norm_cmd(int start) {
-	printf("%-20s : Command : %-50s\n", __func__, cmd_list[start].com);
+	printf("%-20s : Command : %-50s \n", __func__, cmd_list[start].com);
+	print_dir();
+
 	if (fork() == 0) {
 		/*Executing program in child process*/
 		char *exec_args[100];
 		tokenize(cmd_list[start].com, exec_args);
 		if (execv(exec_args[0], exec_args) == -1) {
 			handle_execution_error(start);
+			exit(0);
 		}
 	}
 }
@@ -687,6 +759,10 @@ void execute_mult_cmd(int start, int count) {
 }
 
 void execute_pipe_cmd(int start, int count) {
+	int pipe_lvl[count][2];
+	for (int i = 0; i < count; i++) {
+		pipe(pipe_lvl[i]);
+	}
 	for (int i = 0; i < count; i++) {
 //		printf("%-20s : Command : %-50s\n", __func__, cmd_list[start + i].com);
 	}
@@ -846,27 +922,27 @@ int main(int argc, char **argv) {
 
 	}
 
-	printf("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n");
-
-	printf("Macros : %d    Commands : %d    Targets : %d    Inferences : %d    Names : %d\n", print_counter.macros, print_counter.commands, print_counter.targets, print_counter.inferences,
-			print_counter.names);
-
-	for (int i = 0; i < counters.targets; i++) {
-		printf("Target %s \n", target_arr[i].target_name);
-		printf("Dependencies : ");
-		for (int j = 0; j < target_arr[i].dependency_count; j++) {
-			printf(" %s ", target_arr[i].dependecies[j]);
-		}
-		printf("\n");
-
-		printf("Commands : \n");
-		for (int j = 0; j < target_arr[i].commands.command_count; j++) {
-			printf("CMD =  %-100sProtocol = %-3d SP_PROTOCOL %d\n", target_arr[i].commands.list[j].com, target_arr[i].commands.list[j].command_type, target_arr[i].commands.list[j].sp_command_type);
-		}
-		printf("Dependency Count : %d\n", target_arr[i].dependency_count);
-		printf("\n");
-
-	}
+//	printf("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n");
+//
+//	printf("Macros : %d    Commands : %d    Targets : %d    Inferences : %d    Names : %d\n", print_counter.macros, print_counter.commands, print_counter.targets, print_counter.inferences,
+//			print_counter.names);
+//
+//	for (int i = 0; i < counters.targets; i++) {
+//		printf("Target %s \n", target_arr[i].target_name);
+//		printf("Dependencies : ");
+//		for (int j = 0; j < target_arr[i].dependency_count; j++) {
+//			printf(" %s ", target_arr[i].dependecies[j]);
+//		}
+//		printf("\n");
+//
+//		printf("Commands : \n");
+//		for (int j = 0; j < target_arr[i].commands.command_count; j++) {
+//			printf("CMD =  %-100sProtocol = %-3d SP_PROTOCOL %d\n", target_arr[i].commands.list[j].com, target_arr[i].commands.list[j].command_type, target_arr[i].commands.list[j].sp_command_type);
+//		}
+//		printf("Dependency Count : %d\n", target_arr[i].dependency_count);
+//		printf("\n");
+//
+//	}
 
 	/*Selecting first target if target is missing*/
 	if (strcmp(ui.target, "\0") == 0) {
@@ -874,14 +950,14 @@ int main(int argc, char **argv) {
 		strcpy(ui.target, target_arr[0].target_name);
 	}
 
-	printf("Make file = %s\n", ui.make_file_name);
-	printf("Target = %s\n", ui.target);
-	printf("print = %d\n", ui.print);
-	printf("force = %d\n", ui.force);
-	printf("debug = %d\n", ui.debug);
-	printf("interrupt = %d\n", ui.interrupt);
-	printf("time = %d\n", ui.time);
-	printf("cdir = %s\n", ui.cdir);
+//	printf("Make file = %s\n", ui.make_file_name);
+//	printf("Target = %s\n", ui.target);
+//	printf("print = %d\n", ui.print);
+//	printf("force = %d\n", ui.force);
+//	printf("debug = %d\n", ui.debug);
+//	printf("interrupt = %d\n", ui.interrupt);
+//	printf("time = %d\n", ui.time);
+//	printf("cdir = %s\n", ui.cdir);
 
 	/*Will need to modify here based on the flags!*/
 	/*Trying to find the matching target*/
@@ -967,14 +1043,5 @@ int main(int argc, char **argv) {
 			chdir(ui.cdir);
 		}
 	}
-
-	char *newargv[] = { "/bin/sleep", "20", NULL };
-	for (int i = 0; i < 100; i++) {
-
-		if (fork() == 0)
-			execv(newargv[0], newargv);
-	}
-
-	wait_all_children();
 
 }
