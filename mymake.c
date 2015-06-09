@@ -16,6 +16,7 @@
 #define empty_cmd -1
 #define norm_cmd 0
 #define pipe_cmd 1
+#define redr_both_cmd 8
 #define redr_cmd 2
 #define cdir_cmd 3
 #define back_cmd 4
@@ -222,7 +223,7 @@ void tokenize(char *buffer, char *exec_args[]) {
 	char *token = strtok(buffer_temp, " ");
 	while (token != NULL) {
 		exec_args[counter] = token;
-		printf("TOKENIZE : %d\t%s\n",counter,exec_args[counter]);
+		printf("TOKENIZE : %d\t%s\n", counter, exec_args[counter]);
 		counter++;
 		token = strtok(NULL, " ");
 	}
@@ -230,10 +231,10 @@ void tokenize(char *buffer, char *exec_args[]) {
 	if (test_last_char(buffer, '&')) {
 		/*This removes the &, so that it is not assumed as an argument*/
 		exec_args[counter - 1] = NULL;
-		printf("TOKENIZE : %d\t%s\n",counter - 1,exec_args[counter]);
+		printf("TOKENIZE : %d\t%s\n", counter - 1, exec_args[counter]);
 	}
 	exec_args[counter] = NULL;
-	printf("TOKENIZE : %d\t%s\n",counter,exec_args[counter]);
+	printf("TOKENIZE : %d\t%s\n", counter, exec_args[counter]);
 }
 
 void remove_tab(char *temp) {
@@ -276,7 +277,7 @@ int find_target_idx(char *target) {
 
 void dfs(char *target) {
 	int idx = find_target_idx(target);
-	if(strlen(target) == 0)
+	if (strlen(target) == 0)
 		return;
 	if (idx == -1) {
 		/*Test if it is a file in the current directory*/
@@ -429,7 +430,10 @@ void get_cmd(char *buffer_temp, int target_pos) {
 			trim_string(cmd);
 			if (test_last_char(cmd, '&')) {
 				target_arr[target_pos].commands.list[command_number].sp_command_type = back_cmd;
-			} else if (strchr(cmd, '<') || strchr(buffer_temp, '>')) {
+			} else if (strchr(cmd, '<') && strchr(cmd, '>')) {
+				/*Has both the directions*/
+				target_arr[target_pos].commands.list[command_number].sp_command_type = redr_both_cmd;
+			} else if (strchr(cmd, '<') || strchr(cmd, '>')) {
 				target_arr[target_pos].commands.list[command_number].sp_command_type = redr_cmd;
 			} else if (strstr(cmd, "cd ")) {
 				target_arr[target_pos].commands.list[command_number].sp_command_type = cdir_cmd;
@@ -481,6 +485,15 @@ void get_cmd(char *buffer_temp, int target_pos) {
 		target_arr[target_pos].commands.command_count++;
 
 //		printf("Background command\n");
+	} else if (strchr(buffer_temp, '<') && strchr(buffer_temp, '>')) {
+		/*Has both the directions*/
+		/*IO Redirection command*/
+
+		int command_number = target_arr[target_pos].commands.command_count;
+		strcpy(target_arr[target_pos].commands.list[command_number].com, buffer_temp);
+
+		target_arr[target_pos].commands.list[command_number].command_type = redr_both_cmd;
+		target_arr[target_pos].commands.command_count++;
 	} else if (strchr(buffer_temp, '<') || strchr(buffer_temp, '>')) {
 		/*IO Redirection command*/
 
@@ -643,6 +656,57 @@ void execute_back_cmd(int start) {
 	}
 }
 
+void execute_redr_both_cmd(int start) {
+	printf("%-20s : Command : %-50s\n", __func__, cmd_list[start].com);
+	char buffer_temp[NUMELE];
+	strcpy(buffer_temp, cmd_list[start].com);
+	int stdout = dup(STDOUT_FILENO);
+	int stdin = dup(STDIN_FILENO);
+	if (strchr(cmd_list[start].com, '>')) {
+		/*Forward redirection command*/
+		char *proc = strtok(buffer_temp, "<");
+		char *file1 = strtok(NULL, ">");
+		char *file2 = strtok(NULL, "\n");
+		char *exec_args[100];
+
+		trim_string(proc);
+		trim_string(file1);
+		trim_string(file2);
+		remove_newline(file2);
+		tokenize(proc, exec_args);
+		printf("%s\n", proc);
+		printf("%s\n", file1);
+		printf("%s\n", file2);
+
+		struct stat buf;
+		if (stat(file1, &buf) < 0) {
+			/*make_file_name found, so set it as default*/
+			printf("Supplied file doesn't exist!\n");
+			handle_execution_error(start);
+		}
+		close(STDIN_FILENO);
+		int f1 = open(file1, O_RDONLY);
+
+
+		close(STDOUT_FILENO);
+		int f2 = open(file2, O_WRONLY|O_CREAT|O_TRUNC, 0777);
+		if (fork() == 0) {
+			if (execv(exec_args[0], exec_args) == -1) {
+				perror("fork");
+				handle_execution_error(start);
+				exit(0);
+			}
+		}else{
+			wait_all_children();
+			close(f1);
+			dup(stdin);
+			close(f2);
+			dup(stdout);
+		}
+
+	}
+}
+
 void execute_redr_cmd(int start) {
 	printf("%-20s : Command : %-50s\n", __func__, cmd_list[start].com);
 	char buffer_temp[NUMELE];
@@ -660,14 +724,14 @@ void execute_redr_cmd(int start) {
 		remove_newline(file);
 		tokenize(proc, exec_args);
 		close(STDOUT_FILENO);
-		int f1 = open(file, O_WRONLY|O_CREAT|O_TRUNC, 0777);
+		int f1 = open(file, O_WRONLY | O_CREAT | O_TRUNC, 0777);
 		if (fork() == 0) {
 			if (execv(exec_args[0], exec_args) == -1) {
 				perror("fork");
 				handle_execution_error(start);
 				exit(0);
 			}
-		}else{
+		} else {
 			wait_all_children();
 			close(f1);
 			dup(stdout);
@@ -697,7 +761,7 @@ void execute_redr_cmd(int start) {
 				handle_execution_error(start);
 				exit(0);
 			}
-		}else{
+		} else {
 			wait_all_children();
 			close(f1);
 			dup(stdin);
@@ -1018,6 +1082,10 @@ int main(int argc, char **argv) {
 
 			} else if (cmd_list[k].command_type == redr_cmd) {
 				execute_redr_cmd(k);
+				k++;
+				wait_all_children();
+			} else if (cmd_list[k].command_type == redr_both_cmd) {
+				execute_redr_both_cmd(k);
 				k++;
 				wait_all_children();
 			} else if (cmd_list[k].command_type == back_cmd) {

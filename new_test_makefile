@@ -24,3 +24,5 @@ alarmtest:
 redrtest:
 	cat Makefile > temp.txt
 	grep FLAG < Makefile
+bothredrtest:
+	sort < Makefile > temp.txt
