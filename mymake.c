@@ -281,6 +281,11 @@ void tokenize(char *buffer, char *exec_args[]) {
 		exec_args[counter - 1] = NULL;
 	}
 	exec_args[counter] = NULL;
+
+	for(int i = 0 ; i <= counter ; i++){
+		printf("%d\t\t%s\n" ,i, exec_args[i]);
+	}
+	printf("\n");
 }
 
 void remove_tab(char *temp) {
