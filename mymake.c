@@ -11,7 +11,7 @@
 #include <unistd.h>
 
 #define search_path_env "PATH"
-#define STLEN 200
+#define STLEN 1000
 #define NUMELE 50
 #define empty_cmd -1
 #define norm_cmd 0
