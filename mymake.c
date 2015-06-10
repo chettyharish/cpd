@@ -281,6 +281,7 @@ void tokenize(char *buffer, char *exec_args[]) {
 	}
 	exec_args[counter] = NULL;
 
+	printf("Num ele : %d\n",counter);
 	for(int i = 0 ; i <= counter ; i++){
 		printf("%d\t\t%s\n" ,i, exec_args[i]);
 	}
