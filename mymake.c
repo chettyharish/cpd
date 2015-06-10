@@ -186,12 +186,6 @@ void remove_newline(char *temp) {
 
 }
 
-void print_dir() {
-	char temp[STLEN];
-	getcwd(temp, sizeof(temp));
-	printf("Directory : %s\n", temp);
-}
-
 int find_file(char *env_path, char* cmd) {
 	/*Returns 0 if succesful else 1*/
 	struct stat buf;
@@ -462,7 +456,6 @@ bool test_cdir_cmd(char *cmd) {
 	strcpy(buffer_temp, cmd);
 	char *pos = strtok(buffer_temp, " ");
 	if (strcmp(pos, "cd") == 0) {
-		printf("%-80s CD Command\n", cmd);
 		return true;
 	}
 	return false;
@@ -477,7 +470,6 @@ bool test_echo_cmd(char *cmd) {
 	strcpy(buffer_temp, cmd);
 	char *pos = strtok(buffer_temp, " ");
 	if (strcmp(pos, "echo") == 0) {
-		printf("%-80s ECHO Command\n", cmd);
 		return true;
 	}
 	return false;
@@ -681,7 +673,7 @@ void get_default_make() {
 
 void kill_everything() {
 	/*Kills everything in the same group*/
-	kill(0, SIGKILL);
+	kill(0, SIGTERM);
 }
 
 void handle_execution_error(int pos) {
@@ -697,9 +689,10 @@ void handle_execution_error(int pos) {
 }
 
 void signal_handler(int signo) {
+	printf("SIGINT caught\n");
+	fflush(0);
 	if (ui.interrupt == true) {
 		/*Blocking all SIGINTS*/
-		printf("SIGINT caught\n");
 	} else {
 		kill_everything();
 	}
@@ -719,9 +712,7 @@ void execute_cdir_cmd(int start) {
 	strcpy(buffer_temp, cmd_list[start].com);
 	char *path = strtok(buffer_temp, " ");
 	path = strtok(NULL, " ");
-	print_dir();
 	chdir(path);
-	print_dir();
 }
 
 void execute_echo_cmd(int start) {
@@ -748,7 +739,6 @@ void execute_echo_cmd(int start) {
 }
 
 void execute_back_cmd(int start) {
-	print_dir();
 	if (fork() == 0) {
 		/*Executing program in child process*/
 		char *exec_args[NUMELE];
@@ -871,13 +861,9 @@ void execute_redr_cmd(int start) {
 
 	close(stdout);
 	close(stdin);
-
-	print_dir();
 }
 
 void execute_norm_cmd(int start) {
-	print_dir();
-
 	if (fork() == 0) {
 		/*Executing program in child process*/
 		char *exec_args[100];
@@ -1091,11 +1077,14 @@ int main(int argc, char **argv) {
 	}
 	getcwd(ui.cdir, sizeof(ui.cdir));
 	get_default_make();
-	if (signal(SIGINT, signal_handler) == SIG_ERR) {
-		perror("signal");
-	}
 
+
+	struct sigaction action;
+	action.sa_handler = signal_handler;
+	action.sa_flags = 0;
+	sigaction(SIGINT, &action, NULL);
 	if (ui.interrupt == true) {
+
 		sigset_t newmask, oldmask;
 		sigemptyset(&newmask);
 		sigaddset(&newmask, SIGINT);
