@@ -37,3 +37,6 @@ cdecho:
 	echo "Hello World"
 	cd new
 	echo $(CC)
+
+simple:
+	cat Makefile
