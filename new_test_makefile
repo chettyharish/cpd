@@ -10,7 +10,7 @@ pipetest:
 	cat mymake.c | grep char | grep STLEN | grep NUMELE| grep targ_queue
 	cat mymake.c | grep char | grep STLEN | nl -v0 | grep NUMELE 
 multiline:
-	cd tempor;cd new ; cat makefile
+	cd tempor;cd new ; cat makefile ;
 
 backtest:
 	sleep 100 &

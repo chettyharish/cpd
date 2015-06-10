@@ -448,28 +448,20 @@ void replace_macros(char *buffer_temp) {
 }
 
 bool test_cdir_cmd(char *cmd) {
-	if (strlen(cmd) == 0) {
-		/*Empty command, so just return!*/
+	if (strlen(cmd) == 0)
 		return false;
-	}
-	char buffer_temp[STLEN];
-	strcpy(buffer_temp, cmd);
-	char *pos = strtok(buffer_temp, " ");
-	if (strcmp(pos, "cd") == 0) {
+	char *pos = strstr(cmd, "cd ");
+	if (pos && (pos - cmd) == 0) {
 		return true;
 	}
 	return false;
 }
 
 bool test_echo_cmd(char *cmd) {
-	if (strlen(cmd) == 0) {
-		/*Empty command, so just return!*/
+	if (strlen(cmd) == 0)
 		return false;
-	}
-	char buffer_temp[STLEN];
-	strcpy(buffer_temp, cmd);
-	char *pos = strtok(buffer_temp, " ");
-	if (strcmp(pos, "echo") == 0) {
+	char *pos = strstr(cmd, "echo ");
+	if (pos && (pos - cmd) == 0) {
 		return true;
 	}
 	return false;
@@ -517,6 +509,9 @@ void get_cmd(char *buffer_temp, int target_pos) {
 		int command_number;
 
 		char *cmd = strtok(buffer_temp, "|");
+		char temp[STLEN];
+		strcpy(temp, cmd);
+		printf("COMMAND : %s\n", cmd);
 		while (cmd != NULL) {
 			command_number = target_arr[target_pos].commands.command_count;
 			strcpy(target_arr[target_pos].commands.list[command_number].com, cmd);
@@ -527,9 +522,12 @@ void get_cmd(char *buffer_temp, int target_pos) {
 				target_arr[target_pos].commands.list[command_number].sp_command_type = back_cmd;
 			} else if (strchr(cmd, '<') || strchr(buffer_temp, '>')) {
 				target_arr[target_pos].commands.list[command_number].sp_command_type = redr_cmd;
-			} else if (test_cdir_cmd(cmd)) {
-				target_arr[target_pos].commands.list[command_number].sp_command_type = cdir_cmd;
-			} else if (test_echo_cmd(cmd)) {
+			}
+//				else if (test_cdir_cmd(cmd)) {
+//				target_arr[target_pos].commands.list[command_number].sp_command_type = cdir_cmd;
+//			}
+			else if (test_echo_cmd(cmd)) {
+				printf("COMMAND : %s\n", cmd);
 				target_arr[target_pos].commands.list[command_number].sp_command_type = echo_cmd;
 			} else {
 				target_arr[target_pos].commands.list[command_number].sp_command_type = norm_cmd;
@@ -760,7 +758,7 @@ void execute_redr_both_cmd(int start) {
 		char *proc = strtok(buffer_temp, "<");
 		char *file1 = strtok(NULL, ">");
 		char *file2 = strtok(NULL, "\n");
-		char *exec_args[100];
+		char *exec_args[NUMELE];
 
 		trim_string(proc);
 		trim_string(file1);
@@ -808,7 +806,7 @@ void execute_redr_cmd(int start) {
 		/*Forward redirection command*/
 		char *proc = strtok(buffer_temp, ">");
 		char *file = strtok(NULL, "\n");
-		char *exec_args[100];
+		char *exec_args[NUMELE];
 
 		trim_string(proc);
 		trim_string(file);
@@ -832,7 +830,7 @@ void execute_redr_cmd(int start) {
 		/*Backward redirection command*/
 		char *proc = strtok(buffer_temp, "<");
 		char *file = strtok(NULL, "\n");
-		char *exec_args[100];
+		char *exec_args[NUMELE];
 
 		trim_string(proc);
 		trim_string(file);
@@ -866,7 +864,7 @@ void execute_redr_cmd(int start) {
 void execute_norm_cmd(int start) {
 	if (fork() == 0) {
 		/*Executing program in child process*/
-		char *exec_args[100];
+		char *exec_args[NUMELE];
 		tokenize(cmd_list[start].com, exec_args);
 		if (execv(exec_args[0], exec_args) == -1) {
 			handle_execution_error(start);
@@ -916,7 +914,7 @@ void execute_pipe_cmd(int start, int count) {
 				}
 
 				/*Executing program in child process*/
-				char *exec_args[100];
+				char *exec_args[NUMELE];
 				tokenize(cmd_list[start + i].com, exec_args);
 				if (execv(exec_args[0], exec_args) == -1) {
 					handle_execution_error(start);
@@ -936,7 +934,7 @@ void execute_pipe_cmd(int start, int count) {
 				}
 
 				/*Executing program in child process*/
-				char *exec_args[100];
+				char *exec_args[NUMELE];
 				tokenize(cmd_list[start + i].com, exec_args);
 				if (execv(exec_args[0], exec_args) == -1) {
 					handle_execution_error(start);
@@ -957,7 +955,7 @@ void execute_pipe_cmd(int start, int count) {
 					close(pipe_lvl[i][1]);
 				}
 				/*Executing program in child process*/
-				char *exec_args[100];
+				char *exec_args[NUMELE];
 				tokenize(cmd_list[start + i].com, exec_args);
 				if (execv(exec_args[0], exec_args) == -1) {
 					handle_execution_error(start);
@@ -1077,7 +1075,6 @@ int main(int argc, char **argv) {
 	}
 	getcwd(ui.cdir, sizeof(ui.cdir));
 	get_default_make();
-
 
 	struct sigaction action;
 	action.sa_handler = signal_handler;
