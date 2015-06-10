@@ -282,7 +282,7 @@ void tokenize(char *buffer, char *exec_args[]) {
 	exec_args[counter] = NULL;
 
 	printf("Num ele : %d\n",counter);
-	for(int i = 0 ; i <= counter ; i++){
+	for(int i = 0 ; i < counter ; i++){
 		printf("%d\t\t%s\n" ,i, exec_args[i]);
 	}
 	printf("\n");
@@ -869,10 +869,10 @@ void execute_norm_cmd(int start) {
 		/*Executing program in child process*/
 		char *exec_args[NUMELE];
 		tokenize(cmd_list[start].com, exec_args);
-//		if (execv(exec_args[0], exec_args) == -1) {
-//			handle_execution_error(start);
-//			exit(0);
-//		}
+		if (execv(exec_args[0], exec_args) == -1) {
+			handle_execution_error(start);
+			exit(0);
+		}
 	}
 }
 

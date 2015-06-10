@@ -10,6 +10,6 @@ int main() {
 
 	printf("%d\t\t%s\n",0,argv[0]);
 	printf("%d\t\t%s\n",1,argv[1]);
-	printf("%d\t\t%s\n",2,argv[2]);
+//	printf("%d\t\t%s\n",2,argv[2]);
 	execv(argv[0], argv);
 }
