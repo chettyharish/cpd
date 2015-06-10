@@ -511,7 +511,6 @@ void get_cmd(char *buffer_temp, int target_pos) {
 		char *cmd = strtok(buffer_temp, "|");
 		char temp[STLEN];
 		strcpy(temp, cmd);
-		printf("COMMAND : %s\n", cmd);
 		while (cmd != NULL) {
 			command_number = target_arr[target_pos].commands.command_count;
 			strcpy(target_arr[target_pos].commands.list[command_number].com, cmd);
@@ -522,12 +521,9 @@ void get_cmd(char *buffer_temp, int target_pos) {
 				target_arr[target_pos].commands.list[command_number].sp_command_type = back_cmd;
 			} else if (strchr(cmd, '<') || strchr(buffer_temp, '>')) {
 				target_arr[target_pos].commands.list[command_number].sp_command_type = redr_cmd;
-			}
-//				else if (test_cdir_cmd(cmd)) {
-//				target_arr[target_pos].commands.list[command_number].sp_command_type = cdir_cmd;
-//			}
-			else if (test_echo_cmd(cmd)) {
-				printf("COMMAND : %s\n", cmd);
+			} else if (test_cdir_cmd(cmd)) {
+				target_arr[target_pos].commands.list[command_number].sp_command_type = cdir_cmd;
+			} else if (test_echo_cmd(cmd)) {
 				target_arr[target_pos].commands.list[command_number].sp_command_type = echo_cmd;
 			} else {
 				target_arr[target_pos].commands.list[command_number].sp_command_type = norm_cmd;
