@@ -674,6 +674,7 @@ void handle_execution_error(int pos) {
 	/*Execution error handler
 	 * does stuff based on settings*/
 	if (ui.force == false) {
+		perror("Error");
 		fprintf(stderr, "Error due to instruction %s\n", cmd_list[pos].com);
 		kill_everything();
 	} else {
