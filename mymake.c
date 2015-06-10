@@ -9,6 +9,7 @@
 #include <sys/wait.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <error.h>
 
 #define search_path_env "PATH"
 #define STLEN 200
