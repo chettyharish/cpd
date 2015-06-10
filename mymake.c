@@ -2,13 +2,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 #include <stdbool.h>
 #include <signal.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
 #include <fcntl.h>
+#include <unistd.h>
 
 #define search_path_env "PATH"
 #define STLEN 200
@@ -747,8 +747,8 @@ void execute_back_cmd(int start) {
 void execute_redr_both_cmd(int start) {
 	char buffer_temp[NUMELE];
 	strcpy(buffer_temp, cmd_list[start].com);
-	int stdout = dup(STDOUT_FILENO);
-	int stdin = dup(STDIN_FILENO);
+	int duplicated_stdout = dup(STDOUT_FILENO);
+	int duplicated_stdin = dup(STDIN_FILENO);
 	if (strchr(cmd_list[start].com, '>')) {
 		/*Forward redirection command*/
 		char *proc = strtok(buffer_temp, "<");
@@ -785,9 +785,9 @@ void execute_redr_both_cmd(int start) {
 		} else {
 			wait_all_children();
 			close(f1);
-			dup(stdin);
+			dup(duplicated_stdin);
 			close(f2);
-			dup(stdout);
+			dup(duplicated_stdout);
 		}
 
 	}
@@ -796,8 +796,8 @@ void execute_redr_both_cmd(int start) {
 void execute_redr_cmd(int start) {
 	char buffer_temp[NUMELE];
 	strcpy(buffer_temp, cmd_list[start].com);
-	int stdout = dup(STDOUT_FILENO);
-	int stdin = dup(STDIN_FILENO);
+	int duplicated_stdout = dup(STDOUT_FILENO);
+	int duplicated_stdin = dup(STDIN_FILENO);
 	if (strchr(cmd_list[start].com, '>')) {
 		/*Forward redirection command*/
 		char *proc = strtok(buffer_temp, ">");
@@ -819,7 +819,7 @@ void execute_redr_cmd(int start) {
 		} else {
 			wait_all_children();
 			close(f1);
-			dup(stdout);
+			dup(duplicated_stdout);
 		}
 
 	} else {
@@ -849,12 +849,12 @@ void execute_redr_cmd(int start) {
 		} else {
 			wait_all_children();
 			close(f1);
-			dup(stdin);
+			dup(duplicated_stdin);
 		}
 	}
 
-	close(stdout);
-	close(stdin);
+	close(duplicated_stdout);
+	close(duplicated_stdin);
 }
 
 void execute_norm_cmd(int start) {
@@ -1065,7 +1065,7 @@ int main(int argc, char **argv) {
 			ui.interrupt = true;
 		} else if (strcmp(argv[i], "-t") == 0) {
 			ui.time = atoi(argv[++i]);
-		} else {
+		}  else {
 			strcpy(ui.target, argv[i]);
 		}
 	}
@@ -1077,7 +1077,6 @@ int main(int argc, char **argv) {
 	action.sa_flags = 0;
 	sigaction(SIGINT, &action, NULL);
 	if (ui.interrupt == true) {
-
 		sigset_t newmask, oldmask;
 		sigemptyset(&newmask);
 		sigaddset(&newmask, SIGINT);
@@ -1087,13 +1086,13 @@ int main(int argc, char **argv) {
 	}
 
 	if (ui.time != -1) {
-		struct sigaction act;
+		struct sigaction action;
 
-		act.sa_handler = signal_alarm;
-		sigemptyset(&act.sa_mask);
-		act.sa_flags = 0;
+		action.sa_handler = signal_alarm;
+		sigemptyset(&action.sa_mask);
+		action.sa_flags = 0;
 
-		sigaction(SIGALRM, &act, 0);
+		sigaction(SIGALRM, &action, 0);
 		alarm(ui.time);
 	}
 
