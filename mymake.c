@@ -13,19 +13,20 @@
 #define search_path_env "PATH"
 #define STLEN 200
 #define NUMELE 50
-#define empty_target -2
 #define empty_cmd -1
 #define norm_cmd 0
 #define pipe_cmd 1
-#define redr_both_cmd 8
-#define redr_cmd 2
-#define cdir_cmd 3
-#define back_cmd 4
-#define mult_cmd 5
-#define pipe_cmd_last 6
-#define mult_cmd_last 7
-#define norm_target 20
-#define infr_target 21
+#define pipe_cmd_last 2
+#define redr_cmd 3
+#define redr_both_cmd 4
+#define cdir_cmd 5
+#define back_cmd 6
+#define mult_cmd 7
+#define mult_cmd_last 8
+#define echo_cmd 9
+#define empty_target 20
+#define norm_target 21
+#define infr_target 22
 
 struct userinput {
 	char make_file_name[STLEN];
@@ -133,6 +134,9 @@ char* print_type(int type) {
 	case mult_cmd:
 		strcpy(type_buf, "mult_cmd");
 		return type_buf;
+	case echo_cmd:
+		strcpy(type_buf, "echo_cmd");
+		return type_buf;
 	}
 
 	strcpy(type_buf, "NEVER HAPPENS");
@@ -206,13 +210,15 @@ int find_file(char *env_path, char* cmd) {
 	} else if (file_name[0] == '/') {
 		/*Absolute path found dont change anything*/
 		return 0;
+	} else if (strcmp(file_name, "cd") == 0 || strcmp(file_name, "echo") == 0) {
+		/*CD or ECHO command, will be handled later!*/
+		return 0;
 	} else {
 		char *path = strtok(temp_env, ":");
 		while (path != NULL) {
 			/*Dynamic path probably, so search MYPATH*/
 			sprintf(file_path, "%s/%s", path, file_name);
 			if (stat(file_path, &buf) == 0) {
-
 				if ((pos = strstr(cmd, file_name))) {
 					strncpy(buffer, cmd, pos - cmd);
 					sprintf(buffer + (pos - cmd), "%s%s", file_path, pos + strlen(file_name));
@@ -223,6 +229,8 @@ int find_file(char *env_path, char* cmd) {
 			path = strtok(NULL, ":");
 		}
 	}
+
+	printf("File %s not found!!!", file_name);
 
 	return 1;
 
@@ -293,7 +301,6 @@ int find_target_idx(char *target) {
 	for (int i = 0; i < counters.targets; i++) {
 		if (strcmp(target, target_arr[i].target_name) == 0) {
 			matched_target = i;
-//			printf("%s MATCH FOUND %s \n", target, target_arr[i].target_name);
 			return matched_target;
 		}
 	}
@@ -399,12 +406,6 @@ void get_target(char *buffer_temp, int target_pos) {
 		strcpy(target_arr[target_pos].inference_to, to);
 		target_arr[target_pos].target_type = infr_target;
 	}
-//	printf("Target type = %d\n", target_arr[target_pos].target_type);
-//	printf("From = %s\n", target_arr[target_pos].inference_from);
-//	printf("To = %s\n", target_arr[target_pos].inference_to);
-//	for (int i = 0; i < target_arr[target_pos].dependency_count; ++i) {
-//		printf("Dependency Name : %s\n", target_arr[target_pos].dependecies[i]);
-//	}
 }
 
 void replace_macros(char *buffer_temp) {
@@ -452,6 +453,36 @@ void replace_macros(char *buffer_temp) {
 
 }
 
+bool test_cdir_cmd(char *cmd) {
+	if (strlen(cmd) == 0) {
+		/*Empty command, so just return!*/
+		return false;
+	}
+	char buffer_temp[STLEN];
+	strcpy(buffer_temp, cmd);
+	char *pos = strtok(buffer_temp, " ");
+	if (strcmp(pos, "cd") == 0) {
+		printf("%-80s CD Command\n", cmd);
+		return true;
+	}
+	return false;
+}
+
+bool test_echo_cmd(char *cmd) {
+	if (strlen(cmd) == 0) {
+		/*Empty command, so just return!*/
+		return false;
+	}
+	char buffer_temp[STLEN];
+	strcpy(buffer_temp, cmd);
+	char *pos = strtok(buffer_temp, " ");
+	if (strcmp(pos, "echo") == 0) {
+		printf("%-80s ECHO Command\n", cmd);
+		return true;
+	}
+	return false;
+}
+
 void get_cmd(char *buffer_temp, int target_pos) {
 	/*Have to set type of Target here*/
 	replace_macros(buffer_temp);
@@ -476,8 +507,10 @@ void get_cmd(char *buffer_temp, int target_pos) {
 				target_arr[target_pos].commands.list[command_number].sp_command_type = redr_both_cmd;
 			} else if (strchr(cmd, '<') || strchr(cmd, '>')) {
 				target_arr[target_pos].commands.list[command_number].sp_command_type = redr_cmd;
-			} else if (strstr(cmd, "cd ")) {
+			} else if (test_cdir_cmd(cmd)) {
 				target_arr[target_pos].commands.list[command_number].sp_command_type = cdir_cmd;
+			} else if (test_echo_cmd(cmd)) {
+				target_arr[target_pos].commands.list[command_number].sp_command_type = echo_cmd;
 			} else {
 				target_arr[target_pos].commands.list[command_number].sp_command_type = norm_cmd;
 			}
@@ -502,8 +535,10 @@ void get_cmd(char *buffer_temp, int target_pos) {
 				target_arr[target_pos].commands.list[command_number].sp_command_type = back_cmd;
 			} else if (strchr(cmd, '<') || strchr(buffer_temp, '>')) {
 				target_arr[target_pos].commands.list[command_number].sp_command_type = redr_cmd;
-			} else if (strstr(cmd, "cd ")) {
+			} else if (test_cdir_cmd(cmd)) {
 				target_arr[target_pos].commands.list[command_number].sp_command_type = cdir_cmd;
+			} else if (test_echo_cmd(cmd)) {
+				target_arr[target_pos].commands.list[command_number].sp_command_type = echo_cmd;
 			} else {
 				target_arr[target_pos].commands.list[command_number].sp_command_type = norm_cmd;
 			}
@@ -537,13 +572,21 @@ void get_cmd(char *buffer_temp, int target_pos) {
 
 		target_arr[target_pos].commands.list[command_number].command_type = redr_cmd;
 		target_arr[target_pos].commands.command_count++;
-	} else if (strstr(buffer_temp, "cd ")) {
+	} else if (test_cdir_cmd((buffer_temp))) {
 		/*CD command*/
 
 		int command_number = target_arr[target_pos].commands.command_count;
 		strcpy(target_arr[target_pos].commands.list[command_number].com, buffer_temp);
 
 		target_arr[target_pos].commands.list[command_number].command_type = cdir_cmd;
+		target_arr[target_pos].commands.command_count++;
+	} else if (test_echo_cmd((buffer_temp))) {
+		/*ECHO command*/
+
+		int command_number = target_arr[target_pos].commands.command_count;
+		strcpy(target_arr[target_pos].commands.list[command_number].com, buffer_temp);
+
+		target_arr[target_pos].commands.list[command_number].command_type = echo_cmd;
 		target_arr[target_pos].commands.command_count++;
 	} else {
 		/*Normal command*/
@@ -567,10 +610,7 @@ void create_command_list(int pos) {
 	char *env_path = getenv(search_path_env);
 
 	for (int i = 0; i < k; i++) {
-		if (find_file(env_path, cmd_list[i].com) == 1) {
-			printf("File not found\n");
-		}
-		asfsafsf
+		find_file(env_path, cmd_list[i].com);
 	}
 
 	if (target_arr[idx].target_type == infr_target) {
@@ -670,8 +710,44 @@ void signal_alarm(int signo) {
 	kill_everything();
 }
 
+void execute_cdir_cmd(int start) {
+	if (strlen(cmd_list[start].com) == 0) {
+		/*Empty command, so just return!*/
+		return;
+	}
+	char buffer_temp[STLEN];
+	strcpy(buffer_temp, cmd_list[start].com);
+	char *path = strtok(buffer_temp, " ");
+	path = strtok(NULL, " ");
+	print_dir();
+	chdir(path);
+	print_dir();
+}
+
+void execute_echo_cmd(int start) {
+	if (strlen(cmd_list[start].com) == 0) {
+		/*Empty command, so just return!*/
+		return;
+	}
+	char buffer_temp[NUMELE];
+	strcpy(buffer_temp, cmd_list[start].com);
+	char *msg = strtok(buffer_temp, " ");
+	msg = strtok(NULL, "\n");
+
+	char *ptr;
+	while ((ptr = strchr(msg, '\"'))) {
+		*ptr = ' ';
+	}
+
+	while ((ptr = strchr(msg, '\''))) {
+		*ptr = ' ';
+	}
+
+	trim_string(msg);
+	printf("%s\n", msg);
+}
+
 void execute_back_cmd(int start) {
-	printf("%-20s : Command : %-50s\n", __func__, cmd_list[start].com);
 	print_dir();
 	if (fork() == 0) {
 		/*Executing program in child process*/
@@ -685,7 +761,6 @@ void execute_back_cmd(int start) {
 }
 
 void execute_redr_both_cmd(int start) {
-	printf("%-20s : Command : %-50s\n", __func__, cmd_list[start].com);
 	char buffer_temp[NUMELE];
 	strcpy(buffer_temp, cmd_list[start].com);
 	int stdout = dup(STDOUT_FILENO);
@@ -735,7 +810,6 @@ void execute_redr_both_cmd(int start) {
 }
 
 void execute_redr_cmd(int start) {
-	printf("%-20s : Command : %-50s\n", __func__, cmd_list[start].com);
 	char buffer_temp[NUMELE];
 	strcpy(buffer_temp, cmd_list[start].com);
 	int stdout = dup(STDOUT_FILENO);
@@ -801,19 +875,7 @@ void execute_redr_cmd(int start) {
 	print_dir();
 }
 
-void execute_cdir_cmd(int start) {
-	printf("%-20s : Command : %-50s\n", __func__, cmd_list[start].com);
-	char buffer_temp[STLEN];
-	strcpy(buffer_temp, cmd_list[start].com);
-	char *path = strtok(buffer_temp, " ");
-	path = strtok(NULL, " ");
-	print_dir();
-	chdir(path);
-	print_dir();
-}
-
 void execute_norm_cmd(int start) {
-	printf("%-20s : Command : %-50s \n", __func__, cmd_list[start].com);
 	print_dir();
 
 	if (fork() == 0) {
@@ -829,7 +891,6 @@ void execute_norm_cmd(int start) {
 
 void execute_mult_cmd(int start, int count) {
 	for (int i = start; i < start + count; i++) {
-		printf("%-20s : Command : %-50s\n", __func__, cmd_list[i].com);
 		if (cmd_list[i].sp_command_type == redr_cmd) {
 			execute_redr_cmd(i);
 			wait_all_children();
@@ -1127,7 +1188,7 @@ int main(int argc, char **argv) {
 	dfs(ui.target);
 
 	if (ui.debug == true) {
-		printf("%sDBG : Dependency Queue : ", s);
+		printf("%sDBG : Target Queue : ", s);
 		for (int i = 0; i < queue.queue_end; i++) {
 			printf(" %s ", queue.targ_queue[i]);
 		}
@@ -1208,36 +1269,44 @@ int main(int argc, char **argv) {
 
 			} else if (cmd_list[k].command_type == redr_cmd) {
 				if (ui.debug == true) {
-					printf("%s%s%sDBG : CMD : %-150s\n TYPE : %s\n", s, s, s, cmd_list[k].com, print_type(cmd_list[k].command_type));
+					printf("%s%s%sDBG : CMD : %-150s TYPE : %s\n", s, s, s, cmd_list[k].com, print_type(cmd_list[k].command_type));
 				}
 				execute_redr_cmd(k);
 				k++;
 				wait_all_children();
 			} else if (cmd_list[k].command_type == redr_both_cmd) {
 				if (ui.debug == true) {
-					printf("%s%s%sDBG : CMD : %-150s\n TYPE : %s\n", s, s, s, cmd_list[k].com, print_type(cmd_list[k].command_type));
+					printf("%s%s%sDBG : CMD : %-150s TYPE : %s\n", s, s, s, cmd_list[k].com, print_type(cmd_list[k].command_type));
 				}
 				execute_redr_both_cmd(k);
 				k++;
 				wait_all_children();
 			} else if (cmd_list[k].command_type == back_cmd) {
 				if (ui.debug == true) {
-					printf("%s%s%sDBG : CMD : %-150s\n TYPE : %s\n", s, s, s, cmd_list[k].com, print_type(cmd_list[k].command_type));
+					printf("%s%s%sDBG : CMD : %-150s TYPE : %s\n", s, s, s, cmd_list[k].com, print_type(cmd_list[k].command_type));
 				}
 				execute_back_cmd(k);
 				k++;
 				/*No waitig for background process*/
 			} else if (cmd_list[k].command_type == cdir_cmd) {
 				if (ui.debug == true) {
-					printf("%s%s%sDBG : CMD : %-150s\n TYPE : %s\n", s, s, s, cmd_list[k].com, print_type(cmd_list[k].command_type));
+					printf("%s%s%sDBG : CMD : %-150s TYPE : %s\n", s, s, s, cmd_list[k].com, print_type(cmd_list[k].command_type));
 				}
 				/*Useless command probably does nothing*/
 				execute_cdir_cmd(k);
 				k++;
 				wait_all_children();
+			} else if (cmd_list[k].command_type == echo_cmd) {
+				if (ui.debug == true) {
+					printf("%s%s%sDBG : CMD : %-150s TYPE : %s\n", s, s, s, cmd_list[k].com, print_type(cmd_list[k].command_type));
+				}
+				/*Useless command probably does nothing*/
+				execute_echo_cmd(k);
+				k++;
+				wait_all_children();
 			} else if (cmd_list[k].command_type == norm_cmd) {
 				if (ui.debug == true) {
-					printf("%s%s%sDBG : CMD : %-150s\n TYPE : %s\n", s, s, s, cmd_list[k].com, print_type(cmd_list[k].command_type));
+					printf("%s%s%sDBG : CMD : %-150s TYPE : %s\n", s, s, s, cmd_list[k].com, print_type(cmd_list[k].command_type));
 				}
 				printf("%s \n", cmd_list[k].com);
 				execute_norm_cmd(k);

@@ -32,3 +32,8 @@ redrtest:
 	grep FLAG < Makefile
 bothredrtest:
 	sort < Makefile > temp.txt
+cdecho:
+	cd tempor
+	echo "Hello World"
+	cd new
+	echo $(CC)
