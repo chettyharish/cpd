@@ -869,10 +869,10 @@ void execute_norm_cmd(int start) {
 		/*Executing program in child process*/
 		char *exec_args[NUMELE];
 		tokenize(cmd_list[start].com, exec_args);
-		if (execv(exec_args[0], exec_args) == -1) {
-			handle_execution_error(start);
-			exit(0);
-		}
+//		if (execv(exec_args[0], exec_args) == -1) {
+//			handle_execution_error(start);
+//			exit(0);
+//		}
 	}
 }
 
