@@ -194,7 +194,6 @@ int find_file(char *env_path, char* cmd) {
 	char temp_cmd[STLEN];
 	char buffer[STLEN];
 	char *pos;
-	strcpy(temp_env, env_path);
 	strcpy(temp_cmd, cmd);
 	char *file_name = strtok(temp_cmd, " ");
 
@@ -207,10 +206,11 @@ int find_file(char *env_path, char* cmd) {
 	} else if (strcmp(file_name, "cd") == 0 || strcmp(file_name, "echo") == 0) {
 		/*CD or ECHO command, will be handled later!*/
 		return 0;
-	} else if(env_path == NULL){
+	} else if(!env_path){
 		/*Empty environment variable!*/
 		return 1;
 	}else {
+		strcpy(temp_env, env_path);
 		char *path = strtok(temp_env, ":");
 		while (path != NULL) {
 			/*Dynamic path probably, so search MYPATH*/
@@ -639,7 +639,7 @@ void create_command_list(int pos) {
 
 	char *env_path = getenv(search_path_env);
 
-	if(env_path ==NULL){
+	if(!env_path){
 		if(ui.debug == true){
 			printf("Missing MYPATH environment variable\n");
 		}
@@ -766,11 +766,10 @@ void handle_execution_error(int pos) {
 }
 
 void signal_handler(int signo) {
-	printf("SIGINT caught\n");
-	fflush(0);
 	if (ui.interrupt == true) {
 		/*Blocking all SIGINTS*/
 	} else {
+		fprintf(stderr,"make: *** [%s] Interrupt\n" , ui.target);
 		kill_everything();
 	}
 }
