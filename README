@@ -1,0 +1,11 @@
+##README
+
+The new_test_makefile has various tests to try out all the differet features using variety of targets
+
+Normal Targets
+pipetest: Used for testing pipes, carries out various operations using 1,2,3,4 and 5 piped processed 
+	  (The program can support 50 piped processed, and the number is modifiable by changing the NUMELE macro in code )
+
+multiline: Uses the sample directory and outputs the makefile inside tempor/new.
+
+

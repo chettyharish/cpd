@@ -1,9 +1,8 @@
 CC=/usr/bin/gcc
 CPP=/usr/bin/g++ 
 
-all : pipetest multiline redrdest bothredrtest cdecho
+all : pipetest multiline redrdest bothredrtest
 	echo "Done"
-
 pipetest:
 	cat Makefile | grep CC
 	cat Makefile | grep CC | grep =
@@ -16,24 +15,6 @@ backtest:
 	sleep 100 &
 	sleep 50
 
-alarmtest:
-	sleep 100
-
-redrtest:
-	cat Makefile > temp.txt
-	grep FLAG < Makefile
-bothredrtest:
-	sort < Makefile > temp.txt
-
-echotest:
-	echo "Hello World"
-	echo "$(CC) $(CPP) $(CC)  $(CPP)"
-	echo Hello World
-	echo $CPP $CC
-
-
-
-#Inference rules
 .c.o:
 	echo $<
 	echo $@
@@ -42,6 +23,22 @@ echotest:
 .cpp:
 	echo $<
 	$(CPP) -o $@ $<
+alarmtest:
+	sleep 100
+
+redrtest:
+	cat Makefile > temp.txt
+	grep FLAG < Makefile
+bothredrtest:
+	sort < Makefile > temp.txt
+cdecho:
+	cd tempors
+	cd new
+	echo "Hello World"
+	echo "$(CC) $(CPP) $(CC)  $(CPP)"
+
+simple:
+	cat Makefile
 
 #For testing cycles and ordering
 first : second third fourth
@@ -62,32 +59,9 @@ test1: test2 test3
 test2: test3
 	echo $@
 test3: temp.c
-	echo $@
-
-
-#For testing absolute and dynamic commands
-mixtest:
-	/bin/cat Makefile
-	cat Makefile
-	/bin/ls Makefile
-	ls Makefile
-
-
-
-
-#For testing errors
-cderror: 
-	cd what/where
-
-errortest:
-	/bin/wrongfile
-errortest2:
-	/bin/whatthehell | cat file | /nofile
-errortest3: unknowntarg
-	echo "Hello"
-
+	echo $@ 
 
 
 clean:
-	rm -f temp.o
-	rm -f temp2
+	rm temp.o
+	rm temp2

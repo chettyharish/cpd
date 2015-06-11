@@ -3,5 +3,8 @@ CC=gcc
 CFLAG=-g 
 
 .c.o:
-	echo Hello
+	echo C
 	gcc $<
+.cpp:
+	echo CPP
+	g++ $<

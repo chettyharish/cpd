@@ -10,7 +10,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 
-#define search_path_env "PATH"
+#define search_path_env "MYPATH"
 #define STLEN 1000
 #define NUMELE 50
 #define empty_cmd -1
@@ -42,10 +42,10 @@ struct userinput {
 /*Internal counter for counting different elements
  * Can cont multiple times in case of multiline commands*/
 struct counters {
+	char current_target[STLEN];
 	int macros;
 	int targets;
 	int inferences;
-	int names;
 	int commands;
 } counters;
 
@@ -224,8 +224,6 @@ int find_file(char *env_path, char* cmd) {
 		}
 	}
 
-	printf("File %s not found!!!", file_name);
-
 	return 1;
 
 }
@@ -370,7 +368,9 @@ void dfs(char *target) {
 		if (stat(target, &buf) == 0) {
 			strcpy(queue.targ_queue[queue.queue_end++], target);
 		} else {
-			printf("Missing Target : %s\n", target);
+			strcpy(queue.targ_queue[queue.queue_end++], target);
+			if (ui.debug == true)
+				printf("%sDBG : Missing Target : %s\n", s, target);
 		}
 		return;
 	}
@@ -716,28 +716,43 @@ void kill_everything() {
 	kill(0, SIGTERM);
 }
 
-void handle_target_error(int pos) {
-	/*Target error handler
-	 * does stuff based on settings*/
+void handle_cd_error(int pos) {
+	/*Error handler for cd command*/
+	fprintf(stderr, "make: *** [%s] Error 2\n", counters.current_target);
 	if (ui.force == false) {
-		perror("Error");
-		fprintf(stderr, "Error due to target %s\n", queue.targ_queue[pos]);
+		/*Only kill if not in forced mode*/
 		kill_everything();
-	} else {
-		fprintf(stderr, "Error due to target %s\n", queue.targ_queue[pos]);
-		/*Keep going*/
 	}
 }
-void handle_execution_error(int pos) {
-	/*Execution error handler
-	 * does stuff based on settings*/
+void handle_target_error(int pos) {
+	/*Error handler for targets*/
+	fprintf(stderr, "make: *** No rule to make target `%s', needed by `%s'.  Stop.\n", queue.targ_queue[pos], counters.current_target);
 	if (ui.force == false) {
-		perror("Error");
-		fprintf(stderr, "Error due to instruction %s\n", cmd_list[pos].com);
+		/*Only kill if not in forced mode*/
 		kill_everything();
-	} else {
-		fprintf(stderr, "Error due to instruction %s\n", cmd_list[pos].com);
-		/*Keep going*/
+	}
+}
+
+void handle_execution_error(int pos) {
+	/*Error handler for commands*/
+	char *cmd;
+	char *file_name;
+	char buffer_temp[STLEN];
+	struct stat buf;
+	strcpy(buffer_temp, cmd_list[pos].com);
+	cmd = strtok(buffer_temp, " ");
+	file_name = strtok(NULL, "\n");
+
+	if (stat(cmd, &buf) == -1) {
+		fprintf(stderr, "make: %s: Command not found\n", cmd_list[pos].com);
+		fprintf(stderr, "make: *** [%s] Error 127\n", counters.current_target);
+	} else if (stat(file_name, &buf) == -1) {
+		fprintf(stderr, "make: *** [%s] Error 1", counters.current_target);
+
+	}
+	if (ui.force == false) {
+		/*Only kill if not in forced mode*/
+		kill_everything();
 	}
 }
 
@@ -765,7 +780,9 @@ void execute_cdir_cmd(int start) {
 	strcpy(buffer_temp, cmd_list[start].com);
 	char *path = strtok(buffer_temp, " ");
 	path = strtok(NULL, " ");
-	chdir(path);
+	if (chdir(path) == -1) {
+		handle_cd_error(start);
+	}
 }
 
 void execute_echo_cmd(int start) {
@@ -1031,7 +1048,6 @@ void execute_pipe_cmd(int start, int count) {
 bool test_requirements(int pos) {
 	/*Testing if the requirements are satisfied or not
 	 * Returns true if it is satisfied else false*/
-	fprintf(stderr,"%s\n" , __func__);
 
 	int idx = find_target_idx(queue.targ_queue[pos]);
 	struct stat tar;
@@ -1039,6 +1055,10 @@ bool test_requirements(int pos) {
 	if (idx == -1) {
 		/*Since it is a file, we don't have to do anything with it
 		 * Target make rules only apply to Targets*/
+		struct stat buf;
+		if (stat(queue.targ_queue[pos], &buf) == -1) {
+			handle_target_error(pos);
+		}
 		return true;
 	}
 
@@ -1055,18 +1075,18 @@ bool test_requirements(int pos) {
 			for (int i = 0; i < target_arr[idx].dependency_count; i++) {
 				if ((stat(target_arr[idx].dependecies[i], &dep) == -1)) {
 					/*DEPENDECY ERROR*/
-					fprintf(stderr,"TEST : Dependency doesn't exist we have to compile\n");
+//					fprintf(stderr,"TEST : Dependency doesn't exist we have to compile\n");
 					handle_target_error(pos);
 					return false;
 				} else if (tar.st_mtime < dep.st_mtime) {
 					/*Dependency was made after the Target*/
-					fprintf(stderr,"TEST : Dependency was made after the Target\n");
+//					fprintf(stderr,"TEST : Dependency was made after the Target\n");
 					return false;
 				}
 			}
 		}
 	} else if (test_targ_type(target_arr[idx].target_name) == 1) {
-		fprintf(stderr,"TEST : single inference\n");
+		fprintf(stderr, "TEST : single inference\n");
 		/*Target is inference type 1, so we have to do other checks*/
 		char f_name[STLEN];
 		trim_string(ui.target);
@@ -1078,15 +1098,15 @@ bool test_requirements(int pos) {
 
 		if ((stat(f_name, &dep) == -1)) {
 			/*Dependency doesn't exist, so we have to make it*/
-			fprintf(stderr,"TEST : Dependency doesn't exist we have to compile\n");
+//			fprintf(stderr,"TEST : Dependency doesn't exist we have to compile\n");
 			return false;
 		} else if (tar.st_mtime < dep.st_mtime) {
 			/*Dependency was made after the Target*/
-			fprintf(stderr,"TEST : Dependency was made after the Target\n");
+//			fprintf(stderr,"TEST : Dependency was made after the Target\n");
 			return false;
 		}
 	} else if (test_targ_type(target_arr[idx].target_name) == 2) {
-		fprintf(stderr,"TEST : double inference\n");
+//		fprintf(stderr,"TEST : double inference\n");
 		/*Target is inference type 2, so we have to do other checks*/
 		char f_name[STLEN];
 		char *start = NULL, *end = NULL;
@@ -1104,26 +1124,21 @@ bool test_requirements(int pos) {
 
 		if ((stat(ui.target, &tar) == -1)) {
 			/*Target doesn't exist, so we have to make it*/
-			fprintf(stderr,"TEST : HERE 1\n");
+//			fprintf(stderr,"TEST : HERE 1\n");
 			return false;
 		}
 
-		printf("TAR :  %s \t\t DEP : %s\n" , ui.target , f_name);
-
 		if ((stat(f_name, &dep) == -1)) {
 			/*Dependency doesn't exist, so we have to make it*/
-			fprintf(stderr,"TEST : Dependency doesn't exist we have to compile\n");
+//			fprintf(stderr,"TEST : Dependency doesn't exist we have to compile\n");
 			handle_target_error(pos);
 			return false;
 		} else if (tar.st_mtime < dep.st_mtime) {
 			/*Dependency was made after the Target*/
-			fprintf(stderr,"TEST : Dependency was made after the Target\n");
+//			fprintf(stderr,"TEST : Dependency was made after the Target\n");
 			return false;
 		}
 	}
-
-	printf("TEST : All's well\n");
-
 	return true;
 
 }
@@ -1148,7 +1163,6 @@ int main(int argc, char **argv) {
 	counters.macros = 0;
 	counters.targets = 0;
 	counters.inferences = 0;
-	counters.names = 0;
 	counters.commands = 0;
 	print_counter.macros = 0;
 	print_counter.targets = 0;
@@ -1187,10 +1201,8 @@ int main(int argc, char **argv) {
 			strcpy(ui.target, argv[i]);
 		}
 	}
-//	fprintf(stderr,"Here\n");
 	getcwd(ui.cdir, sizeof(ui.cdir));
 	get_default_make();
-//	fprintf(stderr,"Here\n");
 
 	struct sigaction action;
 	action.sa_handler = signal_handler;
@@ -1246,7 +1258,6 @@ int main(int argc, char **argv) {
 	}
 
 	rewind(file);
-//	fprintf(stderr,"Here\n");
 	if (ui.print == true) {
 		printf("Macros : %d    Commands : %d    Targets : %d    Inferences : %d   \n", print_counter.macros, print_counter.commands, print_counter.targets, print_counter.inferences);
 		while (fgets(buffer_temp, sizeof buffer_temp, file)) {
@@ -1270,7 +1281,6 @@ int main(int argc, char **argv) {
 
 	}
 
-//	fprintf(stderr,"Here\n");
 	/*Selecting first target if target is missing*/
 	if (strcmp(ui.target, "\0") == 0) {
 		/*Missing target , so use the first one*/
@@ -1282,7 +1292,7 @@ int main(int argc, char **argv) {
 	int matched_target = find_target_idx(ui.target);
 
 	if (matched_target == -1) {
-		printf("Make ***No targets found\n");
+		printf("make ***No targets found\n");
 		return (1);
 	}
 
@@ -1318,7 +1328,7 @@ int main(int argc, char **argv) {
 		}
 
 		create_command_list(i);
-
+		strcpy(counters.current_target, queue.targ_queue[i]);
 		int k = 0;
 
 		/*Executing all of them from here*/
