@@ -810,7 +810,7 @@ void execute_echo_cmd(int start) {
 	}
 
 	trim_string(msg);
-//	printf("%s\n", msg);
+	printf("%s\n", msg);
 }
 
 void execute_back_cmd(int start) {
