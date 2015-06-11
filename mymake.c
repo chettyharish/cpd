@@ -207,7 +207,10 @@ int find_file(char *env_path, char* cmd) {
 	} else if (strcmp(file_name, "cd") == 0 || strcmp(file_name, "echo") == 0) {
 		/*CD or ECHO command, will be handled later!*/
 		return 0;
-	} else {
+	} else if(env_path == NULL){
+		/*Empty environment variable!*/
+		return 1;
+	}else {
 		char *path = strtok(temp_env, ":");
 		while (path != NULL) {
 			/*Dynamic path probably, so search MYPATH*/
@@ -635,6 +638,12 @@ void create_command_list(int pos) {
 	}
 
 	char *env_path = getenv(search_path_env);
+
+	if(env_path ==NULL){
+		if(ui.debug == true){
+			printf("Missing MYPATH environment variable\n");
+		}
+	}
 
 	for (int i = 0; i < k; i++) {
 		find_file(env_path, cmd_list[i].com);
