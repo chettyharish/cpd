@@ -1,7 +1,7 @@
 CC=/usr/bin/gcc
 CPP=/usr/bin/g++ 
 
-all : pipetest multiline redrdest bothredrtest cdecho
+all : pipetest multiline redrtest bothredrtest echotest
 	echo "Done"
 
 pipetest:
