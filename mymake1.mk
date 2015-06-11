@@ -12,6 +12,8 @@ pipetest:
 multiline:
 	cd tempor;cd new ; /bin/cat makefile ;
 
+interrupt:
+	/bin/sleep 15
 backtest:
 	/bin/sleep 100 &
 	/bin/sleep 50
