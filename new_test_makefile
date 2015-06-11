@@ -19,9 +19,10 @@ backtest:
 alarmtest:
 	sleep 100
 
-redrtest:
-	cat Makefile > temp.txt
-	grep FLAG < Makefile
+redrouttest:
+	/bin/cat Makefile > temp.txt
+redrintest:
+	/bin/grep FLAG < Makefile
 bothredrtest:
 	sort < Makefile > temp.txt
 
@@ -88,7 +89,8 @@ errortest2:
 	/bin/whatthehell | cat file | /nofile
 errortest3: unknowntarg
 	echo "Hello"
-
+errorredr:
+	/bin/grep FLAG < fakefile
 
 
 clean:

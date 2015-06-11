@@ -22,8 +22,9 @@ backtest2:
 alarmtest:
 	/bin/sleep 100
 
-redrtest:
+redrouttest:
 	/bin/cat Makefile > temp.txt
+redrintest:
 	/bin/grep FLAG < Makefile
 bothredrtest:
 	/usr/bin/sort < Makefile > temp.txt
@@ -93,6 +94,8 @@ errortest2:
 errortest3: unknowntarg
 	echo "Hello"
 
+errorredr:
+	/bin/grep FLAG < fakefile
 
 
 clean:

@@ -206,10 +206,10 @@ int find_file(char *env_path, char* cmd) {
 	} else if (strcmp(file_name, "cd") == 0 || strcmp(file_name, "echo") == 0) {
 		/*CD or ECHO command, will be handled later!*/
 		return 0;
-	} else if(!env_path){
+	} else if (!env_path) {
 		/*Empty environment variable!*/
 		return 1;
-	}else {
+	} else {
 		strcpy(temp_env, env_path);
 		char *path = strtok(temp_env, ":");
 		while (path != NULL) {
@@ -309,24 +309,21 @@ int find_target_idx(char *target) {
 		/*Search for matching inference rules*/
 		for (int i = 0; i < counters.targets; i++) {
 			if (target_arr[i].target_type == infr_target) {
-				fprintf(stderr, "Here TARG = %s \t\t\t %s\n", target, target_arr[i].target_name);
+//				fprintf(stderr, "Here TARG = %s \t\t\t %s\n", target, target_arr[i].target_name);
 				if (test_targ_type(target_arr[i].target_name) == 1) {
-					fprintf(stderr, "START 1\n");
 					struct stat buf;
 					char f_name[STLEN];
 					strcpy(f_name, target);
 					trim_string(f_name);
 
-					fprintf(stderr, "Here\n");
 					sprintf(f_name, "%s%c%s", f_name, '.', target_arr[i].inference_from);
 
 					if (stat(f_name, &buf) == 0) {
-						printf("TYPE 1 : Inference Call\n");
+//						printf("TYPE 1 : Inference Call\n");
 						matched_target = i;
-						printf("TARGET %s \t\tMATCH FOUND %s \n", target, target_arr[i].target_name);
+//						printf("TARGET %s \t\tMATCH FOUND %s \n", target, target_arr[i].target_name);
 						return matched_target;
-					}
-					fprintf(stderr, "END 1\n");
+					};
 				} else if (test_targ_type(target_arr[i].target_name) == 2) {
 					struct stat buf;
 					char f_name[STLEN];
@@ -348,9 +345,9 @@ int find_target_idx(char *target) {
 					sprintf(f_name, "%s%c%s", start, '.', target_arr[i].inference_from);
 
 					if (stat(f_name, &buf) == 0) {
-						printf("TYPE 2 : Inference Call\n");
+//						printf("TYPE 2 : Inference Call\n");
 						matched_target = i;
-						printf("TARGET %s \t\tMATCH FOUND %s \n", target, target_arr[i].target_name);
+//						printf("TARGET %s \t\tMATCH FOUND %s \n", target, target_arr[i].target_name);
 						return matched_target;
 					}
 				}
@@ -639,9 +636,9 @@ void create_command_list(int pos) {
 
 	char *env_path = getenv(search_path_env);
 
-	if(!env_path){
-		if(ui.debug == true){
-			printf("Missing MYPATH environment variable\n");
+	if (!env_path) {
+		if (ui.debug == true) {
+			printf("DBG : Missing MYPATH environment variable\n");
 		}
 	}
 
@@ -653,11 +650,11 @@ void create_command_list(int pos) {
 		char trg[STLEN];
 		char dep[STLEN];
 		if (target_arr[idx].inference_to == NULL) {
-			printf("Single Inference\n");
+//			printf("Single Inference\n");
 			sprintf(trg, "%s", ui.target);
 			sprintf(dep, "%s.%s", ui.target, target_arr[idx].inference_from);
 		} else {
-			printf("Double Inference\n");
+//			printf("Double Inference\n");
 			char buffer_temp[STLEN];
 			strcpy(buffer_temp, ui.target);
 			char *start = strtok(buffer_temp, ".");
@@ -668,12 +665,12 @@ void create_command_list(int pos) {
 
 		/*Change stuff here for inference targets*/
 		for (int i = 0; i < k; i++) {
-			printf("Original command %-50s\n", cmd_list[i].com);
+//			printf("Original command %-50s\n", cmd_list[i].com);
 			char *pos;
 			while ((pos = strstr(cmd_list[i].com, "$(TARGET)"))) {
 				char buffer[STLEN];
 				strncpy(buffer, cmd_list[i].com, pos - cmd_list[i].com);
-				printf("TRG %s\n", trg);
+//				printf("TRG %s\n", trg);
 				sprintf(buffer + (pos - cmd_list[i].com), "%s%s", trg, pos + strlen("$(TARGET)"));
 				strcpy(cmd_list[i].com, buffer);
 			}
@@ -685,7 +682,7 @@ void create_command_list(int pos) {
 				strcpy(cmd_list[i].com, buffer);
 
 			}
-			printf("Changed command %-50s\n", cmd_list[i].com);
+//			printf("Changed command %-50s\n", cmd_list[i].com);
 		}
 	}
 }
@@ -756,7 +753,7 @@ void handle_execution_error(int pos) {
 		fprintf(stderr, "make: %s: Command not found\n", cmd_list[pos].com);
 		fprintf(stderr, "make: *** [%s] Error 127\n", counters.current_target);
 	} else if (stat(file_name, &buf) == -1) {
-		fprintf(stderr, "make: *** [%s] Error 1", counters.current_target);
+		fprintf(stderr, "make: *** [%s] Error 1\n", counters.current_target);
 
 	}
 	if (ui.force == false) {
@@ -769,13 +766,13 @@ void signal_handler(int signo) {
 	if (ui.interrupt == true) {
 		/*Blocking all SIGINTS*/
 	} else {
-		fprintf(stderr,"make: *** [%s] Interrupt\n" , ui.target);
+		fprintf(stderr, "make: *** [%s] Interrupt\n", ui.target);
 		kill_everything();
 	}
 }
 
 void signal_alarm(int signo) {
-	printf("Make Timed Out\n");
+	printf("make: *** [%s] time limit exceeded.\n", ui.target);
 	kill_everything();
 }
 
@@ -813,7 +810,7 @@ void execute_echo_cmd(int start) {
 	}
 
 	trim_string(msg);
-	printf("%s\n", msg);
+//	printf("%s\n", msg);
 }
 
 void execute_back_cmd(int start) {
@@ -845,14 +842,11 @@ void execute_redr_both_cmd(int start) {
 		trim_string(file2);
 		remove_newline(file2);
 		tokenize(proc, exec_args);
-		printf("%s\n", proc);
-		printf("%s\n", file1);
-		printf("%s\n", file2);
 
 		struct stat buf;
 		if (stat(file1, &buf) < 0) {
 			/*make_file_name found, so set it as default*/
-			printf("Supplied file doesn't exist!\n");
+//			printf("Supplied file doesn't exist!\n");
 			handle_execution_error(start);
 		}
 		close(STDIN_FILENO);
@@ -921,7 +915,7 @@ void execute_redr_cmd(int start) {
 		struct stat buf;
 		if (stat(file, &buf) < 0) {
 			/*make_file_name found, so set it as default*/
-			printf("Supplied file doesn't exist!\n");
+//			printf("Supplied file doesn't exist!\n");
 			handle_execution_error(start);
 		}
 		int f1 = open(file, O_RDONLY);
@@ -969,7 +963,9 @@ void execute_mult_cmd(int start, int count) {
 			execute_norm_cmd(i);
 			wait_all_children();
 		} else {
-			printf("This is not possible SOMETHING IS WRONG!%-50s%d\n", cmd_list[i].com, cmd_list[i].command_type);
+			if (ui.debug == true) {
+				printf("DANGER!!!\n");
+			}
 		}
 	}
 }
@@ -1236,7 +1232,7 @@ int main(int argc, char **argv) {
 		alarm(ui.time);
 	}
 
-//	fprintf(stderr,"Here\n");
+
 	FILE *file = fopen(ui.make_file_name, "r");
 	while (fgets(buffer_temp, sizeof buffer_temp, file)) {
 		char *pos;
@@ -1394,7 +1390,7 @@ int main(int argc, char **argv) {
 				wait_all_children();
 
 			} else if (cmd_list[k].command_type == redr_cmd) {
-				printf("%s\n",cmd_list[k].com);
+				printf("%s\n", cmd_list[k].com);
 				if (ui.debug == true) {
 					printf("%s%s%sDBG : CMD : %-150s TYPE : %s\n", s, s, s, cmd_list[k].com, print_type(cmd_list[k].command_type));
 				}
@@ -1402,7 +1398,7 @@ int main(int argc, char **argv) {
 				k++;
 				wait_all_children();
 			} else if (cmd_list[k].command_type == redr_both_cmd) {
-				printf("%s\n",cmd_list[k].com);
+				printf("%s\n", cmd_list[k].com);
 				if (ui.debug == true) {
 					printf("%s%s%sDBG : CMD : %-150s TYPE : %s\n", s, s, s, cmd_list[k].com, print_type(cmd_list[k].command_type));
 				}
@@ -1410,7 +1406,7 @@ int main(int argc, char **argv) {
 				k++;
 				wait_all_children();
 			} else if (cmd_list[k].command_type == back_cmd) {
-				printf("%s\n",cmd_list[k].com);
+				printf("%s\n", cmd_list[k].com);
 				if (ui.debug == true) {
 					printf("%s%s%sDBG : CMD : %-150s TYPE : %s\n", s, s, s, cmd_list[k].com, print_type(cmd_list[k].command_type));
 				}
@@ -1418,7 +1414,7 @@ int main(int argc, char **argv) {
 				k++;
 				/*No waitig for background process*/
 			} else if (cmd_list[k].command_type == cdir_cmd) {
-				printf("%s\n",cmd_list[k].com);
+				printf("%s\n", cmd_list[k].com);
 				if (ui.debug == true) {
 					printf("%s%s%sDBG : CMD : %-150s TYPE : %s\n", s, s, s, cmd_list[k].com, print_type(cmd_list[k].command_type));
 				}
@@ -1427,7 +1423,7 @@ int main(int argc, char **argv) {
 				k++;
 				wait_all_children();
 			} else if (cmd_list[k].command_type == echo_cmd) {
-				printf("%s\n",cmd_list[k].com);
+				printf("%s\n", cmd_list[k].com);
 				if (ui.debug == true) {
 					printf("%s%s%sDBG : CMD : %-150s TYPE : %s\n", s, s, s, cmd_list[k].com, print_type(cmd_list[k].command_type));
 				}
