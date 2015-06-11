@@ -1353,9 +1353,9 @@ int main(int argc, char **argv) {
 					sprintf(output, "%s%s%sDBG : CMD : ", s, s, s);
 				}
 				while (cmd_list[k].command_type != pipe_cmd_last) {
+					printf("%s |", cmd_list[k].com);
 					if (ui.debug == true) {
 						sprintf(output, "%s %s |", output, cmd_list[k].com);
-						printf(" %s |", cmd_list[k].com);
 					}
 					counter++;
 					k++;
@@ -1377,12 +1377,14 @@ int main(int argc, char **argv) {
 					sprintf(output, "%s%s%sDBG : CMD : ", s, s, s);
 				}
 				while (cmd_list[k].command_type != mult_cmd_last) {
+					printf("%s ;", cmd_list[k].com);
 					if (ui.debug == true) {
 						sprintf(output, "%s %s ;", output, cmd_list[k].com);
 					}
 					counter++;
 					k++;
 				}
+				printf("%s \n", cmd_list[k].com);
 				if (ui.debug == true) {
 					sprintf(output, "%s %s ", output, cmd_list[k].com);
 					printf(" %-150s  TYPE : %s\n", output, print_type(cmd_list[k].command_type));
@@ -1393,6 +1395,7 @@ int main(int argc, char **argv) {
 				wait_all_children();
 
 			} else if (cmd_list[k].command_type == redr_cmd) {
+				printf("%s\n",cmd_list[k].com);
 				if (ui.debug == true) {
 					printf("%s%s%sDBG : CMD : %-150s TYPE : %s\n", s, s, s, cmd_list[k].com, print_type(cmd_list[k].command_type));
 				}
@@ -1400,6 +1403,7 @@ int main(int argc, char **argv) {
 				k++;
 				wait_all_children();
 			} else if (cmd_list[k].command_type == redr_both_cmd) {
+				printf("%s\n",cmd_list[k].com);
 				if (ui.debug == true) {
 					printf("%s%s%sDBG : CMD : %-150s TYPE : %s\n", s, s, s, cmd_list[k].com, print_type(cmd_list[k].command_type));
 				}
@@ -1407,6 +1411,7 @@ int main(int argc, char **argv) {
 				k++;
 				wait_all_children();
 			} else if (cmd_list[k].command_type == back_cmd) {
+				printf("%s\n",cmd_list[k].com);
 				if (ui.debug == true) {
 					printf("%s%s%sDBG : CMD : %-150s TYPE : %s\n", s, s, s, cmd_list[k].com, print_type(cmd_list[k].command_type));
 				}
@@ -1414,6 +1419,7 @@ int main(int argc, char **argv) {
 				k++;
 				/*No waitig for background process*/
 			} else if (cmd_list[k].command_type == cdir_cmd) {
+				printf("%s\n",cmd_list[k].com);
 				if (ui.debug == true) {
 					printf("%s%s%sDBG : CMD : %-150s TYPE : %s\n", s, s, s, cmd_list[k].com, print_type(cmd_list[k].command_type));
 				}
@@ -1422,6 +1428,7 @@ int main(int argc, char **argv) {
 				k++;
 				wait_all_children();
 			} else if (cmd_list[k].command_type == echo_cmd) {
+				printf("%s\n",cmd_list[k].com);
 				if (ui.debug == true) {
 					printf("%s%s%sDBG : CMD : %-150s TYPE : %s\n", s, s, s, cmd_list[k].com, print_type(cmd_list[k].command_type));
 				}
@@ -1430,10 +1437,10 @@ int main(int argc, char **argv) {
 				k++;
 				wait_all_children();
 			} else if (cmd_list[k].command_type == norm_cmd) {
+				printf("%s \n", cmd_list[k].com);
 				if (ui.debug == true) {
 					printf("%s%s%sDBG : CMD : %-150s TYPE : %s\n", s, s, s, cmd_list[k].com, print_type(cmd_list[k].command_type));
 				}
-				printf("%s \n", cmd_list[k].com);
 				execute_norm_cmd(k);
 				k++;
 				wait_all_children();

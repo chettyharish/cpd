@@ -76,6 +76,9 @@ mixtest:
 
 
 #For testing errors
+
+pipeerror:
+	cat Makefile | grep MissingWord | grep Hello | grep Car
 cderror: 
 	cd what/where
 
