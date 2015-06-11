@@ -102,5 +102,5 @@ errorredr:
 
 
 clean:
-	rm -f temp.o
-	rm -f temp2
+	/bin/rm -f temp.o
+	/bin/rm -f temp2

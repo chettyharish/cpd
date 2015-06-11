@@ -83,7 +83,7 @@ mixtest:
 #For testing errors
 
 pipeerror:
-	cat Makefile | grep MissingWord | grep Hello | grep Car
+	/bin/cat Makefile | /bin/grep all
 cderror: 
 	cd what/where
 

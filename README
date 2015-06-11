@@ -1,11 +1,52 @@
 ##README
 
-The new_test_makefile has various tests to try out all the differet features using variety of targets
+The new_test_makefile has various tests to try out all the differet features using variety of targets. Some of the tests
+only work with the supplied files as they use these files as input.
 
-Normal Targets
 pipetest: Used for testing pipes, carries out various operations using 1,2,3,4 and 5 piped processed 
 	  (The program can support 50 piped processed, and the number is modifiable by changing the NUMELE macro in code )
+multiline: Uses the sample directory and outputs the makefile inside tempor/new. Ensures that the cd works for cat.
+interrupt: Executes sleep for 15 seconds, good for testing the NO INTERRUPT -i flag.
+backtest: Executes two sleeps, first is background and next is not. Also good for testing killing children.
+alarmtest: Executes sleep for 100 seconds, food for testing the ALARM -t flag.
+redrouttest: Tests IO Redirection to a file.
+redrintest: Tests IO Redirection from a file.
+bothredrtest: Tests IO Redirection for both input and output.
+echotest : Test for echo command
+simple.o: For testing timestamp based compilation
+.c.o : Inference to make target.o from target.c
+.cpp : Inference to make target from target.cpp
+first/second/third/fourth/fifth/sixth && test1/test2/test3 : Tests whethere Cyclic Redundancies and ordering is correct
+mixtest: Handles case of absolute and dynamic command path
+pipeerror: A simple pipe command to crash pipes
+cderror: Testing execution with wrong cd paths
+errortest: Testing wrong command without a file
+errortest2: Testing piped wrong commands with no files
+errortest3: Testing wrong targets
+errorredr: IO Redirected input from missing file
 
-multiline: Uses the sample directory and outputs the makefile inside tempor/new.
+
+##Sample executions
+./mymake pipetest
+./mymake multiline
+./mymake interrupt -i
+./mymake backtest (You can test that both processes are running concurrently by carrying out a ps)
+./mymake alarmtest -t 5
+./mymake redrouttest -d
+./mymake redrintest -d
+./mymake bothredrtest -i
+./mymake echotest
+./mymake simple.o
+./mymake temp.o (Uses .c.o inference rule)
+./mymake temp2 (Uses .cpp inference rule)
+./mymake first
+./mymake mixtest
+./mymake pipeerror -k
+./mymake cderror
+./mymake errortest
+./mymake errortest2
+./mymake errortest3
+./mymake errorredr
 
 
+The program has been tested hoping that there are no bugs . If you find one, please message me :) I would like to know where!
