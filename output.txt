@@ -1,0 +1,20 @@
+TYPE 2 : Inference Call
+TARGET temp.o 		MATCH FOUND .c.o 
+TYPE 2 : Inference Call
+TARGET temp.o 		MATCH FOUND .c.o 
+Double Inference
+Original command echo $(DEP)                                       
+Changed command echo temp.c                                       
+Original command echo $(TARGET)                                    
+TRG temp.o
+Changed command echo temp.o                                       
+Original command /usr/bin/gcc -o $(TARGET) $(DEP)                  
+TRG temp.o
+Changed command /usr/bin/gcc -o temp.o temp.c                     
+Original command                                                   
+Changed command                                                   
+echo temp.c 
+temp.c
+echo temp.o 
+temp.o
+/usr/bin/gcc -o temp.o temp.c 

@@ -292,7 +292,7 @@ void remove_tab(char *temp) {
 
 int find_target_idx(char *target) {
 
-	if(strlen(target) == 0){
+	if (strlen(target) == 0) {
 		return -1;
 	}
 
@@ -308,15 +308,15 @@ int find_target_idx(char *target) {
 		/*Search for matching inference rules*/
 		for (int i = 0; i < counters.targets; i++) {
 			if (target_arr[i].target_type == infr_target) {
-				fprintf(stderr,"Here TARG = %s \t\t\t %s\n" , target , target_arr[i].target_name );
+				fprintf(stderr, "Here TARG = %s \t\t\t %s\n", target, target_arr[i].target_name);
 				if (test_targ_type(target_arr[i].target_name) == 1) {
-					fprintf(stderr,"START 1\n");
+					fprintf(stderr, "START 1\n");
 					struct stat buf;
 					char f_name[STLEN];
 					strcpy(f_name, target);
 					trim_string(f_name);
 
-					fprintf(stderr,"Here\n");
+					fprintf(stderr, "Here\n");
 					sprintf(f_name, "%s%c%s", f_name, '.', target_arr[i].inference_from);
 
 					if (stat(f_name, &buf) == 0) {
@@ -325,7 +325,7 @@ int find_target_idx(char *target) {
 						printf("TARGET %s \t\tMATCH FOUND %s \n", target, target_arr[i].target_name);
 						return matched_target;
 					}
-					fprintf(stderr,"END 1\n");
+					fprintf(stderr, "END 1\n");
 				} else if (test_targ_type(target_arr[i].target_name) == 2) {
 					struct stat buf;
 					char f_name[STLEN];
@@ -336,7 +336,7 @@ int find_target_idx(char *target) {
 						end = strtok(NULL, "\n");
 					}
 
-					if(end == NULL){
+					if (end == NULL || strcmp(end, target_arr[i].inference_to)) {
 						/*Might be inference type 1*/
 						continue;
 					}
@@ -651,8 +651,7 @@ void create_command_list(int pos) {
 			printf("Double Inference\n");
 			char buffer_temp[STLEN];
 			strcpy(buffer_temp, ui.target);
-			char *start = strtok(buffer_temp,".");
-
+			char *start = strtok(buffer_temp, ".");
 
 			sprintf(trg, "%s", ui.target);
 			sprintf(dep, "%s.%s", start, target_arr[idx].inference_from);
@@ -665,7 +664,7 @@ void create_command_list(int pos) {
 			while ((pos = strstr(cmd_list[i].com, "$(TARGET)"))) {
 				char buffer[STLEN];
 				strncpy(buffer, cmd_list[i].com, pos - cmd_list[i].com);
-				printf("TRG %s\n",trg);
+				printf("TRG %s\n", trg);
 				sprintf(buffer + (pos - cmd_list[i].com), "%s%s", trg, pos + strlen("$(TARGET)"));
 				strcpy(cmd_list[i].com, buffer);
 			}
@@ -717,6 +716,18 @@ void kill_everything() {
 	kill(0, SIGTERM);
 }
 
+void handle_target_error(int pos) {
+	/*Target error handler
+	 * does stuff based on settings*/
+	if (ui.force == false) {
+		perror("Error");
+		fprintf(stderr, "Error due to target %s\n", queue.targ_queue[pos]);
+		kill_everything();
+	} else {
+		fprintf(stderr, "Error due to target %s\n", queue.targ_queue[pos]);
+		/*Keep going*/
+	}
+}
 void handle_execution_error(int pos) {
 	/*Execution error handler
 	 * does stuff based on settings*/
@@ -1020,6 +1031,7 @@ void execute_pipe_cmd(int start, int count) {
 bool test_requirements(int pos) {
 	/*Testing if the requirements are satisfied or not
 	 * Returns true if it is satisfied else false*/
+	fprintf(stderr,"%s\n" , __func__);
 
 	int idx = find_target_idx(queue.targ_queue[pos]);
 	struct stat tar;
@@ -1027,34 +1039,92 @@ bool test_requirements(int pos) {
 	if (idx == -1) {
 		/*Since it is a file, we don't have to do anything with it
 		 * Target make rules only apply to Targets*/
-//		printf("TEST : it is a file\n");
 		return true;
 	}
 
-	if ((stat(queue.targ_queue[pos], &tar) == -1)) {
-		/*Target doesn't exist, so we have to make it*/
-//		printf("TEST : Target doesn't exist we have to compile\n");
-		return false;
-	}
+	if (target_arr[idx].target_type == norm_target) {
 
-	if (stat(queue.targ_queue[pos], &tar) == 0) {
-		/*Test if dependecy exists!*/
+		if ((stat(queue.targ_queue[pos], &tar) == -1)) {
+			/*Target doesn't exist, so we have to make it*/
+			return false;
+		}
 
-		for (int i = 0; i < target_arr[idx].dependency_count; i++) {
-			if ((stat(target_arr[idx].dependecies[i], &dep) == -1)) {
-				/*Dependency doesn't exist, so we have to make it*/
-				printf("TEST : Dependency doesn't exist we have to compile\n");
-				return false;
-			} else if (tar.st_mtime < dep.st_mtime) {
-				/*Dependency was made after the Target*/
-				printf("TEST : Dependency was made after the Target\n");
-				return false;
+		if (stat(queue.targ_queue[pos], &tar) == 0) {
+			/*Test if dependecy exists!*/
+
+			for (int i = 0; i < target_arr[idx].dependency_count; i++) {
+				if ((stat(target_arr[idx].dependecies[i], &dep) == -1)) {
+					/*DEPENDECY ERROR*/
+					fprintf(stderr,"TEST : Dependency doesn't exist we have to compile\n");
+					handle_target_error(pos);
+					return false;
+				} else if (tar.st_mtime < dep.st_mtime) {
+					/*Dependency was made after the Target*/
+					fprintf(stderr,"TEST : Dependency was made after the Target\n");
+					return false;
+				}
 			}
 		}
+	} else if (test_targ_type(target_arr[idx].target_name) == 1) {
+		fprintf(stderr,"TEST : single inference\n");
+		/*Target is inference type 1, so we have to do other checks*/
+		char f_name[STLEN];
+		trim_string(ui.target);
+		sprintf(f_name, "%s%c%s", ui.target, '.', target_arr[idx].inference_from);
+		if ((stat(ui.target, &tar) == -1)) {
+			/*Target doesn't exist, so we have to make it*/
+			return false;
+		}
+
+		if ((stat(f_name, &dep) == -1)) {
+			/*Dependency doesn't exist, so we have to make it*/
+			fprintf(stderr,"TEST : Dependency doesn't exist we have to compile\n");
+			return false;
+		} else if (tar.st_mtime < dep.st_mtime) {
+			/*Dependency was made after the Target*/
+			fprintf(stderr,"TEST : Dependency was made after the Target\n");
+			return false;
+		}
+	} else if (test_targ_type(target_arr[idx].target_name) == 2) {
+		fprintf(stderr,"TEST : double inference\n");
+		/*Target is inference type 2, so we have to do other checks*/
+		char f_name[STLEN];
+		char *start = NULL, *end = NULL;
+		strcpy(f_name, ui.target);
+		if (strchr(f_name, '.')) {
+			start = strtok(f_name, ".");
+			end = strtok(NULL, "\n");
+		}
+
+		trim_string(start);
+		trim_string(end);
+		remove_newline(start);
+		remove_newline(end);
+		sprintf(f_name, "%s%c%s", start, '.', target_arr[idx].inference_from);
+
+		if ((stat(ui.target, &tar) == -1)) {
+			/*Target doesn't exist, so we have to make it*/
+			fprintf(stderr,"TEST : HERE 1\n");
+			return false;
+		}
+
+		printf("TAR :  %s \t\t DEP : %s\n" , ui.target , f_name);
+
+		if ((stat(f_name, &dep) == -1)) {
+			/*Dependency doesn't exist, so we have to make it*/
+			fprintf(stderr,"TEST : Dependency doesn't exist we have to compile\n");
+			handle_target_error(pos);
+			return false;
+		} else if (tar.st_mtime < dep.st_mtime) {
+			/*Dependency was made after the Target*/
+			fprintf(stderr,"TEST : Dependency was made after the Target\n");
+			return false;
+		}
 	}
+
 	printf("TEST : All's well\n");
 
-	return false;
+	return true;
 
 }
 
