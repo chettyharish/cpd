@@ -280,12 +280,6 @@ void tokenize(char *buffer, char *exec_args[]) {
 		exec_args[counter - 1] = NULL;
 	}
 	exec_args[counter] = NULL;
-
-	printf("Num ele : %d\n",counter);
-	for(int i = 0 ; i < counter ; i++){
-		printf("%d\t\t%s\n" ,i, exec_args[i]);
-	}
-	printf("\n");
 }
 
 void remove_tab(char *temp) {
@@ -297,6 +291,11 @@ void remove_tab(char *temp) {
 }
 
 int find_target_idx(char *target) {
+
+	if(strlen(target) == 0){
+		return -1;
+	}
+
 	int matched_target = -1;
 	for (int i = 0; i < counters.targets; i++) {
 		if (strcmp(target, target_arr[i].target_name) == 0) {
@@ -309,14 +308,50 @@ int find_target_idx(char *target) {
 		/*Search for matching inference rules*/
 		for (int i = 0; i < counters.targets; i++) {
 			if (target_arr[i].target_type == infr_target) {
-				char f_name[STLEN];
-				struct stat buf;
-				sprintf(f_name, "%s%c%s", target, '.', target_arr[i].inference_from);
+				fprintf(stderr,"Here TARG = %s \t\t\t %s\n" , target , target_arr[i].target_name );
+				if (test_targ_type(target_arr[i].target_name) == 1) {
+					fprintf(stderr,"START 1\n");
+					struct stat buf;
+					char f_name[STLEN];
+					strcpy(f_name, target);
+					trim_string(f_name);
 
-				if (stat(f_name, &buf) == 0) {
-					matched_target = i;
-					printf("%s \t\tMATCH FOUND %s \n", target, target_arr[i].target_name);
-					return matched_target;
+					fprintf(stderr,"Here\n");
+					sprintf(f_name, "%s%c%s", f_name, '.', target_arr[i].inference_from);
+
+					if (stat(f_name, &buf) == 0) {
+						printf("TYPE 1 : Inference Call\n");
+						matched_target = i;
+						printf("TARGET %s \t\tMATCH FOUND %s \n", target, target_arr[i].target_name);
+						return matched_target;
+					}
+					fprintf(stderr,"END 1\n");
+				} else if (test_targ_type(target_arr[i].target_name) == 2) {
+					struct stat buf;
+					char f_name[STLEN];
+					char *start = NULL, *end = NULL;
+					strcpy(f_name, target);
+					if (strchr(f_name, '.')) {
+						start = strtok(f_name, ".");
+						end = strtok(NULL, "\n");
+					}
+
+					if(end == NULL){
+						/*Might be inference type 1*/
+						continue;
+					}
+					trim_string(start);
+					trim_string(end);
+					remove_newline(start);
+					remove_newline(end);
+					sprintf(f_name, "%s%c%s", start, '.', target_arr[i].inference_from);
+
+					if (stat(f_name, &buf) == 0) {
+						printf("TYPE 2 : Inference Call\n");
+						matched_target = i;
+						printf("TARGET %s \t\tMATCH FOUND %s \n", target, target_arr[i].target_name);
+						return matched_target;
+					}
 				}
 			}
 		}
@@ -614,8 +649,13 @@ void create_command_list(int pos) {
 			sprintf(dep, "%s.%s", ui.target, target_arr[idx].inference_from);
 		} else {
 			printf("Double Inference\n");
-			sprintf(trg, "%s.%s", ui.target, target_arr[idx].inference_to);
-			sprintf(dep, "%s.%s", ui.target, target_arr[idx].inference_from);
+			char buffer_temp[STLEN];
+			strcpy(buffer_temp, ui.target);
+			char *start = strtok(buffer_temp,".");
+
+
+			sprintf(trg, "%s", ui.target);
+			sprintf(dep, "%s.%s", start, target_arr[idx].inference_from);
 		}
 
 		/*Change stuff here for inference targets*/
@@ -625,6 +665,7 @@ void create_command_list(int pos) {
 			while ((pos = strstr(cmd_list[i].com, "$(TARGET)"))) {
 				char buffer[STLEN];
 				strncpy(buffer, cmd_list[i].com, pos - cmd_list[i].com);
+				printf("TRG %s\n",trg);
 				sprintf(buffer + (pos - cmd_list[i].com), "%s%s", trg, pos + strlen("$(TARGET)"));
 				strcpy(cmd_list[i].com, buffer);
 			}
@@ -721,7 +762,7 @@ void execute_echo_cmd(int start) {
 		/*Empty command, so just return!*/
 		return;
 	}
-	char buffer_temp[NUMELE];
+	char buffer_temp[STLEN];
 	strcpy(buffer_temp, cmd_list[start].com);
 	char *msg = strtok(buffer_temp, " ");
 	msg = strtok(NULL, "\n");
@@ -1072,12 +1113,14 @@ int main(int argc, char **argv) {
 			ui.interrupt = true;
 		} else if (strcmp(argv[i], "-t") == 0) {
 			ui.time = atoi(argv[++i]);
-		}  else {
+		} else {
 			strcpy(ui.target, argv[i]);
 		}
 	}
+//	fprintf(stderr,"Here\n");
 	getcwd(ui.cdir, sizeof(ui.cdir));
 	get_default_make();
+//	fprintf(stderr,"Here\n");
 
 	struct sigaction action;
 	action.sa_handler = signal_handler;
@@ -1103,6 +1146,7 @@ int main(int argc, char **argv) {
 		alarm(ui.time);
 	}
 
+//	fprintf(stderr,"Here\n");
 	FILE *file = fopen(ui.make_file_name, "r");
 	while (fgets(buffer_temp, sizeof buffer_temp, file)) {
 		char *pos;
@@ -1132,6 +1176,7 @@ int main(int argc, char **argv) {
 	}
 
 	rewind(file);
+//	fprintf(stderr,"Here\n");
 	if (ui.print == true) {
 		printf("Macros : %d    Commands : %d    Targets : %d    Inferences : %d   \n", print_counter.macros, print_counter.commands, print_counter.targets, print_counter.inferences);
 		while (fgets(buffer_temp, sizeof buffer_temp, file)) {
@@ -1155,6 +1200,7 @@ int main(int argc, char **argv) {
 
 	}
 
+//	fprintf(stderr,"Here\n");
 	/*Selecting first target if target is missing*/
 	if (strcmp(ui.target, "\0") == 0) {
 		/*Missing target , so use the first one*/
@@ -1220,10 +1266,12 @@ int main(int argc, char **argv) {
 				while (cmd_list[k].command_type != pipe_cmd_last) {
 					if (ui.debug == true) {
 						sprintf(output, "%s %s |", output, cmd_list[k].com);
+						printf(" %s |", cmd_list[k].com);
 					}
 					counter++;
 					k++;
 				}
+				printf(" %s \n", cmd_list[k].com);
 				if (ui.debug == true) {
 					sprintf(output, "%s %s ", output, cmd_list[k].com);
 					printf(" %-150s  TYPE : %s\n", output, print_type(cmd_list[k].command_type));
@@ -1241,7 +1289,7 @@ int main(int argc, char **argv) {
 				}
 				while (cmd_list[k].command_type != mult_cmd_last) {
 					if (ui.debug == true) {
-						sprintf(output, "%s %s |", output, cmd_list[k].com);
+						sprintf(output, "%s %s ;", output, cmd_list[k].com);
 					}
 					counter++;
 					k++;
@@ -1305,7 +1353,6 @@ int main(int argc, char **argv) {
 				k++;
 				wait_all_children();
 			}
-
 			/*Reset back to original directory after everything is done in a command*/
 			chdir(ui.cdir);
 		}

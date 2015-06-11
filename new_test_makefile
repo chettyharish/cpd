@@ -1,6 +1,5 @@
 CC=/usr/bin/gcc
-CPP=/usr/bin/g++
-CFLAG=-g 
+CPP=/usr/bin/g++ 
 
 all : pipetest multiline redrdest bothredrtest
 	echo "Done"
@@ -19,11 +18,11 @@ backtest:
 .c.o:
 	echo $<
 	echo $@
-	$(CC) -c $<
+	$(CC) -o $@ $<
 
 .cpp:
 	echo $<
-	$(CPP) -c $<
+	$(CPP) -o $@ $<
 alarmtest:
 	sleep 100
 
@@ -33,10 +32,36 @@ redrtest:
 bothredrtest:
 	sort < Makefile > temp.txt
 cdecho:
-	cd tempor
-	echo "Hello World"
+	cd tempors
 	cd new
-	echo $(CC)
+	echo "Hello World"
+	echo "$(CC) $(CPP) $(CC)  $(CPP)"
 
 simple:
 	cat Makefile
+
+#For testing cycles and ordering
+first : second third fourth
+	echo $@
+second : fifth sixth
+	echo $@
+third : first
+	echo $@
+fourth: second
+	echo $@
+fifth:  fourth third
+	echo $@
+sixth:  first
+	echo $@
+
+test1: test2 test3
+	echo $@
+test2: test3
+	echo $@
+test3: temp.c
+	echo $@ 
+
+
+clean:
+	rm temp.o
+	rm temp2
