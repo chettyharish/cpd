@@ -732,7 +732,11 @@ void handle_cd_error(int pos) {
 }
 void handle_target_error(int pos) {
 	/*Error handler for targets*/
-	fprintf(stderr, "make: *** No rule to make target `%s', needed by `%s'.  Stop.\n", queue.targ_queue[pos], counters.current_target);
+	if (strlen(counters.current_target) != 0)
+		fprintf(stderr, "make: *** No rule to make target `%s', needed by `%s'.  Stop.\n", queue.targ_queue[pos], counters.current_target);
+	else
+		fprintf(stderr, "make: *** No rule to make target `%s', needed by `%s'.  Stop.\n", queue.targ_queue[pos], ui.target);
+
 	if (ui.force == false) {
 		/*Only kill if not in forced mode*/
 		kill_everything();
@@ -1075,22 +1079,18 @@ bool test_requirements(int pos) {
 
 		if (stat(queue.targ_queue[pos], &tar) == 0) {
 			/*Test if dependecy exists!*/
-
 			for (int i = 0; i < target_arr[idx].dependency_count; i++) {
 				if ((stat(target_arr[idx].dependecies[i], &dep) == -1)) {
 					/*DEPENDECY ERROR*/
-//					fprintf(stderr,"TEST : Dependency doesn't exist we have to compile\n");
 					handle_target_error(pos);
 					return false;
 				} else if (tar.st_mtime < dep.st_mtime) {
 					/*Dependency was made after the Target*/
-//					fprintf(stderr,"TEST : Dependency was made after the Target\n");
 					return false;
 				}
 			}
 		}
 	} else if (test_targ_type(target_arr[idx].target_name) == 1) {
-		fprintf(stderr, "TEST : single inference\n");
 		/*Target is inference type 1, so we have to do other checks*/
 		char f_name[STLEN];
 		trim_string(ui.target);
@@ -1102,15 +1102,12 @@ bool test_requirements(int pos) {
 
 		if ((stat(f_name, &dep) == -1)) {
 			/*Dependency doesn't exist, so we have to make it*/
-//			fprintf(stderr,"TEST : Dependency doesn't exist we have to compile\n");
 			return false;
 		} else if (tar.st_mtime < dep.st_mtime) {
 			/*Dependency was made after the Target*/
-//			fprintf(stderr,"TEST : Dependency was made after the Target\n");
 			return false;
 		}
 	} else if (test_targ_type(target_arr[idx].target_name) == 2) {
-//		fprintf(stderr,"TEST : double inference\n");
 		/*Target is inference type 2, so we have to do other checks*/
 		char f_name[STLEN];
 		char *start = NULL, *end = NULL;
@@ -1128,21 +1125,20 @@ bool test_requirements(int pos) {
 
 		if ((stat(ui.target, &tar) == -1)) {
 			/*Target doesn't exist, so we have to make it*/
-//			fprintf(stderr,"TEST : HERE 1\n");
 			return false;
 		}
 
 		if ((stat(f_name, &dep) == -1)) {
 			/*Dependency doesn't exist, so we have to make it*/
-//			fprintf(stderr,"TEST : Dependency doesn't exist we have to compile\n");
 			handle_target_error(pos);
 			return false;
 		} else if (tar.st_mtime < dep.st_mtime) {
 			/*Dependency was made after the Target*/
-//			fprintf(stderr,"TEST : Dependency was made after the Target\n");
 			return false;
 		}
+
 	}
+
 	return true;
 
 }
@@ -1232,7 +1228,6 @@ int main(int argc, char **argv) {
 		alarm(ui.time);
 	}
 
-
 	FILE *file = fopen(ui.make_file_name, "r");
 	while (fgets(buffer_temp, sizeof buffer_temp, file)) {
 		char *pos;
@@ -1313,6 +1308,8 @@ int main(int argc, char **argv) {
 		printf("\n");
 	}
 
+	bool build = false;
+
 	for (int i = 0; i < queue.queue_end; i++) {
 		if (ui.debug == true) {
 			printf("%s%sDBG : Making target %s\n", s, s, queue.targ_queue[i]);
@@ -1325,6 +1322,8 @@ int main(int argc, char **argv) {
 			}
 			continue;
 		}
+
+		build = true;
 
 		cmd_list = malloc(sizeof(struct command_line) * NUMELE * NUMELE);
 		for (int i = 0; i < NUMELE; i++) {
@@ -1453,4 +1452,6 @@ int main(int argc, char **argv) {
 		}
 	}
 
+	if (build == false)
+		fprintf(stderr, "make: '%s' is up to date.\n", ui.target);
 }

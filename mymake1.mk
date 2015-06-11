@@ -37,7 +37,8 @@ echotest:
 	echo Hello World
 	echo $CPP $CC
 
-
+simple.o : simple.c
+	$(CC) -o $@ $<
 
 #Inference rules
 .c.o:
