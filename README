@@ -16,7 +16,7 @@ echotest : Test for echo command
 simple.o: For testing timestamp based compilation
 .c.o : Inference to make target.o from target.c
 .cpp : Inference to make target from target.cpp
-first/second/third/fourth/fifth/sixth && test1/test2/test3 : Tests whethere Cyclic Redundancies and ordering is correct
+first/second/third/fourth/fifth/sixth && test1/test2/test3 : Tests whether Cyclic Redundancies and ordering are correct
 mixtest: Handles case of absolute and dynamic command path
 pipeerror: A simple pipe command to crash pipes
 cderror: Testing execution with wrong cd paths

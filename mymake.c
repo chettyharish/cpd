@@ -412,7 +412,8 @@ void get_target(char *buffer_temp, int target_pos) {
 
 	while (dependencies != NULL) {
 		remove_newline(dependencies);
-		strcpy(target_arr[target_pos].dependecies[target_arr[target_pos].dependency_count++], dependencies);
+		if (strlen(dependencies) != 0)
+			strcpy(target_arr[target_pos].dependecies[target_arr[target_pos].dependency_count++], dependencies);
 		dependencies = strtok(NULL, " ");
 	}
 
@@ -1071,7 +1072,6 @@ bool test_requirements(int pos) {
 	}
 
 	if (target_arr[idx].target_type == norm_target) {
-
 		if ((stat(queue.targ_queue[pos], &tar) == -1)) {
 			/*Target doesn't exist, so we have to make it*/
 			return false;
@@ -1082,6 +1082,7 @@ bool test_requirements(int pos) {
 			for (int i = 0; i < target_arr[idx].dependency_count; i++) {
 				if ((stat(target_arr[idx].dependecies[i], &dep) == -1)) {
 					/*DEPENDECY ERROR*/
+					printf("Missing dep : %s \n", target_arr[idx].dependecies[i]);
 					handle_target_error(pos);
 					return false;
 				} else if (tar.st_mtime < dep.st_mtime) {
@@ -1248,10 +1249,18 @@ int main(int argc, char **argv) {
 			/*Type target*/
 			start = false;
 			get_target(buffer_temp, counters.targets);
-		} else if (start == false) {
+		} else if (start == false && buffer_temp[0] == '\t') {
 			/* The condition ensures that we count empty lines in targets not macros*/
 			get_cmd(buffer_temp, counters.targets - 1);
 			print_counter.commands++;
+		} else if (start == true && buffer_temp[0] == '\t') {
+			fprintf(stderr, "make *** commands commence before first target.  Stop.\n");
+			exit(0);
+		} else if (buffer_temp[0] == '\n') {
+			/*Ignoring line*/
+		} else {
+			fprintf(stderr, "make *** *** missing separator.  Stop.\n");
+			exit(0);
 		}
 
 	}

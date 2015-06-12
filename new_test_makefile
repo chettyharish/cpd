@@ -1,7 +1,7 @@
 CC=/usr/bin/gcc
 CPP=/usr/bin/g++ 
 
-all : pipetest multiline redrtest bothredrtest echotest
+all : pipetest multiline redrouttest redrintest bothredrtest echotest
 	echo "Done"
 
 pipetest:
@@ -100,3 +100,5 @@ errorredr:
 clean:
 	rm -f temp.o
 	rm -f temp2
+	rm -f temp.txt
+	rm -f simple.o
