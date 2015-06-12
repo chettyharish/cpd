@@ -1,7 +1,7 @@
 CC=/usr/bin/gcc
 CPP=/usr/bin/g++ 
 
-all : pipetest multiline redrtest bothredrtest echotest
+all : pipetest multiline redrouttest redrintest bothredrtest echotest
 	echo "Done"
 
 pipetest:
@@ -12,6 +12,8 @@ pipetest:
 multiline:
 	cd tempor;cd new ; /bin/cat makefile ;
 
+interrupt:
+	/bin/sleep 15
 backtest:
 	/bin/sleep 100 &
 	/bin/sleep 50
@@ -35,7 +37,8 @@ echotest:
 	echo Hello World
 	echo $CPP $CC
 
-
+simple.o : simple.c
+	$(CC) -o $@ $<
 
 #Inference rules
 .c.o:
@@ -99,5 +102,5 @@ errorredr:
 
 
 clean:
-	rm -f temp.o
-	rm -f temp2
+	/bin/rm -f temp.o
+	/bin/rm -f temp2

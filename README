@@ -1,5 +1,10 @@
 ##README
 
+#Make
+The make dynamically detects the operating system and choses compile flags accordingly. Currently it works only for Linux and SunOS
+(Though it is easily modifiable for other OS). It uses the -D_POSIX_SOURCE flag for Linux and -D_XOPEN_SOURCE=600 for SunOS.
+
+#Testcases
 The new_test_makefile has various tests to try out all the differet features using variety of targets. Some of the tests
 only work with the supplied files as they use these files as input.
 
@@ -26,7 +31,8 @@ errortest3: Testing wrong targets
 errorredr: IO Redirected input from missing file
 
 
-##Sample executions
+##Sample execution statements
+./mymake -p
 ./mymake pipetest
 ./mymake multiline
 ./mymake interrupt -i
@@ -34,6 +40,7 @@ errorredr: IO Redirected input from missing file
 ./mymake alarmtest -t 5
 ./mymake redrouttest -d
 ./mymake redrintest -d
+./mymake all -i
 ./mymake bothredrtest -i
 ./mymake echotest
 ./mymake simple.o
