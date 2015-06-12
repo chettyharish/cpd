@@ -1,10 +1,18 @@
+OS = $(shell uname -s)
 CC=gcc
-FLAG=-Wall -std=c99 -pedantic -D_POSIX_SOURCE
-
+FLAG=-Wall -std=c99 -pedantic 
+ifeq ($(OS),Linux)
+FLAG+=-D_POSIX_SOURCE
+endif
+ifeq ($(OS),SunOS)
+FLAG+=-D_XOPEN_SOURCE=600
+endif
 all:
 	$(CC) -o mymake mymake.c $(FLAG)
-demo :
-	$(CC) -o mymake mymake.c $(FLAG)
-	./mymake -f new_test_makefile
+
+flagcheck:
+	echo $(CC)
+	echo $(FLAG)
+	echo $(OS)
 clean:
 	rm mymake
