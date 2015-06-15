@@ -84,6 +84,9 @@ mixtest:
 
 pipeerror:
 	/bin/cat Makefile | /bin/grep all
+
+perrornew:
+	/bin/cat Makefile | /hello /nocode | /doesntexist
 cderror: 
 	cd what/where
 
