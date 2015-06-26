@@ -127,16 +127,20 @@ int main(int argc, char *argv[]) {
 					/*Close unnecessary pipes*/
 					/*Writes and Reads to pipe[i]*/
 					if (i != myid) {
-						pipe(pipe_down[i]);
-						pipe(pipe_up[i]);
+						close(pipe_down[i][0]);
+						close(pipe_down[i][1]);
+						close(pipe_up[i][0]);
+						close(pipe_up[i][1]);
 					}
 				}
 				for (int i = 0; i < NUM_PROCS; i++) {
 					/*Dedicated pipes to handlers*/
 					/*Writes and Reads to pipe[i]*/
 					if (i != myid) {
-						pipe(count_down[i]);
-						pipe(count_up[i]);
+						close(count_down[i][0]);
+						close(count_down[i][1]);
+						close(count_up[i][0]);
+						close(count_up[i][1]);
 					}
 				}
 
@@ -150,16 +154,20 @@ int main(int argc, char *argv[]) {
 					/*Close unnecessary pipes*/
 					/*Writes and Reads to pipe[i]*/
 					if (i != myid - 1) {
-						pipe(pipe_down[i]);
-						pipe(pipe_up[i]);
+						close(pipe_down[i][0]);
+						close(pipe_down[i][1]);
+						close(pipe_up[i][0]);
+						close(pipe_up[i][1]);
 					}
 				}
 				for (int i = 0; i < NUM_PROCS; i++) {
 					/*Dedicated pipes to handlers*/
 					/*Writes and Reads to pipe[i]*/
 					if (i != myid) {
-						pipe(count_down[i]);
-						pipe(count_up[i]);
+						close(count_down[i][0]);
+						close(count_down[i][1]);
+						close(count_up[i][0]);
+						close(count_up[i][1]);
 					}
 				}
 			}
@@ -167,21 +175,24 @@ int main(int argc, char *argv[]) {
 			if (fork() == 0) {
 				/*Middle process so needs both top and bottom rows*/
 				int myid = i;
-
 				for (int i = 0; i < num_pipe; i++) {
 					/*Close unnecessary pipes*/
 					/*Writes and Reads to pipe[i]*/
 					if (i != myid - 1 && i != myid) {
-						pipe(pipe_down[i]);
-						pipe(pipe_up[i]);
+						close(pipe_down[i][0]);
+						close(pipe_down[i][1]);
+						close(pipe_up[i][0]);
+						close(pipe_up[i][1]);
 					}
 				}
 				for (int i = 0; i < NUM_PROCS; i++) {
 					/*Dedicated pipes to handlers*/
 					/*Writes and Reads to pipe[i]*/
 					if (i != myid) {
-						pipe(count_down[i]);
-						pipe(count_up[i]);
+						close(count_down[i][0]);
+						close(count_down[i][1]);
+						close(count_up[i][0]);
+						close(count_up[i][1]);
 					}
 				}
 			}
@@ -191,6 +202,18 @@ int main(int argc, char *argv[]) {
 	if (fork() == 0) {
 	}
 
+	for (int i = 0; i < num_pipe; i++) {
+		close(pipe_down[i][0]);
+		close(pipe_down[i][1]);
+		close(pipe_up[i][0]);
+		close(pipe_up[i][1]);
+	}
+	for (int i = 0; i < NUM_PROCS; i++) {
+		close(count_down[i][0]);
+		close(count_down[i][1]);
+		close(count_up[i][0]);
+		close(count_up[i][1]);
+	}
 	wait_all_children();
 
 //	c = 0;
