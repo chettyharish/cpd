@@ -19,12 +19,17 @@
 
 int w_X, w_Y;
 
+char **w;
+char *arr;
+char **neww;
+char *arr2;
+
 void wait_all_children() {
 	while (wait(NULL) > 0)
 		;
 }
 
-void init_new(int rows_per_blk, int w_X, char w[rows_per_blk + 2][w_X], char neww[rows_per_blk + 2][w_X], int myid) {
+void init_new(int rows_per_blk, int myid) {
 	int i, j;
 	for (j = 0; j < rows_per_blk + 2; j++)
 		for (i = 0; i < w_X; i++)
@@ -39,57 +44,39 @@ void init_new(int rows_per_blk, int w_X, char w[rows_per_blk + 2][w_X], char new
 		w[i][0] = 1;
 }
 
-//void print_world() {
-//	int i, j;
-//
-//	for (i = 0; i < w_Y; i++) {
-//		for (j = 0; j < w_X; j++) {
-//			printf("%d", (int) w[i][j]);
-//		}
-//		printf("\n");
-//	}
-//}
+void print_world() {
+	int i, j;
 
-//int neighborcount(int x, int y ) {
-//	int count = 0;
-//
-//	if ((x < 0) || (x >= w_X)) {
-//		printf("neighborcount: (%d %d) out of bound (0..%d, 0..%d).\n", x, y, w_X, w_Y);
-//		exit(0);
-//	}
-//	if ((y < 0) || (y >= w_Y)) {
-//		printf("neighborcount: (%d %d) out of bound (0..%d, 0..%d).\n", x, y, w_X, w_Y);
-//		exit(0);
-//	}
-//
-//	if (x == 0) {
-//		if (y == 0) {
-//			count = w[y][x + 1] + w[y + 1][x] + w[y + 1][x + 1];
-//		} else if (y == w_Y - 1) {
-//			count = w[y][x + 1] + w[y - 1][x] + w[y - 1][x + 1];
-//		} else {
-//			count = w[y - 1][x] + w[y + 1][x] + w[y - 1][x + 1] + w[y][x + 1] + w[y + 1][x + 1];
-//		}
-//	} else if (x == w_X - 1) {
-//		if (y == 0) {
-//			count = w[y][x - 1] + w[y + 1][x - 1] + w[y + 1][x];
-//		} else if (y == w_Y - 1) {
-//			count = w[y][x - 1] + w[y - 1][x] + w[y - 1][x - 1];
-//		} else {
-//			count = w[y - 1][x] + w[y + 1][x] + w[y - 1][x - 1] + w[y][x - 1] + w[y + 1][x - 1];
-//		}
-//	} else { /* x is in the middle */
-//		if (y == 0) {
-//			count = w[y][x - 1] + w[y][x + 1] + w[y + 1][x - 1] + w[y + 1][x] + w[y + 1][x + 1];
-//		} else if (y == w_Y - 1) {
-//			count = w[y][x - 1] + w[y][x + 1] + w[y - 1][x - 1] + w[y - 1][x] + w[y - 1][x + 1];
-//		} else {
-//			count = w[y - 1][x - 1] + w[y][x - 1] + w[y + 1][x - 1] + w[y - 1][x] + w[y + 1][x] + w[y - 1][x + 1] + w[y][x + 1] + w[y + 1][x + 1];
-//		}
-//	}
-//
-//	return count;
-//}
+	for (i = 0; i < w_Y; i++) {
+		for (j = 0; j < w_X; j++) {
+			printf("%d", (int) w[i][j]);
+		}
+		printf("\n");
+	}
+}
+
+int neighborcount(int rows_per_blk, int x, int y) {
+	int count = 0;
+
+	if ((x < 0) || (x >= w_X)) {
+		printf("neighborcount: (%d %d) out of bound (0..%d, 0..%d).\n", x, y, w_X, w_Y);
+		exit(0);
+	}
+	if ((y < 0) || (y == 0) || (y > rows_per_blk)) {
+		printf("neighborcount: (%d %d) out of bound (0..%d, 0..%d).\n", x, y, w_X, w_Y);
+		exit(0);
+	}
+
+	if (x == 0) {
+		count = w[y - 1][x] + w[y + 1][x] + w[y - 1][x + 1] + w[y][x + 1] + w[y + 1][x + 1];
+	} else if (x == w_X - 1) {
+		count = w[y - 1][x] + w[y + 1][x] + w[y - 1][x - 1] + w[y][x - 1] + w[y + 1][x - 1];
+	} else {
+		count = w[y - 1][x - 1] + w[y][x - 1] + w[y + 1][x - 1] + w[y - 1][x] + w[y + 1][x] + w[y - 1][x + 1] + w[y][x + 1] + w[y + 1][x + 1];
+	}
+
+	return count;
+}
 
 int main(int argc, char *argv[]) {
 	int x, y;
@@ -105,8 +92,18 @@ int main(int argc, char *argv[]) {
 
 	w_X = atoi(argv[1]), w_Y = atoi(argv[2]);
 	int rows_per_blk = ceil(w_Y * 1.0f / NUM_PROCS);
-	char w[rows_per_blk + 2][w_X];
-	char neww[rows_per_blk + 2][w_X];
+
+	w = malloc((rows_per_blk + 2) * sizeof(*w));
+	neww = malloc((rows_per_blk + 2) * sizeof(*neww));
+	arr = malloc((rows_per_blk + 2) * w_X * sizeof(char));
+	arr2 = malloc((rows_per_blk + 2) * w_X * sizeof(char));
+	for (int i = 0; i < (rows_per_blk + 2); ++i) {
+		w[i] = &arr[i * w_X];
+		neww[i] = &arr2[i * w_X];
+	}
+
+//	char w[rows_per_blk + 2][w_X];
+//	char neww[rows_per_blk + 2][w_X];
 
 	int num_pipe = NUM_PROCS - 1;
 	int pipe_down[num_pipe][2];
@@ -130,7 +127,7 @@ int main(int argc, char *argv[]) {
 	}
 
 	for (int i = 0; i < NUM_PROCS; i++) {
-		init_new(rows_per_blk, w_X, w, neww, i);
+		init_new(rows_per_blk, i);
 		if (i == 0) {
 			if (fork() == 0) {
 				/*First process so reads only bottom row*/
@@ -177,17 +174,55 @@ int main(int argc, char *argv[]) {
 				}
 				printf("myid  = %d INIT COUNT = %d\n", myid, init_count);
 
+				count = init_count;
 				/*Communicate with next process*/
-				for (int i = 0; i < w_X; i++) {
-					if (write(pipe_down[myid][1], &w[rows_per_blk][i], sizeof(w[rows_per_blk][i])) != 1) {
-						perror("Write START : ");
-					}
-				}
 
-				for (int i = 0; i < w_X; i++) {
-					if (read(pipe_up[myid][0], &w[rows_per_blk + 1][i], sizeof(w[rows_per_blk + 1][i])) != 1) {
-						perror("Read START : ");
+				for (iter = 0; (iter < 200) && (count < 50 * init_count) && (count > init_count / 50); iter++) {
+					for (int i = 0; i < w_X; i++) {
+						if (write(pipe_down[myid][1], &w[rows_per_blk][i], sizeof(w[rows_per_blk][i])) != 1) {
+							perror("Write START : ");
+						}
 					}
+
+					for (int i = 0; i < w_X; i++) {
+						if (read(pipe_up[myid][0], &w[rows_per_blk + 1][i], sizeof(w[rows_per_blk + 1][i])) != 1) {
+							perror("Read START : ");
+						}
+					}
+
+					for (x = 0; x < w_X; x++) {
+						for (y = 1; y <= rows_per_blk; y++) {
+							c = neighborcount(rows_per_blk, x, y); /* count neighbors */
+							if (c <= 1)
+								neww[y][x] = 0; /* die of loneliness */
+							else if (c >= 4)
+								neww[y][x] = 0; /* die of overpopulation */
+							else if (c == 3)
+								neww[y][x] = 1; /* becomes alive */
+							else
+								neww[y][x] = w[y][x]; /* c == 2, no change */
+						}
+					}
+
+					/* copy the world, and count the current lives */
+					count = 0;
+					for (x = 0; x < w_X; x++) {
+						for (y = 1; y <= rows_per_blk; y++) {
+							w[y][x] = neww[y][x];
+							if (w[y][x] == 1)
+								count++;
+						}
+					}
+
+					/*Calculate the new pop*/
+					if (write(count_down[myid][1], &count, sizeof(count)) != 4) {
+						perror("Write START INIT: ");
+					}
+
+					if (read(count_up[myid][0], &count, sizeof(count)) != 4) {
+						perror("Read START INIT: ");
+					}
+
 				}
 
 				close(pipe_down[myid][0]);
@@ -253,17 +288,60 @@ int main(int argc, char *argv[]) {
 				}
 				printf("myid  = %d INIT COUNT = %d\n", myid, init_count);
 
-				/*Communicate with previous process*/
-				for (int i = 0; i < w_X; i++) {
-					if (write(pipe_up[myid - 1][1], &w[1][i], sizeof(w[rows_per_blk][i])) != 1) {
-						perror("Write END : ");
+				count = init_count;
+				for (iter = 0; (iter < 200) && (count < 50 * init_count) && (count > init_count / 50); iter++) {
+					/*Communicate with previous process*/
+					for (int i = 0; i < w_X; i++) {
+						if (write(pipe_up[myid - 1][1], &w[1][i], sizeof(w[rows_per_blk][i])) != 1) {
+							perror("Write END : ");
+						}
 					}
-				}
 
-				for (int i = 0; i < w_X; i++) {
-					if (read(pipe_down[myid - 1][0], &w[0][i], sizeof(w[rows_per_blk + 1][i])) != 1) {
-						perror("Read END : ");
+					for (int i = 0; i < w_X; i++) {
+						if (read(pipe_down[myid - 1][0], &w[0][i], sizeof(w[rows_per_blk + 1][i])) != 1) {
+							perror("Read END : ");
+						}
 					}
+
+					for (x = 0; x < w_X; x++) {
+						for (y = 1; y <= rows_per_blk; y++) {
+
+							if (myid * rows_per_blk + y > w_Y)
+								break;
+							c = neighborcount(rows_per_blk, x, y); /* count neighbors */
+							if (c <= 1)
+								neww[y][x] = 0; /* die of loneliness */
+							else if (c >= 4)
+								neww[y][x] = 0; /* die of overpopulation */
+							else if (c == 3)
+								neww[y][x] = 1; /* becomes alive */
+							else
+								neww[y][x] = w[y][x]; /* c == 2, no change */
+						}
+					}
+
+					/* copy the world, and count the current lives */
+					count = 0;
+					for (x = 0; x < w_X; x++) {
+						for (y = 1; y <= rows_per_blk; y++) {
+
+							if (myid * rows_per_blk + y > w_Y)
+								break;
+							w[y][x] = neww[y][x];
+							if (w[y][x] == 1)
+								count++;
+						}
+					}
+
+					/*Calculate the new pop*/
+					if (write(count_down[myid][1], &count, sizeof(count)) != 4) {
+						perror("Write START INIT: ");
+					}
+
+					if (read(count_up[myid][0], &count, sizeof(count)) != 4) {
+						perror("Read START INIT: ");
+					}
+
 				}
 
 				close(pipe_down[myid - 1][0]);
@@ -278,7 +356,9 @@ int main(int argc, char *argv[]) {
 				printf("Exiting process : %d\n", myid);
 				exit(0);
 			}
-		} else {
+		}
+
+		else {
 			if (fork() == 0) {
 				/*Middle process so needs both top and bottom rows*/
 				int myid = i;
@@ -323,30 +403,67 @@ int main(int argc, char *argv[]) {
 				}
 				printf("myid  = %d INIT COUNT = %d\n", myid, init_count);
 
-				/*Communicate with previous process*/
-				for (int i = 0; i < w_X; i++) {
-					if (write(pipe_up[myid - 1][1], &w[1][i], sizeof(w[rows_per_blk][i])) != 1) {
-						perror("Write MID : ");
+				count = init_count;
+				for (iter = 0; (iter < 200) && (count < 50 * init_count) && (count > init_count / 50); iter++) {
+					/*Communicate with previous process*/
+					for (int i = 0; i < w_X; i++) {
+						if (write(pipe_up[myid - 1][1], &w[1][i], sizeof(w[rows_per_blk][i])) != 1) {
+							perror("Write MID : ");
+						}
 					}
-				}
 
-				for (int i = 0; i < w_X; i++) {
-					if (read(pipe_down[myid - 1][0], &w[0][i], sizeof(w[rows_per_blk + 1][i])) != 1) {
-						perror("Read MID : ");
+					for (int i = 0; i < w_X; i++) {
+						if (read(pipe_down[myid - 1][0], &w[0][i], sizeof(w[rows_per_blk + 1][i])) != 1) {
+							perror("Read MID : ");
+						}
 					}
-				}
 
-				/*Communicate with next process*/
-				for (int i = 0; i < w_X; i++) {
-					if (write(pipe_down[myid][1], &w[rows_per_blk][i], sizeof(w[rows_per_blk][i])) != 1) {
-						perror("Write MID : ");
+					/*Communicate with next process*/
+					for (int i = 0; i < w_X; i++) {
+						if (write(pipe_down[myid][1], &w[rows_per_blk][i], sizeof(w[rows_per_blk][i])) != 1) {
+							perror("Write MID : ");
+						}
 					}
-				}
 
-				for (int i = 0; i < w_X; i++) {
-					if (read(pipe_up[myid][0], &w[rows_per_blk + 1][i], sizeof(w[rows_per_blk + 1][i])) != 1) {
-						perror("Read MID : ");
+					for (int i = 0; i < w_X; i++) {
+						if (read(pipe_up[myid][0], &w[rows_per_blk + 1][i], sizeof(w[rows_per_blk + 1][i])) != 1) {
+							perror("Read MID : ");
+						}
 					}
+
+					for (x = 0; x < w_X; x++) {
+						for (y = 1; y <= rows_per_blk; y++) {
+							c = neighborcount(rows_per_blk, x, y); /* count neighbors */
+							if (c <= 1)
+								neww[y][x] = 0; /* die of loneliness */
+							else if (c >= 4)
+								neww[y][x] = 0; /* die of overpopulation */
+							else if (c == 3)
+								neww[y][x] = 1; /* becomes alive */
+							else
+								neww[y][x] = w[y][x]; /* c == 2, no change */
+						}
+					}
+
+					/* copy the world, and count the current lives */
+					count = 0;
+					for (x = 0; x < w_X; x++) {
+						for (y = 1; y <= rows_per_blk; y++) {
+							w[y][x] = neww[y][x];
+							if (w[y][x] == 1)
+								count++;
+						}
+					}
+
+					/*Calculate the new pop*/
+					if (write(count_down[myid][1], &count, sizeof(count)) != 4) {
+						perror("Write START INIT: ");
+					}
+
+					if (read(count_up[myid][0], &count, sizeof(count)) != 4) {
+						perror("Read START INIT: ");
+					}
+
 				}
 
 				close(pipe_down[myid][0]);
@@ -370,16 +487,17 @@ int main(int argc, char *argv[]) {
 
 	if (fork() == 0) {
 		/*The count handler*/
+
+		printf("Starting Counter handlers\n");
+		int count = 0;
 		for (int i = 0; i < num_pipe; i++) {
 			/*Close unnecessary pipes*/
-			/*Writes and Reads to pipe[i]*/
 			close(pipe_down[i][0]);
 			close(pipe_down[i][1]);
 			close(pipe_up[i][0]);
 			close(pipe_up[i][1]);
 		}
 
-		int count = 0;
 		for (int i = 0; i < NUM_PROCS; i++) {
 			int temp = 0;
 			if (read(count_down[i][0], &temp, sizeof(temp)) != 4) {
@@ -387,11 +505,37 @@ int main(int argc, char *argv[]) {
 			}
 			count += temp;
 		}
+		printf("initial world, population count: %d\n", count);
 
 		for (int i = 0; i < NUM_PROCS; i++) {
 			if (write(count_up[i][1], &count, sizeof(count)) != 4) {
 				perror("Write Count Handler: ");
 			}
+		}
+
+		printf("initial world, population count: %d\n", count);
+		init_count = count;
+		for (iter = 0; (iter < 200) && (count < 50 * init_count) && (count > init_count / 50); iter++) {
+			printf("FIRST INSIDE FOR iter = %d count = %d init_count = %d\n", iter, count, init_count);
+			int temp = 0;
+
+			count = 0;
+			for (int i = 0; i < NUM_PROCS; i++) {
+				int temp = 0;
+				if (read(count_down[i][0], &temp, sizeof(temp)) != 4) {
+					perror("Read Count Handler: ");
+				}
+				count += temp;
+			}
+
+			for (int i = 0; i < NUM_PROCS; i++) {
+				if (write(count_up[i][1], &count, sizeof(count)) != 4) {
+					perror("Write Count Handler: ");
+				}
+			}
+
+			printf("iter = %d, population count = %d\n", iter, count);
+			printf("SECOND INSIDE FOR iter = %d count = %d init_count = %d\n", iter, count, init_count);
 		}
 
 		for (int i = 0; i < NUM_PROCS; i++) {
@@ -402,6 +546,9 @@ int main(int argc, char *argv[]) {
 			close(count_up[i][0]);
 			close(count_up[i][1]);
 		}
+
+		printf("Exiting Counter handlers\n");
+		exit(0);
 	}
 
 	for (int i = 0; i < num_pipe; i++) {
@@ -418,46 +565,6 @@ int main(int argc, char *argv[]) {
 	}
 	wait_all_children();
 
-//	c = 0;
-//	for (x = 0; x < w_X; x++) {
-//		for (y = 0; y < w_Y; y++) {
-//			if (w[y][x] == 1)
-//				c++;
-//		}
-//	}
-//
-//	init_count = c;
-//	count = init_count;
-
-//	printf("initial world, population count: %d\n", c);
-//	if (DEBUG_LEVEL > 10)
-//		print_world();
-//
-//	for (iter = 0; (iter < 200) && (count < 50 * init_count) && (count > init_count / 50); iter++) {
-//
-//		for (x = 0; x < w_X; x++) {
-//			for (y = 0; y < w_Y; y++) {
-//				c = neighborcount(x, y); /* count neighbors */
-//				if (c <= 1)
-//					neww[y][x] = 0; /* die of loneliness */
-//				else if (c >= 4)
-//					neww[y][x] = 0; /* die of overpopulation */
-//				else if (c == 3)
-//					neww[y][x] = 1; /* becomes alive */
-//				else
-//					neww[y][x] = w[y][x]; /* c == 2, no change */
-//			}
-//		}
-//
-//		/* copy the world, and count the current lives */
-//		count = 0;
-//		for (x = 0; x < w_X; x++) {
-//			for (y = 0; y < w_Y; y++) {
-//				w[y][x] = neww[y][x];
-//				if (w[y][x] == 1)
-//					count++;
-//			}
-//		}
 //		printf("iter = %d, population count = %d\n", iter, count);
 //		if (DEBUG_LEVEL > 10)
 //			print_world();
