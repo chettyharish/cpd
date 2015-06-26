@@ -16,7 +16,7 @@
 
 char w[MAX_N][MAX_N];
 char neww[MAX_N][MAX_N];
-
+int counters[NUM_THREADS];
 int w_X, w_Y;
 
 void init1(int X, int Y) {
@@ -84,7 +84,7 @@ int neighborcount(int x, int y) {
 	return count;
 }
 
-void *new_world_generator(void *arg) {
+void *new_status_generator(void *arg) {
 	int myid = *(int *) arg;
 	int x, y, c;
 	int rows_per_blk = ceil((w_Y * 1.0f) / NUM_THREADS);
@@ -104,6 +104,26 @@ void *new_world_generator(void *arg) {
 				neww[start + y][x] = w[start + y][x]; /* c == 2, no change */
 		}
 	}
+}
+
+void *new_world_generator(void *arg) {
+	int myid = *(int *) arg;
+	int x, y;
+	int rows_per_blk = ceil((w_Y * 1.0f) / NUM_THREADS);
+	int start = myid * rows_per_blk;
+
+	int count = 0;
+	for (x = 0; x < w_X; x++) {
+		for (y = 0; y < rows_per_blk; y++) {
+			if (start + y >= w_Y)
+				break;
+			w[start + y][x] = neww[start + y][x];
+			if (w[start + y][x] == 1)
+				count++;
+		}
+	}
+
+	counters[myid] = count;
 }
 
 int main(int argc, char *argv[]) {
@@ -139,6 +159,17 @@ int main(int argc, char *argv[]) {
 	pthread_t tid[NUM_THREADS];
 
 	for (iter = 0; (iter < 200) && (count < 50 * init_count) && (count > init_count / 50); iter++) {
+		count = 0;
+		for (int i = 0; i < NUM_THREADS; i++) {
+			myid[i] = i;
+			pthread_create(&tid[i], NULL, &new_status_generator, &myid[i]);
+		}
+
+		for (int i = 0; i < NUM_THREADS; i++) {
+			pthread_join(tid[i], NULL);
+		}
+
+		/* copy the world, and count the current lives */
 
 		for (int i = 0; i < NUM_THREADS; i++) {
 			myid[i] = i;
@@ -148,15 +179,11 @@ int main(int argc, char *argv[]) {
 		for (int i = 0; i < NUM_THREADS; i++) {
 			pthread_join(tid[i], NULL);
 		}
-		/* copy the world, and count the current lives */
-		count = 0;
-		for (x = 0; x < w_X; x++) {
-			for (y = 0; y < w_Y; y++) {
-				w[y][x] = neww[y][x];
-				if (w[y][x] == 1)
-					count++;
-			}
+
+		for (int i = 0; i < NUM_THREADS; i++) {
+			count += counters[i];
 		}
+
 		printf("iter = %d, population count = %d\n", iter, count);
 		if (DEBUG_LEVEL > 10)
 			print_world();
