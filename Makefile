@@ -17,5 +17,7 @@ process:
 	gcc -o process process.c  -std=c99 -O3
 	
 clean:
-	rm -f seq omp thread process testomp testseq testthread testprocess
+	rm -f seq omp thread process
+	rm -f  testomp testseq testthread testprocess
+	rm -f final_worldomp.txt final_worldseq.txt final_worldprocess.txt final_worldomp.txt
 
