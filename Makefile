@@ -8,7 +8,6 @@ seq:
 	gcc -o seq seq.c -std=c99 -O3
 
 omp:
-	setenv OMP_NUM_THREADS 32 
 	gcc -fopenmp -o omp omp.c -std=c99 -O3
 	
 thread:
@@ -18,4 +17,5 @@ process:
 	gcc -o process process.c  -std=c99 -O3
 	
 clean:
-	rm -f seq omp thread process
+	rm -f seq omp thread process testomp testseq testthread testprocess
+

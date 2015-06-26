@@ -111,9 +111,8 @@ int main(int argc, char *argv[]) {
 	if (DEBUG_LEVEL > 10)
 		print_world();
 
-#pragma parallel for private(x,y,c) shared(w,neww,w_X,w_Y) reduction(+: count)
 	for (iter = 0; (iter < 200) && (count < 50 * init_count) && (count > init_count / 50); iter++) {
-
+#pragma omp parallel for private(x,y,c) shared(neww,w,w_X,w_Y)
 		for (x = 0; x < w_X; x++) {
 			for (y = 0; y < w_Y; y++) {
 				c = neighborcount(x, y); /* count neighbors */
@@ -130,6 +129,7 @@ int main(int argc, char *argv[]) {
 
 		/* copy the world, and count the current lives */
 		count = 0;
+#pragma omp parallel for private(x,y) shared(neww,w,w_X,w_Y) reduction(+:count)
 		for (x = 0; x < w_X; x++) {
 			for (y = 0; y < w_Y; y++) {
 				w[y][x] = neww[y][x];
