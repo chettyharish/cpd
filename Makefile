@@ -1,7 +1,7 @@
 all:
 	gcc -o seq seq.c -std=c99 -O3
 	gcc -fopenmp -o omp omp.c -std=c99 -O3
-	gcc -lpthread -o thread thread.c -std=c99 -O3
+	gcc -pthread -o thread thread.c -std=c99 -O3 -lm
 	gcc -o process process.c  -std=c99 -O3
 
 seq:
