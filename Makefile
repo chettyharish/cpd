@@ -19,5 +19,5 @@ process:
 clean:
 	rm -f seq omp thread process
 	rm -f  testomp testseq testthread testprocess
-	rm -f final_worldomp.txt final_worldseq.txt final_worldprocess.txt final_worldomp.txt
+	rm -f final_worldomp.txt final_worldseq.txt final_worldprocess.txt final_worldthread.txt
 
