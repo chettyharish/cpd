@@ -142,7 +142,7 @@ int main(int argc, char *argv[]) {
 
 	{
 		FILE *fd;
-		if ((fd = fopen("final_world000.txt", "w")) != NULL) {
+		if ((fd = fopen("final_world0seq.txt", "w")) != NULL) {
 			for (x = 0; x < w_X; x++) {
 				for (y = 0; y < w_Y; y++) {
 					fprintf(fd, "%d", (int) w[y][x]);

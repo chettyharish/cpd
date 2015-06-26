@@ -8,7 +8,7 @@
 #include <math.h>
 
 #define MAX_N 8192
-#define NUM_THREADS 100
+#define NUM_THREADS 32
 
 #ifndef DEBUG_LEVEL
 #define DEBUG_LEVEL 0
@@ -122,7 +122,6 @@ void *new_world_generator(void *arg) {
 				count++;
 		}
 	}
-
 	counters[myid] = count;
 }
 
@@ -191,7 +190,7 @@ int main(int argc, char *argv[]) {
 
 	{
 		FILE *fd;
-		if ((fd = fopen("final_world000.txt", "w")) != NULL) {
+		if ((fd = fopen("final_worldthread.txt", "w")) != NULL) {
 			for (x = 0; x < w_X; x++) {
 				for (y = 0; y < w_Y; y++) {
 					fprintf(fd, "%d", (int) w[y][x]);
