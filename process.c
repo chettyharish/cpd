@@ -135,6 +135,7 @@ int main(int argc, char *argv[]) {
 			if (fork() == 0) {
 				/*First process so reads only bottom row*/
 				int myid = i;
+				int x, y;
 				printf("Starting process : %d\n", myid);
 				for (int i = 0; i < num_pipe; i++) {
 					/*Close unnecessary pipes*/
@@ -156,6 +157,25 @@ int main(int argc, char *argv[]) {
 						close(count_up[i][1]);
 					}
 				}
+
+				/*The init_count part before the loop*/
+				int count = 0;
+				int init_count = 0;
+				for (x = 0; x < w_X; x++) {
+					for (y = 1; y <= rows_per_blk; y++) {
+						if (w[y][x] == 1)
+							count++;
+					}
+				}
+
+				if (write(count_down[myid][1], &count, sizeof(count)) != 4) {
+					perror("Write START INIT: ");
+				}
+
+				if (read(count_up[myid][0], &init_count, sizeof(init_count)) != 4) {
+					perror("Read START INIT: ");
+				}
+				printf("myid  = %d INIT COUNT = %d\n", myid, init_count);
 
 				/*Communicate with next process*/
 				for (int i = 0; i < w_X; i++) {
@@ -185,7 +205,6 @@ int main(int argc, char *argv[]) {
 			}
 		}
 
-
 		else if (i == NUM_PROCS - 1) {
 			if (fork() == 0) {
 				/*Last process so reads only top row*/
@@ -213,6 +232,27 @@ int main(int argc, char *argv[]) {
 					}
 				}
 
+				/*The init_count part before the loop*/
+				int count = 0;
+				int init_count = 0;
+				for (x = 0; x < w_X; x++) {
+					for (y = 1; y <= rows_per_blk; y++) {
+						if (myid * rows_per_blk + y > w_Y)
+							break;
+						if (w[y][x] == 1)
+							count++;
+					}
+				}
+
+				if (write(count_down[myid][1], &count, sizeof(count)) != 4) {
+					perror("Write END INIT: ");
+				}
+
+				if (read(count_up[myid][0], &init_count, sizeof(init_count)) != 4) {
+					perror("Read END INIT: ");
+				}
+				printf("myid  = %d INIT COUNT = %d\n", myid, init_count);
+
 				/*Communicate with previous process*/
 				for (int i = 0; i < w_X; i++) {
 					if (write(pipe_up[myid - 1][1], &w[1][i], sizeof(w[rows_per_blk][i])) != 1) {
@@ -238,8 +278,7 @@ int main(int argc, char *argv[]) {
 				printf("Exiting process : %d\n", myid);
 				exit(0);
 			}
-		}
-		else {
+		} else {
 			if (fork() == 0) {
 				/*Middle process so needs both top and bottom rows*/
 				int myid = i;
@@ -264,6 +303,25 @@ int main(int argc, char *argv[]) {
 						close(count_up[i][1]);
 					}
 				}
+
+				/*The init_count part before the loop*/
+				int count = 0;
+				int init_count = 0;
+				for (x = 0; x < w_X; x++) {
+					for (y = 1; y <= rows_per_blk; y++) {
+						if (w[y][x] == 1)
+							count++;
+					}
+				}
+
+				if (write(count_down[myid][1], &count, sizeof(count)) != 4) {
+					perror("Write MID INIT: ");
+				}
+
+				if (read(count_up[myid][0], &init_count, sizeof(init_count)) != 4) {
+					perror("Read MID INIT: ");
+				}
+				printf("myid  = %d INIT COUNT = %d\n", myid, init_count);
 
 				/*Communicate with previous process*/
 				for (int i = 0; i < w_X; i++) {
@@ -311,6 +369,7 @@ int main(int argc, char *argv[]) {
 	}
 
 	if (fork() == 0) {
+		/*The count handler*/
 		for (int i = 0; i < num_pipe; i++) {
 			/*Close unnecessary pipes*/
 			/*Writes and Reads to pipe[i]*/
@@ -318,6 +377,21 @@ int main(int argc, char *argv[]) {
 			close(pipe_down[i][1]);
 			close(pipe_up[i][0]);
 			close(pipe_up[i][1]);
+		}
+
+		int count = 0;
+		for (int i = 0; i < NUM_PROCS; i++) {
+			int temp = 0;
+			if (read(count_down[i][0], &temp, sizeof(temp)) != 4) {
+				perror("Read Count Handler: ");
+			}
+			count += temp;
+		}
+
+		for (int i = 0; i < NUM_PROCS; i++) {
+			if (write(count_up[i][1], &count, sizeof(count)) != 4) {
+				perror("Write Count Handler: ");
+			}
 		}
 
 		for (int i = 0; i < NUM_PROCS; i++) {
