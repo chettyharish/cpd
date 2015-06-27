@@ -693,6 +693,8 @@ int main(int argc, char *argv[]) {
 		}
 	}
 
+
+
 	for (int i = 0; i < num_pipe; i++) {
 		close(pipe_down[i][0]);
 		close(pipe_down[i][1]);

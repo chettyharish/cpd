@@ -1,7 +1,3 @@
-/*
- * Created 06/20/2015 by Xin Yuan for the COP5570 class
- */
-
 #include <stdio.h>
 #include <stdlib.h>
 
