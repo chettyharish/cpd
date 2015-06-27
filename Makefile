@@ -9,12 +9,24 @@ primedemo: seq omp thread process
 	time ./omp 1093 1277 > testomp
 	time ./thread 1093 1277 > testthread
 	time ./process 1093 1277 > testprocess
+	diff testseq testomp
+	diff testseq testthread
+	diff testseq testprocess
+	diff final_worldseq.txt finalworldomp.txt
+	diff final_worldseq.txt finalworldthread.txt
+	diff final_worldseq.txt finalworldprocess.txt
 
 simpledemo: seq omp thread process
 	time ./seq 1000 1000 > testseq
 	time ./omp 1000 1000 > testomp
 	time ./thread 1000 1000 > testthread
 	time ./process 1000 1000 > testprocess
+	diff testseq testomp
+	diff testseq testthread
+	diff testseq testprocess
+	diff final_worldseq.txt finalworldomp.txt
+	diff final_worldseq.txt finalworldthread.txt
+	diff final_worldseq.txt finalworldprocess.txt
 	
 seq:
 	gcc -o seq seq.c -std=c99 -O3 -pedantic
