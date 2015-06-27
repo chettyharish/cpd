@@ -12,9 +12,9 @@ primedemo: seq omp thread process
 	diff testseq testomp
 	diff testseq testthread
 	diff testseq testprocess
-	diff final_worldseq.txt finalworldomp.txt
-	diff final_worldseq.txt finalworldthread.txt
-	diff final_worldseq.txt finalworldprocess.txt
+	diff final_worldseq.txt final_worldomp.txt
+	diff final_worldseq.txt final_worldthread.txt
+	diff final_worldseq.txt final_worldprocess.txt
 
 simpledemo: seq omp thread process
 	time ./seq 1000 1000 > testseq
@@ -24,9 +24,9 @@ simpledemo: seq omp thread process
 	diff testseq testomp
 	diff testseq testthread
 	diff testseq testprocess
-	diff final_worldseq.txt finalworldomp.txt
-	diff final_worldseq.txt finalworldthread.txt
-	diff final_worldseq.txt finalworldprocess.txt
+	diff final_worldseq.txt final_worldomp.txt
+	diff final_worldseq.txt final_worldthread.txt
+	diff final_worldseq.txt final_worldprocess.txt
 	
 seq:
 	gcc -o seq seq.c -std=c99 -O3 -pedantic
