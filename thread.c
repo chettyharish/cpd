@@ -198,7 +198,7 @@ int main(int argc, char *argv[]) {
 				fprintf(fd, "\n");
 			}
 		} else {
-			printf("Can't open file final_world000.txt\n");
+			printf("Can't open file final_worldthread.txt\n");
 			exit(1);
 		}
 	}

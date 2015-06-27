@@ -15,7 +15,7 @@
 #define DEBUG_LEVEL 0
 #endif
 
-#define NUM_PROCS 14
+#define NUM_PROCS 8
 
 int w_X, w_Y;
 
@@ -106,21 +106,28 @@ int main(int argc, char *argv[]) {
 	int pipe_down[num_pipe][2];
 	int pipe_up[num_pipe][2];
 
-	/*Since there is an extra handler process*/
+	/*Since there is an extra handler processes*/
 	int count_down[NUM_PROCS][2];
 	int count_up[NUM_PROCS][2];
+	int file_write[NUM_PROCS][2];
 	for (int i = 0; i < NUM_PROCS; i++) {
 		if (i < num_pipe) {
-			if (pipe(pipe_down[i]))
-				;
-			if (pipe(pipe_up[i]))
-				;
+			if (pipe(pipe_down[i]) == -1) {
+				perror("Pipe creation : ");
+			}
+			if (pipe(pipe_up[i]) == -1) {
+				perror("Pipe creation : ");
+			}
 		}
-		if (pipe(count_down[i]))
-			;
-		if (pipe(count_up[i]))
-			;
-
+		if (pipe(count_down[i]) == -1) {
+			perror("Pipe creation : ");
+		}
+		if (pipe(count_up[i]) == -1) {
+			perror("Pipe creation : ");
+		}
+		if (pipe(file_write[i]) == -1) {
+			perror("Pipe creation : ");
+		}
 	}
 
 	for (int i = 0; i < NUM_PROCS; i++) {
@@ -149,6 +156,8 @@ int main(int argc, char *argv[]) {
 						close(count_down[i][1]);
 						close(count_up[i][0]);
 						close(count_up[i][1]);
+						close(file_write[i][0]);
+						close(file_write[i][1]);
 					}
 				}
 
@@ -221,7 +230,18 @@ int main(int argc, char *argv[]) {
 					}
 
 				}
+				int mem_count = 0;
 
+				for (x = 0; x < w_X; x++) {
+					for (y = 1; y <= rows_per_blk; y++) {
+						mem_count++;
+						if (write(file_write[myid][1], &w[y][x], sizeof(w[y][x])) != 1) {
+							perror("FileWrite START : ");
+						}
+					}
+				}
+
+				printf("MYID = %d COUNT = %d\n", myid, mem_count);
 				close(pipe_down[myid][0]);
 				close(pipe_down[myid][1]);
 				close(pipe_up[myid][0]);
@@ -230,6 +250,9 @@ int main(int argc, char *argv[]) {
 				close(count_down[myid][1]);
 				close(count_up[myid][0]);
 				close(count_up[myid][1]);
+
+				close(file_write[myid][0]);
+				close(file_write[myid][1]);
 
 //				printf("Exiting process : %d\n", myid);
 				exit(0);
@@ -261,6 +284,8 @@ int main(int argc, char *argv[]) {
 						close(count_down[i][1]);
 						close(count_up[i][0]);
 						close(count_up[i][1]);
+						close(file_write[i][0]);
+						close(file_write[i][1]);
 					}
 				}
 
@@ -303,7 +328,7 @@ int main(int argc, char *argv[]) {
 					for (x = 0; x < w_X; x++) {
 						for (y = 1; y <= rows_per_blk; y++) {
 
-							if (myid * rows_per_blk + y >= w_Y)
+							if (myid * rows_per_blk + y > w_Y)
 								break;
 							c = neighborcount(rows_per_blk, x, y); /* count neighbors */
 							if (c <= 1)
@@ -341,6 +366,23 @@ int main(int argc, char *argv[]) {
 
 				}
 
+				int mem_count = 0;
+
+				for (x = 0; x < w_X; x++) {
+					for (y = 1; y <= rows_per_blk; y++) {
+
+						if (myid * rows_per_blk + y > w_Y)
+							break;
+						mem_count++;
+						if (write(file_write[myid][1], &w[y][x], sizeof(w[y][x])) != 1) {
+							perror("FileWrite END : ");
+						}
+
+					}
+				}
+
+				printf("MYID = %d COUNT = %d\n", myid, mem_count);
+
 				close(pipe_down[myid - 1][0]);
 				close(pipe_down[myid - 1][1]);
 				close(pipe_up[myid - 1][0]);
@@ -349,6 +391,9 @@ int main(int argc, char *argv[]) {
 				close(count_down[myid][1]);
 				close(count_up[myid][0]);
 				close(count_up[myid][1]);
+
+				close(file_write[myid][0]);
+				close(file_write[myid][1]);
 
 //				printf("Exiting process : %d\n", myid);
 				exit(0);
@@ -368,6 +413,8 @@ int main(int argc, char *argv[]) {
 						close(pipe_down[i][1]);
 						close(pipe_up[i][0]);
 						close(pipe_up[i][1]);
+						close(file_write[i][0]);
+						close(file_write[i][1]);
 					}
 				}
 				for (int i = 0; i < NUM_PROCS; i++) {
@@ -463,6 +510,17 @@ int main(int argc, char *argv[]) {
 
 				}
 
+				int mem_count = 0;
+				for (x = 0; x < w_X; x++) {
+					for (y = 1; y <= rows_per_blk; y++) {
+						mem_count++;
+						if (write(file_write[myid][1], &w[y][x], sizeof(w[y][x])) != 1) {
+							perror("FileWrite MID : ");
+						}
+					}
+				}
+				printf("MYID = %d COUNT = %d\n", myid, mem_count);
+
 				close(pipe_down[myid][0]);
 				close(pipe_down[myid][1]);
 				close(pipe_up[myid][0]);
@@ -475,6 +533,9 @@ int main(int argc, char *argv[]) {
 				close(count_down[myid][1]);
 				close(count_up[myid][0]);
 				close(count_up[myid][1]);
+
+				close(file_write[myid][0]);
+				close(file_write[myid][1]);
 
 //				printf("Exiting process : %d\n", myid);
 				exit(0);
@@ -493,6 +554,10 @@ int main(int argc, char *argv[]) {
 			close(pipe_down[i][1]);
 			close(pipe_up[i][0]);
 			close(pipe_up[i][1]);
+		}
+		for (int i = 0; i < NUM_PROCS; i++) {
+			close(file_write[i][0]);
+			close(file_write[i][1]);
 		}
 
 		for (int i = 0; i < NUM_PROCS; i++) {
@@ -546,6 +611,65 @@ int main(int argc, char *argv[]) {
 		exit(0);
 	}
 
+	if (fork() == 0) {
+		/*Function to write to a file*/
+
+		for (int i = 0; i < num_pipe; i++) {
+			close(pipe_down[i][0]);
+			close(pipe_down[i][1]);
+			close(pipe_up[i][0]);
+			close(pipe_up[i][1]);
+		}
+		for (int i = 0; i < NUM_PROCS; i++) {
+			close(count_down[i][0]);
+			close(count_down[i][1]);
+			close(count_up[i][0]);
+			close(count_up[i][1]);
+		}
+		FILE *fd;
+//		int t_c[NUM_PROCS];
+//		for (int i = 0; i < NUM_PROCS; i++)
+//			t_c[i] = 0;
+		if ((fd = fopen("final_worldprocess.txt", "w")) != NULL) {
+			for (x = 0; x < w_X; x++) {
+				for (int i = 0; i < NUM_PROCS; i++) {
+					if (i == NUM_PROCS - 1) {
+						for (y = 1; y <= rows_per_blk; y++) {
+							if (i * rows_per_blk + y > w_Y)
+								break;
+//							t_c[i]++;
+							char c;
+							if (read(file_write[i][0], &c, sizeof(c)) != 1) {
+								perror("FileWrite Handler: ");
+							}
+							fprintf(fd, "%d", (int) c);
+						}
+					} else {
+						for (y = 1; y <= rows_per_blk; y++) {
+//							t_c[i]++;
+							char c;
+							if (read(file_write[i][0], &c, sizeof(c)) != 1) {
+								perror("FileWrite Handler: ");
+							}
+							fprintf(fd, "%d", (int) c);
+						}
+					}
+				}
+				fprintf(fd, "\n");
+			}
+		} else {
+			printf("Can't open file final_worldprocess.txt\n");
+			exit(1);
+		}
+
+		fflush(fd);
+		for (int i = 0; i < NUM_PROCS; i++) {
+//			printf("myid = %d\tcount = %d\n", i, t_c[i]);
+			close(file_write[i][0]);
+			close(file_write[i][1]);
+		}
+	}
+
 	for (int i = 0; i < num_pipe; i++) {
 		close(pipe_down[i][0]);
 		close(pipe_down[i][1]);
@@ -557,27 +681,10 @@ int main(int argc, char *argv[]) {
 		close(count_down[i][1]);
 		close(count_up[i][0]);
 		close(count_up[i][1]);
+		close(file_write[i][0]);
+		close(file_write[i][1]);
 	}
 	wait_all_children();
 
-//		printf("iter = %d, population count = %d\n", iter, count);
-//		if (DEBUG_LEVEL > 10)
-//			print_world();
-//	}
-//
-//	{
-//		FILE *fd;
-//		if ((fd = fopen("final_worldseq.txt", "w")) != NULL) {
-//			for (x = 0; x < w_X; x++) {
-//				for (y = 0; y < w_Y; y++) {
-//					fprintf(fd, "%d", (int) w[y][x]);
-//				}
-//				fprintf(fd, "\n");
-//			}
-//		} else {
-//			printf("Can't open file final_world000.txt\n");
-//			exit(1);
-//		}
-//	}
-//	return 0;
+	return 0;
 }
