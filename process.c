@@ -62,7 +62,7 @@ int neighborcount(int rows_per_blk, int x, int y) {
 		printf("neighborcount: (%d %d) out of bound (0..%d, 0..%d).\n", x, y, w_X, w_Y);
 		exit(0);
 	}
-	if ((y < 0) || (y == 0) || (y > rows_per_blk)) {
+	if ((y <= 0) || (y > rows_per_blk)) {
 		printf("neighborcount: (%d %d) out of bound (0..%d, 0..%d).\n", x, y, w_X, w_Y);
 		exit(0);
 	}
@@ -171,6 +171,7 @@ int main(int argc, char *argv[]) {
 					}
 				}
 
+//				printf("myid = %d mycount = %d\n", myid, count);
 				if (write(count_down[myid][1], &count, sizeof(count)) != 4) {
 					perror("Write START INIT: ");
 				}
@@ -220,6 +221,7 @@ int main(int argc, char *argv[]) {
 						}
 					}
 
+//					printf("myid = %d mycount = %d\n", myid, count);
 					/*Calculate the new pop*/
 					if (write(count_down[myid][1], &count, sizeof(count)) != 4) {
 						perror("Write START INIT: ");
@@ -230,18 +232,18 @@ int main(int argc, char *argv[]) {
 					}
 
 				}
-				int mem_count = 0;
+//				int mem_count = 0;
 
 				for (x = 0; x < w_X; x++) {
 					for (y = 1; y <= rows_per_blk; y++) {
-						mem_count++;
+//						mem_count++;
 						if (write(file_write[myid][1], &w[y][x], sizeof(w[y][x])) != 1) {
 							perror("FileWrite START : ");
 						}
 					}
 				}
 
-				printf("MYID = %d COUNT = %d\n", myid, mem_count);
+//				printf("MYID = %d COUNT = %d\n", myid, mem_count);
 				close(pipe_down[myid][0]);
 				close(pipe_down[myid][1]);
 				close(pipe_up[myid][0]);
@@ -294,12 +296,16 @@ int main(int argc, char *argv[]) {
 				int init_count = 0;
 				for (x = 0; x < w_X; x++) {
 					for (y = 1; y <= rows_per_blk; y++) {
-						if (myid * rows_per_blk + y >= w_Y)
+						if (myid * rows_per_blk + y <= w_Y) {
+							if (w[y][x] == 1)
+								count++;
+						} else {
 							break;
-						if (w[y][x] == 1)
-							count++;
+						}
 					}
 				}
+
+//				printf("OLOOP myid = %d mycount = %d\n", myid, count);
 
 				if (write(count_down[myid][1], &count, sizeof(count)) != 4) {
 					perror("Write END INIT: ");
@@ -327,18 +333,29 @@ int main(int argc, char *argv[]) {
 
 					for (x = 0; x < w_X; x++) {
 						for (y = 1; y <= rows_per_blk; y++) {
+							if (!(myid * rows_per_blk + y <= w_Y)) {
+								w[y][x] = 0;
+							}
+						}
+					}
 
-							if (myid * rows_per_blk + y > w_Y)
+					for (x = 0; x < w_X; x++) {
+						for (y = 1; y <= rows_per_blk; y++) {
+
+							if (myid * rows_per_blk + y <= w_Y) {
+								c = neighborcount(rows_per_blk, x, y); /* count neighbors */
+								if (c <= 1)
+									neww[y][x] = 0; /* die of loneliness */
+								else if (c >= 4)
+									neww[y][x] = 0; /* die of overpopulation */
+								else if (c == 3)
+									neww[y][x] = 1; /* becomes alive */
+								else
+									neww[y][x] = w[y][x]; /* c == 2, no change */
+							} else {
 								break;
-							c = neighborcount(rows_per_blk, x, y); /* count neighbors */
-							if (c <= 1)
-								neww[y][x] = 0; /* die of loneliness */
-							else if (c >= 4)
-								neww[y][x] = 0; /* die of overpopulation */
-							else if (c == 3)
-								neww[y][x] = 1; /* becomes alive */
-							else
-								neww[y][x] = w[y][x]; /* c == 2, no change */
+							}
+
 						}
 					}
 
@@ -346,15 +363,17 @@ int main(int argc, char *argv[]) {
 					count = 0;
 					for (x = 0; x < w_X; x++) {
 						for (y = 1; y <= rows_per_blk; y++) {
-
-							if (myid * rows_per_blk + y > w_Y)
+							if (myid * rows_per_blk + y <= w_Y) {
+								w[y][x] = neww[y][x];
+								if (w[y][x] == 1)
+									count++;
+							} else {
 								break;
-							w[y][x] = neww[y][x];
-							if (w[y][x] == 1)
-								count++;
+							}
 						}
 					}
 
+//					printf("myid = %d mycount = %d\n", myid, count);
 					/*Calculate the new pop*/
 					if (write(count_down[myid][1], &count, sizeof(count)) != 4) {
 						perror("Write START INIT: ");
@@ -366,22 +385,22 @@ int main(int argc, char *argv[]) {
 
 				}
 
-				int mem_count = 0;
+//				int mem_count = 0;
 
 				for (x = 0; x < w_X; x++) {
 					for (y = 1; y <= rows_per_blk; y++) {
-
-						if (myid * rows_per_blk + y > w_Y)
+						if (myid * rows_per_blk + y <= w_Y) {
+//							mem_count++;
+							if (write(file_write[myid][1], &w[y][x], sizeof(w[y][x])) != 1) {
+								perror("FileWrite END : ");
+							}
+						} else {
 							break;
-						mem_count++;
-						if (write(file_write[myid][1], &w[y][x], sizeof(w[y][x])) != 1) {
-							perror("FileWrite END : ");
 						}
-
 					}
 				}
 
-				printf("MYID = %d COUNT = %d\n", myid, mem_count);
+//				printf("MYID = %d COUNT = %d\n", myid, mem_count);
 
 				close(pipe_down[myid - 1][0]);
 				close(pipe_down[myid - 1][1]);
@@ -438,6 +457,7 @@ int main(int argc, char *argv[]) {
 					}
 				}
 
+//				printf("myid = %d mycount = %d\n", myid, count);
 				if (write(count_down[myid][1], &count, sizeof(count)) != 4) {
 					perror("Write MID INIT: ");
 				}
@@ -451,13 +471,13 @@ int main(int argc, char *argv[]) {
 				for (iter = 0; (iter < 200) && (count < 50 * init_count) && (count > init_count / 50); iter++) {
 					/*Communicate with previous process*/
 					for (int i = 0; i < w_X; i++) {
-						if (write(pipe_up[myid - 1][1], &w[1][i], sizeof(w[rows_per_blk][i])) != 1) {
+						if (write(pipe_up[myid - 1][1], &w[1][i], sizeof(w[1][i])) != 1) {
 							perror("Write MID : ");
 						}
 					}
 
 					for (int i = 0; i < w_X; i++) {
-						if (read(pipe_down[myid - 1][0], &w[0][i], sizeof(w[rows_per_blk + 1][i])) != 1) {
+						if (read(pipe_down[myid - 1][0], &w[0][i], sizeof(w[0][i])) != 1) {
 							perror("Read MID : ");
 						}
 					}
@@ -499,6 +519,7 @@ int main(int argc, char *argv[]) {
 						}
 					}
 
+//					printf("myid = %d mycount = %d\n", myid, count);
 					/*Calculate the new pop*/
 					if (write(count_down[myid][1], &count, sizeof(count)) != 4) {
 						perror("Write START INIT: ");
@@ -510,16 +531,16 @@ int main(int argc, char *argv[]) {
 
 				}
 
-				int mem_count = 0;
+//				int mem_count = 0;
 				for (x = 0; x < w_X; x++) {
 					for (y = 1; y <= rows_per_blk; y++) {
-						mem_count++;
+//						mem_count++;
 						if (write(file_write[myid][1], &w[y][x], sizeof(w[y][x])) != 1) {
 							perror("FileWrite MID : ");
 						}
 					}
 				}
-				printf("MYID = %d COUNT = %d\n", myid, mem_count);
+//				printf("MYID = %d COUNT = %d\n", myid, mem_count);
 
 				close(pipe_down[myid][0]);
 				close(pipe_down[myid][1]);
@@ -546,7 +567,7 @@ int main(int argc, char *argv[]) {
 	if (fork() == 0) {
 		/*The count handler*/
 
-		printf("Starting Counter handlers\n");
+//		printf("Starting Counter handlers\n");
 		int count = 0;
 		for (int i = 0; i < num_pipe; i++) {
 			/*Close unnecessary pipes*/
@@ -607,7 +628,7 @@ int main(int argc, char *argv[]) {
 			close(count_up[i][1]);
 		}
 
-		printf("Exiting Counter handlers\n");
+//		printf("Exiting Counter handlers\n");
 		exit(0);
 	}
 
@@ -635,14 +656,16 @@ int main(int argc, char *argv[]) {
 				for (int i = 0; i < NUM_PROCS; i++) {
 					if (i == NUM_PROCS - 1) {
 						for (y = 1; y <= rows_per_blk; y++) {
-							if (i * rows_per_blk + y > w_Y)
+							if (i * rows_per_blk + y <= w_Y) {
+//								t_c[i]++;
+								char c;
+								if (read(file_write[i][0], &c, sizeof(c)) != 1) {
+									perror("FileWrite Handler: ");
+								}
+								fprintf(fd, "%d", (int) c);
+							} else {
 								break;
-//							t_c[i]++;
-							char c;
-							if (read(file_write[i][0], &c, sizeof(c)) != 1) {
-								perror("FileWrite Handler: ");
 							}
-							fprintf(fd, "%d", (int) c);
 						}
 					} else {
 						for (y = 1; y <= rows_per_blk; y++) {
