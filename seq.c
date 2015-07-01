@@ -8,7 +8,7 @@
 #define MAX_N 8192
 #define BOUND_CHECK 0
 #ifndef DEBUG_LEVEL
-#define DEBUG_LEVEL 20
+#define DEBUG_LEVEL 0
 
 #endif
 

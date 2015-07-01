@@ -12,7 +12,7 @@
 #include <math.h>
 
 #ifndef DEBUG_LEVEL
-#define DEBUG_LEVEL 20
+#define DEBUG_LEVEL 0
 #endif
 
 //#define NUM_PROCS 8
@@ -45,7 +45,22 @@ void init_new(int myid) {
 		w[i][0] = 1;
 }
 
+void set_real_procs() {
+	/*If the number of rows or cols are less than NUM_PROCS
+	 * then change NUM_PROCS*/
+	if (w_X <= NUM_PROCS && w_X <= w_Y)
+		NUM_PROCS = w_X;
+	else if (w_Y <= NUM_PROCS && w_Y <= w_X)
+		NUM_PROCS = w_Y;
+
+	/*Falling back to 2 processes when distributing equal work in top N-1 processes is complex*/
+	if (w_Y > 8 && w_Y < 30)
+		NUM_PROCS = 2;
+
+}
+
 void init_seq(int X, int Y) {
+	printf("%s\n", __func__);
 	int i, j;
 	w_X = X, w_Y = Y;
 	for (i = 0; i < w_X; i++)
@@ -59,6 +74,7 @@ void init_seq(int X, int Y) {
 }
 
 int neighborcount_seq(int x, int y) {
+	printf("%s\n", __func__);
 	int count = 0;
 
 	if ((x < 0) || (x >= w_X)) {
@@ -70,23 +86,24 @@ int neighborcount_seq(int x, int y) {
 		exit(0);
 	}
 
-
 	if (w_X == 1 && w_Y == 1) {
 		count = 0;
 	} else if (w_X == 1) {
-		if (y == 0)
+		if (y == 0) {
 			count = w[y + 1][x];
-		else if (y == w_X - 1)
+		} else if (y == w_Y - 1) {
 			count = w[y - 1][x];
-		else
+		} else {
 			count = w[y - 1][x] + w[y + 1][x];
+		}
 	} else if (w_Y == 1) {
-		if (x == 0)
+		if (x == 0) {
 			count = w[y][x + 1];
-		else if (x == w_X - 1)
+		} else if (x == w_X - 1) {
 			count = w[y][x - 1];
-		else
+		} else {
 			count = w[y][x + 1] + w[y][x - 1];
+		}
 	} else {
 		printf("WRONG!!\n");
 	}
@@ -126,16 +143,6 @@ int neighborcount(int x, int y) {
 	}
 
 	return count;
-}
-
-void set_real_procs() {
-	/*If the number of rows or cols are less than NUM_PROCS
-	 * then change NUM_PROCS*/
-	if (w_X <= NUM_PROCS && w_X <= w_Y)
-		NUM_PROCS = w_X;
-	else if (w_Y <= NUM_PROCS && w_Y <= w_X)
-		NUM_PROCS = w_Y;
-
 }
 
 int main(int argc, char *argv[]) {
