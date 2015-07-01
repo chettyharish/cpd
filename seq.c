@@ -6,9 +6,10 @@
 #include <stdlib.h>
 
 #define MAX_N 8192
-
+#define BOUND_CHECK 0
 #ifndef DEBUG_LEVEL
-#define DEBUG_LEVEL 0
+#define DEBUG_LEVEL 20
+
 #endif
 
 char w[MAX_N][MAX_N];
@@ -54,10 +55,19 @@ int neighborcount(int x, int y) {
 
 	if (x == 0) {
 		if (y == 0) {
+			if (BOUND_CHECK == 1)
+				printf("(%d,%d)  (%d,%d)  (%d,%d)  \n", y, x + 1, y + 1, x, y + 1, x + 1);
+
 			count = w[y][x + 1] + w[y + 1][x] + w[y + 1][x + 1];
 		} else if (y == w_Y - 1) {
+			if (BOUND_CHECK == 1)
+				printf("(%d,%d)  (%d,%d)  (%d,%d)  \n", y, x + 1, y - 1, x, y - 1, x + 1);
+
 			count = w[y][x + 1] + w[y - 1][x] + w[y - 1][x + 1];
 		} else {
+			if (BOUND_CHECK == 1)
+				printf("(%d,%d)  (%d,%d)  (%d,%d)  (%d,%d)  (%d,%d)  \n", y - 1, x, y + 1, x, y - 1, x + 1, y, x + 1, y + 1, x + 1);
+
 			count = w[y - 1][x] + w[y + 1][x] + w[y - 1][x + 1] + w[y][x + 1] + w[y + 1][x + 1];
 		}
 	} else if (x == w_X - 1) {
@@ -140,19 +150,18 @@ int main(int argc, char *argv[]) {
 			print_world();
 	}
 
-	{
-		FILE *fd;
-		if ((fd = fopen("final_worldseq.txt", "w")) != NULL) {
-			for (x = 0; x < w_X; x++) {
-				for (y = 0; y < w_Y; y++) {
-					fprintf(fd, "%d", (int) w[y][x]);
-				}
-				fprintf(fd, "\n");
+	FILE *fd;
+	if ((fd = fopen("final_worldseq.txt", "w")) != NULL) {
+		for (x = 0; x < w_X; x++) {
+			for (y = 0; y < w_Y; y++) {
+				fprintf(fd, "%d", (int) w[y][x]);
 			}
-		} else {
-			printf("Can't open file final_worldseq.txt\n");
-			exit(1);
+			fprintf(fd, "\n");
 		}
+	} else {
+		printf("Can't open file final_worldseq.txt\n");
+		exit(1);
 	}
+
 	return 0;
 }
