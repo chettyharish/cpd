@@ -29,6 +29,31 @@ void wait_all_children() {
 		;
 }
 
+void set_real_procs() {
+	/*If the number of rows or cols are less than NUM_PROCS
+	 * then change NUM_PROCS*/
+	if (w_X <= NUM_PROCS && w_X <= w_Y)
+		NUM_PROCS = w_X;
+	else if (w_Y <= NUM_PROCS && w_Y <= w_X)
+		NUM_PROCS = w_Y;
+
+	/*Falling back to 2 processes when distributing equal work in top N-1 processes is complex*/
+	if (w_Y > 8 && w_Y < 30)
+		NUM_PROCS = 2;
+
+}
+
+void print_world() {
+	int i, j;
+
+	for (i = 0; i < w_Y; i++) {
+		for (j = 0; j < w_X; j++) {
+			printf("%d", (int) w[i][j]);
+		}
+		printf("\n");
+	}
+}
+
 void init_new(int myid) {
 	int i, j;
 
@@ -45,19 +70,6 @@ void init_new(int myid) {
 		w[i][0] = 1;
 }
 
-void set_real_procs() {
-	/*If the number of rows or cols are less than NUM_PROCS
-	 * then change NUM_PROCS*/
-	if (w_X <= NUM_PROCS && w_X <= w_Y)
-		NUM_PROCS = w_X;
-	else if (w_Y <= NUM_PROCS && w_Y <= w_X)
-		NUM_PROCS = w_Y;
-
-	/*Falling back to 2 processes when distributing equal work in top N-1 processes is complex*/
-	if (w_Y > 8 && w_Y < 30)
-		NUM_PROCS = 2;
-
-}
 
 void init_seq(int X, int Y) {
 	printf("%s\n", __func__);
@@ -109,17 +121,6 @@ int neighborcount_seq(int x, int y) {
 	}
 
 	return count;
-}
-
-void print_world() {
-	int i, j;
-
-	for (i = 0; i < w_Y; i++) {
-		for (j = 0; j < w_X; j++) {
-			printf("%d", (int) w[i][j]);
-		}
-		printf("\n");
-	}
 }
 
 int neighborcount(int x, int y) {
@@ -204,12 +205,13 @@ int main(int argc, char *argv[]) {
 
 		for (int i = 0; i < NUM_PROCS; i++) {
 			init_new(i);
+
+/*############################################################################################################*/
 			if (i == 0) {
 				if (fork() == 0) {
 					/*First process so reads only bottom row*/
 					int myid = i;
 					int x, y;
-//				printf("Starting process : %d\n", myid);
 					for (int i = 0; i < num_pipe; i++) {
 						/*Close unnecessary pipes*/
 						/*Writes and Reads to pipe[i]*/
@@ -243,7 +245,6 @@ int main(int argc, char *argv[]) {
 						}
 					}
 
-//				printf("myid = %d mycount = %d\n", myid, count);
 					if (write(count_down[myid][1], &count, sizeof(count)) != 4) {
 						perror("Write START INIT: ");
 					}
@@ -251,7 +252,6 @@ int main(int argc, char *argv[]) {
 					if (read(count_up[myid][0], &init_count, sizeof(init_count)) != 4) {
 						perror("Read START INIT: ");
 					}
-//				printf("myid  = %d INIT COUNT = %d\n", myid, init_count);
 
 					count = init_count;
 					/*Communicate with next process*/
@@ -293,7 +293,6 @@ int main(int argc, char *argv[]) {
 							}
 						}
 
-//					printf("myid = %d mycount = %d\n", myid, count);
 						/*Calculate the new pop*/
 						if (write(count_down[myid][1], &count, sizeof(count)) != 4) {
 							perror("Write START INIT: ");
@@ -304,18 +303,15 @@ int main(int argc, char *argv[]) {
 						}
 
 					}
-//				int mem_count = 0;
 
 					for (x = 0; x < w_X; x++) {
 						for (y = 1; y <= rows_per_blk; y++) {
-//						mem_count++;
 							if (write(file_write[myid][1], &w[y][x], sizeof(w[y][x])) != 1) {
 								perror("FileWrite START : ");
 							}
 						}
 					}
 
-//				printf("MYID = %d COUNT = %d\n", myid, mem_count);
 					close(pipe_down[myid][0]);
 					close(pipe_down[myid][1]);
 					close(pipe_up[myid][0]);
@@ -328,17 +324,17 @@ int main(int argc, char *argv[]) {
 					close(file_write[myid][0]);
 					close(file_write[myid][1]);
 
-//				printf("Exiting process : %d\n", myid);
+
 					exit(0);
 
 				}
 			}
 
+/*############################################################################################################*/
 			else if (i == NUM_PROCS - 1) {
 				if (fork() == 0) {
 					/*Last process so reads only top row*/
 					int myid = i;
-//				printf("Starting process : %d\n", myid);
 
 					for (int i = 0; i < num_pipe; i++) {
 						/*Close unnecessary pipes*/
@@ -377,7 +373,6 @@ int main(int argc, char *argv[]) {
 						}
 					}
 
-//				printf("OLOOP myid = %d mycount = %d\n", myid, count);
 
 					if (write(count_down[myid][1], &count, sizeof(count)) != 4) {
 						perror("Write END INIT: ");
@@ -386,7 +381,6 @@ int main(int argc, char *argv[]) {
 					if (read(count_up[myid][0], &init_count, sizeof(init_count)) != 4) {
 						perror("Read END INIT: ");
 					}
-//				printf("myid  = %d INIT COUNT = %d\n", myid, init_count);
 
 					count = init_count;
 					for (iter = 0; (iter < 200) && (count < 50 * init_count) && (count > init_count / 50); iter++) {
@@ -445,7 +439,6 @@ int main(int argc, char *argv[]) {
 							}
 						}
 
-//					printf("myid = %d mycount = %d\n", myid, count);
 						/*Calculate the new pop*/
 						if (write(count_down[myid][1], &count, sizeof(count)) != 4) {
 							perror("Write START INIT: ");
@@ -457,12 +450,10 @@ int main(int argc, char *argv[]) {
 
 					}
 
-//				int mem_count = 0;
 
 					for (x = 0; x < w_X; x++) {
 						for (y = 1; y <= rows_per_blk; y++) {
 							if (myid * rows_per_blk + y <= w_Y) {
-//							mem_count++;
 								if (write(file_write[myid][1], &w[y][x], sizeof(w[y][x])) != 1) {
 									perror("FileWrite END : ");
 								}
@@ -472,7 +463,6 @@ int main(int argc, char *argv[]) {
 						}
 					}
 
-//				printf("MYID = %d COUNT = %d\n", myid, mem_count);
 
 					close(pipe_down[myid - 1][0]);
 					close(pipe_down[myid - 1][1]);
@@ -486,16 +476,15 @@ int main(int argc, char *argv[]) {
 					close(file_write[myid][0]);
 					close(file_write[myid][1]);
 
-//				printf("Exiting process : %d\n", myid);
 					exit(0);
 				}
 			}
 
+/*############################################################################################################*/
 			else {
 				if (fork() == 0) {
 					/*Middle process so needs both top and bottom rows*/
 					int myid = i;
-//				printf("Starting process : %d\n", myid);
 					for (int i = 0; i < num_pipe; i++) {
 						/*Close unnecessary pipes*/
 						/*Writes and Reads to pipe[i]*/
@@ -529,7 +518,6 @@ int main(int argc, char *argv[]) {
 						}
 					}
 
-//				printf("myid = %d mycount = %d\n", myid, count);
 					if (write(count_down[myid][1], &count, sizeof(count)) != 4) {
 						perror("Write MID INIT: ");
 					}
@@ -537,7 +525,6 @@ int main(int argc, char *argv[]) {
 					if (read(count_up[myid][0], &init_count, sizeof(init_count)) != 4) {
 						perror("Read MID INIT: ");
 					}
-//				printf("myid  = %d INIT COUNT = %d\n", myid, init_count);
 
 					count = init_count;
 					for (iter = 0; (iter < 200) && (count < 50 * init_count) && (count > init_count / 50); iter++) {
@@ -591,7 +578,6 @@ int main(int argc, char *argv[]) {
 							}
 						}
 
-//					printf("myid = %d mycount = %d\n", myid, count);
 						/*Calculate the new pop*/
 						if (write(count_down[myid][1], &count, sizeof(count)) != 4) {
 							perror("Write START INIT: ");
@@ -603,16 +589,13 @@ int main(int argc, char *argv[]) {
 
 					}
 
-//				int mem_count = 0;
 					for (x = 0; x < w_X; x++) {
 						for (y = 1; y <= rows_per_blk; y++) {
-//						mem_count++;
 							if (write(file_write[myid][1], &w[y][x], sizeof(w[y][x])) != 1) {
 								perror("FileWrite MID : ");
 							}
 						}
 					}
-//				printf("MYID = %d COUNT = %d\n", myid, mem_count);
 
 					close(pipe_down[myid][0]);
 					close(pipe_down[myid][1]);
@@ -630,16 +613,15 @@ int main(int argc, char *argv[]) {
 					close(file_write[myid][0]);
 					close(file_write[myid][1]);
 
-//				printf("Exiting process : %d\n", myid);
 					exit(0);
 				}
 			}
 		}
 
+/*############################################################################################################*/
 		if (fork() == 0) {
 			/*The count handler*/
 
-//		printf("Starting Counter handlers\n");
 			int count = 0;
 			for (int i = 0; i < num_pipe; i++) {
 				/*Close unnecessary pipes*/
@@ -669,7 +651,6 @@ int main(int argc, char *argv[]) {
 			}
 			init_count = count;
 			for (iter = 0; (iter < 200) && (count < 50 * init_count) && (count > init_count / 50); iter++) {
-//			printf("FIRST INSIDE FOR iter = %d count = %d init_count = %d\n", iter, count, init_count);
 				int temp = 0;
 
 				count = 0;
@@ -688,7 +669,6 @@ int main(int argc, char *argv[]) {
 				}
 
 				printf("iter = %d, population count = %d\n", iter, count);
-//			printf("SECOND INSIDE FOR iter = %d count = %d init_count = %d\n", iter, count, init_count);
 			}
 
 			for (int i = 0; i < NUM_PROCS; i++) {
@@ -700,7 +680,6 @@ int main(int argc, char *argv[]) {
 				close(count_up[i][1]);
 			}
 
-//		printf("Exiting Counter handlers\n");
 			exit(0);
 		}
 
@@ -720,16 +699,12 @@ int main(int argc, char *argv[]) {
 				close(count_up[i][1]);
 			}
 			FILE *fd;
-//		int t_c[NUM_PROCS];
-//		for (int i = 0; i < NUM_PROCS; i++)
-//			t_c[i] = 0;
 			if ((fd = fopen("final_worldprocess.txt", "w")) != NULL) {
 				for (x = 0; x < w_X; x++) {
 					for (int i = 0; i < NUM_PROCS; i++) {
 						if (i == NUM_PROCS - 1) {
 							for (y = 1; y <= rows_per_blk; y++) {
 								if (i * rows_per_blk + y <= w_Y) {
-//								t_c[i]++;
 									char c;
 									if (read(file_write[i][0], &c, sizeof(c)) != 1) {
 										perror("FileWrite Handler: ");
@@ -741,7 +716,6 @@ int main(int argc, char *argv[]) {
 							}
 						} else {
 							for (y = 1; y <= rows_per_blk; y++) {
-//							t_c[i]++;
 								char c;
 								if (read(file_write[i][0], &c, sizeof(c)) != 1) {
 									perror("FileWrite Handler: ");
@@ -759,12 +733,16 @@ int main(int argc, char *argv[]) {
 
 			fflush(fd);
 			for (int i = 0; i < NUM_PROCS; i++) {
-//			printf("myid = %d\tcount = %d\n", i, t_c[i]);
 				close(file_write[i][0]);
 				close(file_write[i][1]);
 			}
 		}
 
+/*############################################################################################################*/
+
+
+
+/*############################################################################################################*/
 		for (int i = 0; i < num_pipe; i++) {
 			close(pipe_down[i][0]);
 			close(pipe_down[i][1]);
