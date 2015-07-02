@@ -12,7 +12,7 @@
 #include <math.h>
 
 #ifndef DEBUG_LEVEL
-#define DEBUG_LEVEL 0
+#define DEBUG_LEVEL 20
 #endif
 
 //#define NUM_PROCS 8
@@ -69,7 +69,6 @@ void init_new(int myid) {
 	for (i = 1; i <= rows_per_blk; i++)
 		w[i][0] = 1;
 }
-
 
 void init_seq(int X, int Y) {
 	printf("%s\n", __func__);
@@ -183,6 +182,7 @@ int main(int argc, char *argv[]) {
 		int count_down[NUM_PROCS][2];
 		int count_up[NUM_PROCS][2];
 		int file_write[NUM_PROCS][2];
+		int sp_pipe[2];
 		for (int i = 0; i < NUM_PROCS; i++) {
 			if (i < num_pipe) {
 				if (pipe(pipe_down[i]) == -1) {
@@ -203,10 +203,13 @@ int main(int argc, char *argv[]) {
 			}
 		}
 
+		if (pipe(sp_pipe) == -1) {
+			perror("Pipe creation : ");
+		}
 		for (int i = 0; i < NUM_PROCS; i++) {
 			init_new(i);
 
-/*############################################################################################################*/
+			/*############################################################################################################*/
 			if (i == 0) {
 				if (fork() == 0) {
 					/*First process so reads only bottom row*/
@@ -235,6 +238,8 @@ int main(int argc, char *argv[]) {
 						}
 					}
 
+					close(sp_pipe[0]);
+					close(sp_pipe[1]);
 					/*The init_count part before the loop*/
 					int count = 0;
 					int init_count = 0;
@@ -324,13 +329,12 @@ int main(int argc, char *argv[]) {
 					close(file_write[myid][0]);
 					close(file_write[myid][1]);
 
-
 					exit(0);
 
 				}
 			}
 
-/*############################################################################################################*/
+			/*############################################################################################################*/
 			else if (i == NUM_PROCS - 1) {
 				if (fork() == 0) {
 					/*Last process so reads only top row*/
@@ -359,6 +363,8 @@ int main(int argc, char *argv[]) {
 						}
 					}
 
+					close(sp_pipe[0]);
+					close(sp_pipe[1]);
 					/*The init_count part before the loop*/
 					int count = 0;
 					int init_count = 0;
@@ -372,7 +378,6 @@ int main(int argc, char *argv[]) {
 							}
 						}
 					}
-
 
 					if (write(count_down[myid][1], &count, sizeof(count)) != 4) {
 						perror("Write END INIT: ");
@@ -450,7 +455,6 @@ int main(int argc, char *argv[]) {
 
 					}
 
-
 					for (x = 0; x < w_X; x++) {
 						for (y = 1; y <= rows_per_blk; y++) {
 							if (myid * rows_per_blk + y <= w_Y) {
@@ -462,7 +466,6 @@ int main(int argc, char *argv[]) {
 							}
 						}
 					}
-
 
 					close(pipe_down[myid - 1][0]);
 					close(pipe_down[myid - 1][1]);
@@ -480,7 +483,7 @@ int main(int argc, char *argv[]) {
 				}
 			}
 
-/*############################################################################################################*/
+			/*############################################################################################################*/
 			else {
 				if (fork() == 0) {
 					/*Middle process so needs both top and bottom rows*/
@@ -507,6 +510,8 @@ int main(int argc, char *argv[]) {
 							close(count_up[i][1]);
 						}
 					}
+					close(sp_pipe[0]);
+					close(sp_pipe[1]);
 
 					/*The init_count part before the loop*/
 					int count = 0;
@@ -618,7 +623,7 @@ int main(int argc, char *argv[]) {
 			}
 		}
 
-/*############################################################################################################*/
+		/*############################################################################################################*/
 		if (fork() == 0) {
 			/*The count handler*/
 
@@ -649,6 +654,11 @@ int main(int argc, char *argv[]) {
 					perror("Write Count Handler: ");
 				}
 			}
+			if (DEBUG_LEVEL >= 10) {
+				if (write(sp_pipe[1], &count, sizeof(count)) != 4) {
+					perror("Write Count Handler: ");
+				}
+			}
 			init_count = count;
 			for (iter = 0; (iter < 200) && (count < 50 * init_count) && (count > init_count / 50); iter++) {
 				int temp = 0;
@@ -667,6 +677,11 @@ int main(int argc, char *argv[]) {
 						perror("Write Count Handler: ");
 					}
 				}
+				if (DEBUG_LEVEL >= 10) {
+					if (write(sp_pipe[1], &count, sizeof(count)) != 4) {
+						perror("Write Count Handler: ");
+					}
+				}
 
 				printf("iter = %d, population count = %d\n", iter, count);
 			}
@@ -679,6 +694,8 @@ int main(int argc, char *argv[]) {
 				close(count_up[i][0]);
 				close(count_up[i][1]);
 			}
+			close(sp_pipe[0]);
+			close(sp_pipe[1]);
 
 			exit(0);
 		}
@@ -698,6 +715,8 @@ int main(int argc, char *argv[]) {
 				close(count_up[i][0]);
 				close(count_up[i][1]);
 			}
+			close(sp_pipe[0]);
+			close(sp_pipe[1]);
 			FILE *fd;
 			if ((fd = fopen("final_worldprocess.txt", "w")) != NULL) {
 				for (x = 0; x < w_X; x++) {
@@ -736,13 +755,56 @@ int main(int argc, char *argv[]) {
 				close(file_write[i][0]);
 				close(file_write[i][1]);
 			}
+			exit(0);
 		}
 
-/*############################################################################################################*/
+		/*############################################################################################################*/
+
+		if (fork() == 0) {
+			/*Function to write to screen for debug*/
+			int count = 0;
+			int init_count = 0;
+			for (int i = 0; i < num_pipe; i++) {
+				close(pipe_down[i][0]);
+				close(pipe_down[i][1]);
+				close(pipe_up[i][0]);
+				close(pipe_up[i][1]);
+			}
+			for (int i = 0; i < NUM_PROCS; i++) {
+				close(count_down[i][0]);
+				close(count_down[i][1]);
+				close(count_up[i][0]);
+				close(count_up[i][1]);
+				close(file_write[i][0]);
+				close(file_write[i][1]);
+			}
+
+			if (DEBUG_LEVEL >= 10) {
+				if (read(sp_pipe[0], &init_count, sizeof(init_count)) != 4) {
+					perror("Read DBG INIT: ");
+				}
+
+				count = init_count;
+				for (iter = 0; (iter < 200) && (count < 50.0f * init_count) && (count > init_count / 50.0f); iter++) {
+					if (read(sp_pipe[0], &count, sizeof(count)) != 4) {
+						perror("Read DBG: ");
+					}
 
 
 
-/*############################################################################################################*/
+
+
+
+
+				}
+			}
+
+			close(sp_pipe[0]);
+			close(sp_pipe[1]);
+			exit(0);
+		}
+
+		/*############################################################################################################*/
 		for (int i = 0; i < num_pipe; i++) {
 			close(pipe_down[i][0]);
 			close(pipe_down[i][1]);
@@ -757,6 +819,8 @@ int main(int argc, char *argv[]) {
 			close(file_write[i][0]);
 			close(file_write[i][1]);
 		}
+		close(sp_pipe[0]);
+		close(sp_pipe[1]);
 		wait_all_children();
 
 	} else {
