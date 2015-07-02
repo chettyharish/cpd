@@ -148,7 +148,8 @@ int main(int argc, char *argv[]) {
 	int c;
 	int init_count = -1;
 	int count;
-
+	if (setvbuf(stdout, NULL, _IONBF, BUFSIZ))
+		printf("Usage: ./a.out w_X w_Y\n");
 	if (argc == 1) {
 		printf("Usage: ./a.out w_X w_Y\n");
 		exit(0);
@@ -862,6 +863,11 @@ int main(int argc, char *argv[]) {
 				count = init_count;
 				for (iter = 0; (iter < 200) && (count < 50 * init_count) && (count > init_count / 50); iter++) {
 
+
+					if (read(sp_pipe_up[0], &count, sizeof(count)) != 4) {
+						perror("Read DBG: ");
+					}
+
 					for (x = 0; x < w_X; x++) {
 						for (int i = 0; i < NUM_PROCS; i++) {
 							if (i == NUM_PROCS - 1) {
@@ -891,10 +897,6 @@ int main(int argc, char *argv[]) {
 					}
 
 					/*Synchronzing between count and debug here*/
-
-					if (read(sp_pipe_up[0], &count, sizeof(count)) != 4) {
-						perror("Read DBG: ");
-					}
 					if (write(sp_pipe_down[1], &count, sizeof(count)) != 4) {
 						perror("Write Count Handler: ");
 					}
