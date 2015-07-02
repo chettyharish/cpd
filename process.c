@@ -182,6 +182,7 @@ int main(int argc, char *argv[]) {
 		int count_down[NUM_PROCS][2];
 		int count_up[NUM_PROCS][2];
 		int file_write[NUM_PROCS][2];
+		int debug_write[NUM_PROCS][2];
 		int sp_pipe[2];
 		for (int i = 0; i < NUM_PROCS; i++) {
 			if (i < num_pipe) {
@@ -199,6 +200,9 @@ int main(int argc, char *argv[]) {
 				perror("Pipe creation : ");
 			}
 			if (pipe(file_write[i]) == -1) {
+				perror("Pipe creation : ");
+			}
+			if (pipe(debug_write[i]) == -1) {
 				perror("Pipe creation : ");
 			}
 		}
@@ -235,6 +239,8 @@ int main(int argc, char *argv[]) {
 							close(count_up[i][1]);
 							close(file_write[i][0]);
 							close(file_write[i][1]);
+							close(debug_write[i][0]);
+							close(debug_write[i][1]);
 						}
 					}
 
@@ -328,6 +334,8 @@ int main(int argc, char *argv[]) {
 
 					close(file_write[myid][0]);
 					close(file_write[myid][1]);
+					close(debug_write[myid][0]);
+					close(debug_write[myid][1]);
 
 					exit(0);
 
@@ -360,6 +368,8 @@ int main(int argc, char *argv[]) {
 							close(count_up[i][1]);
 							close(file_write[i][0]);
 							close(file_write[i][1]);
+							close(debug_write[i][0]);
+							close(debug_write[i][1]);
 						}
 					}
 
@@ -478,6 +488,8 @@ int main(int argc, char *argv[]) {
 
 					close(file_write[myid][0]);
 					close(file_write[myid][1]);
+					close(debug_write[myid][0]);
+					close(debug_write[myid][1]);
 
 					exit(0);
 				}
@@ -508,6 +520,8 @@ int main(int argc, char *argv[]) {
 							close(count_down[i][1]);
 							close(count_up[i][0]);
 							close(count_up[i][1]);
+							close(debug_write[i][0]);
+							close(debug_write[i][1]);
 						}
 					}
 					close(sp_pipe[0]);
@@ -617,6 +631,8 @@ int main(int argc, char *argv[]) {
 
 					close(file_write[myid][0]);
 					close(file_write[myid][1]);
+					close(debug_write[myid][0]);
+					close(debug_write[myid][1]);
 
 					exit(0);
 				}
@@ -638,6 +654,8 @@ int main(int argc, char *argv[]) {
 			for (int i = 0; i < NUM_PROCS; i++) {
 				close(file_write[i][0]);
 				close(file_write[i][1]);
+				close(debug_write[i][0]);
+				close(debug_write[i][1]);
 			}
 
 			for (int i = 0; i < NUM_PROCS; i++) {
@@ -700,6 +718,8 @@ int main(int argc, char *argv[]) {
 			exit(0);
 		}
 
+		/*############################################################################################################*/
+
 		if (fork() == 0) {
 			/*Function to write to a file*/
 
@@ -714,6 +734,8 @@ int main(int argc, char *argv[]) {
 				close(count_down[i][1]);
 				close(count_up[i][0]);
 				close(count_up[i][1]);
+				close(debug_write[i][0]);
+				close(debug_write[i][1]);
 			}
 			close(sp_pipe[0]);
 			close(sp_pipe[1]);
@@ -785,20 +807,18 @@ int main(int argc, char *argv[]) {
 				}
 
 				count = init_count;
-				for (iter = 0; (iter < 200) && (count < 50.0f * init_count) && (count > init_count / 50.0f); iter++) {
+				for (iter = 0; (iter < 200) && (count < 50 * init_count) && (count > init_count / 50); iter++) {
 					if (read(sp_pipe[0], &count, sizeof(count)) != 4) {
 						perror("Read DBG: ");
 					}
 
-
-
-
-
-
-
 				}
 			}
 
+			for (int i = 0; i < NUM_PROCS; i++) {
+				close(debug_write[i][0]);
+				close(debug_write[i][1]);
+			}
 			close(sp_pipe[0]);
 			close(sp_pipe[1]);
 			exit(0);
