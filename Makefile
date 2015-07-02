@@ -28,16 +28,16 @@ simpledemo: seq omp thread process
 	diff final_worldseq.txt final_worldthread.txt
 	diff final_worldseq.txt final_worldprocess.txt
 	
-seq:
+seq: seq.c
 	gcc -o seq seq.c -std=c99 -O3 -pedantic
 
-omp:
+omp: omp.c
 	gcc -fopenmp -o omp omp.c -std=c99 -O3 -pedantic
 	
-thread:
+thread: thread.c
 	gcc -pthread -o thread thread.c -std=c99 -O3 -lm -pedantic
 
-process:
+process: process.c
 	gcc -o process process.c  -std=c99 -O3 -pedantic -lm
 	
 clean:

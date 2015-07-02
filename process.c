@@ -15,7 +15,6 @@
 #define DEBUG_LEVEL 20
 #endif
 
-//#define NUM_PROCS 8
 int NUM_PROCS = 8;
 int rows_per_blk;
 int w_X, w_Y;
@@ -71,7 +70,6 @@ void init_new(int myid) {
 }
 
 void init_seq(int X, int Y) {
-	printf("%s\n", __func__);
 	int i, j;
 	w_X = X, w_Y = Y;
 	for (i = 0; i < w_X; i++)
@@ -85,7 +83,6 @@ void init_seq(int X, int Y) {
 }
 
 int neighborcount_seq(int x, int y) {
-	printf("%s\n", __func__);
 	int count = 0;
 
 	if ((x < 0) || (x >= w_X)) {
@@ -183,7 +180,8 @@ int main(int argc, char *argv[]) {
 		int count_up[NUM_PROCS][2];
 		int file_write[NUM_PROCS][2];
 		int debug_write[NUM_PROCS][2];
-		int sp_pipe[2];
+		int sp_pipe_down[2];
+		int sp_pipe_up[2];
 		for (int i = 0; i < NUM_PROCS; i++) {
 			if (i < num_pipe) {
 				if (pipe(pipe_down[i]) == -1) {
@@ -207,7 +205,10 @@ int main(int argc, char *argv[]) {
 			}
 		}
 
-		if (pipe(sp_pipe) == -1) {
+		if (pipe(sp_pipe_down) == -1) {
+			perror("Pipe creation : ");
+		}
+		if (pipe(sp_pipe_up) == -1) {
 			perror("Pipe creation : ");
 		}
 		for (int i = 0; i < NUM_PROCS; i++) {
@@ -244,8 +245,10 @@ int main(int argc, char *argv[]) {
 						}
 					}
 
-					close(sp_pipe[0]);
-					close(sp_pipe[1]);
+					close(sp_pipe_up[0]);
+					close(sp_pipe_up[1]);
+					close(sp_pipe_down[0]);
+					close(sp_pipe_down[1]);
 					/*The init_count part before the loop*/
 					int count = 0;
 					int init_count = 0;
@@ -301,6 +304,16 @@ int main(int argc, char *argv[]) {
 								w[y][x] = neww[y][x];
 								if (w[y][x] == 1)
 									count++;
+							}
+						}
+
+						if (DEBUG_LEVEL >= 10) {
+							for (x = 0; x < w_X; x++) {
+								for (y = 1; y <= rows_per_blk; y++) {
+									if (write(debug_write[myid][1], &w[y][x], sizeof(w[y][x])) != 1) {
+										perror("FileWrite START : ");
+									}
+								}
 							}
 						}
 
@@ -373,8 +386,10 @@ int main(int argc, char *argv[]) {
 						}
 					}
 
-					close(sp_pipe[0]);
-					close(sp_pipe[1]);
+					close(sp_pipe_up[0]);
+					close(sp_pipe_up[1]);
+					close(sp_pipe_down[0]);
+					close(sp_pipe_down[1]);
 					/*The init_count part before the loop*/
 					int count = 0;
 					int init_count = 0;
@@ -454,6 +469,19 @@ int main(int argc, char *argv[]) {
 							}
 						}
 
+						if (DEBUG_LEVEL >= 10) {
+							for (x = 0; x < w_X; x++) {
+								for (y = 1; y <= rows_per_blk; y++) {
+									if (myid * rows_per_blk + y <= w_Y) {
+										if (write(debug_write[myid][1], &w[y][x], sizeof(w[y][x])) != 1) {
+											perror("FileWrite END : ");
+										}
+									} else {
+										break;
+									}
+								}
+							}
+						}
 						/*Calculate the new pop*/
 						if (write(count_down[myid][1], &count, sizeof(count)) != 4) {
 							perror("Write START INIT: ");
@@ -524,8 +552,11 @@ int main(int argc, char *argv[]) {
 							close(debug_write[i][1]);
 						}
 					}
-					close(sp_pipe[0]);
-					close(sp_pipe[1]);
+
+					close(sp_pipe_up[0]);
+					close(sp_pipe_up[1]);
+					close(sp_pipe_down[0]);
+					close(sp_pipe_down[1]);
 
 					/*The init_count part before the loop*/
 					int count = 0;
@@ -597,6 +628,15 @@ int main(int argc, char *argv[]) {
 							}
 						}
 
+						if (DEBUG_LEVEL >= 10) {
+							for (x = 0; x < w_X; x++) {
+								for (y = 1; y <= rows_per_blk; y++) {
+									if (write(debug_write[myid][1], &w[y][x], sizeof(w[y][x])) != 1) {
+										perror("FileWrite START : ");
+									}
+								}
+							}
+						}
 						/*Calculate the new pop*/
 						if (write(count_down[myid][1], &count, sizeof(count)) != 4) {
 							perror("Write START INIT: ");
@@ -644,6 +684,7 @@ int main(int argc, char *argv[]) {
 			/*The count handler*/
 
 			int count = 0;
+			int temp;
 			for (int i = 0; i < num_pipe; i++) {
 				/*Close unnecessary pipes*/
 				close(pipe_down[i][0]);
@@ -673,7 +714,7 @@ int main(int argc, char *argv[]) {
 				}
 			}
 			if (DEBUG_LEVEL >= 10) {
-				if (write(sp_pipe[1], &count, sizeof(count)) != 4) {
+				if (write(sp_pipe_up[1], &count, sizeof(count)) != 4) {
 					perror("Write Count Handler: ");
 				}
 			}
@@ -695,13 +736,19 @@ int main(int argc, char *argv[]) {
 						perror("Write Count Handler: ");
 					}
 				}
-				if (DEBUG_LEVEL >= 10) {
-					if (write(sp_pipe[1], &count, sizeof(count)) != 4) {
-						perror("Write Count Handler: ");
-					}
-				}
 
 				printf("iter = %d, population count = %d\n", iter, count);
+				if (DEBUG_LEVEL >= 10) {
+					if (write(sp_pipe_up[1], &count, sizeof(count)) != 4) {
+						perror("Write Count Handler: ");
+					}
+
+					/*Only for synchronizing
+					 * The data is discarded*/
+					if (read(sp_pipe_down[0], &temp, sizeof(temp)) != 4) {
+						perror("Read DBG: ");
+					}
+				}
 			}
 
 			for (int i = 0; i < NUM_PROCS; i++) {
@@ -712,8 +759,11 @@ int main(int argc, char *argv[]) {
 				close(count_up[i][0]);
 				close(count_up[i][1]);
 			}
-			close(sp_pipe[0]);
-			close(sp_pipe[1]);
+
+			close(sp_pipe_up[0]);
+			close(sp_pipe_up[1]);
+			close(sp_pipe_down[0]);
+			close(sp_pipe_down[1]);
 
 			exit(0);
 		}
@@ -737,8 +787,11 @@ int main(int argc, char *argv[]) {
 				close(debug_write[i][0]);
 				close(debug_write[i][1]);
 			}
-			close(sp_pipe[0]);
-			close(sp_pipe[1]);
+
+			close(sp_pipe_up[0]);
+			close(sp_pipe_up[1]);
+			close(sp_pipe_down[0]);
+			close(sp_pipe_down[1]);
 			FILE *fd;
 			if ((fd = fopen("final_worldprocess.txt", "w")) != NULL) {
 				for (x = 0; x < w_X; x++) {
@@ -802,25 +855,60 @@ int main(int argc, char *argv[]) {
 			}
 
 			if (DEBUG_LEVEL >= 10) {
-				if (read(sp_pipe[0], &init_count, sizeof(init_count)) != 4) {
+				if (read(sp_pipe_up[0], &init_count, sizeof(init_count)) != 4) {
 					perror("Read DBG INIT: ");
 				}
 
 				count = init_count;
 				for (iter = 0; (iter < 200) && (count < 50 * init_count) && (count > init_count / 50); iter++) {
-					if (read(sp_pipe[0], &count, sizeof(count)) != 4) {
-						perror("Read DBG: ");
+
+					for (x = 0; x < w_X; x++) {
+						for (int i = 0; i < NUM_PROCS; i++) {
+							if (i == NUM_PROCS - 1) {
+								for (y = 1; y <= rows_per_blk; y++) {
+									if (i * rows_per_blk + y <= w_Y) {
+										char c;
+										if (read(debug_write[i][0], &c, sizeof(c)) != 1) {
+											perror("FileWrite Handler: ");
+										}
+										printf("%d", (int) c);
+									} else {
+										break;
+									}
+								}
+							} else {
+								for (y = 1; y <= rows_per_blk; y++) {
+									char c;
+									if (read(debug_write[i][0], &c, sizeof(c)) != 1) {
+										perror("FileWrite Handler: ");
+									}
+									printf("%d", (int) c);
+								}
+							}
+						}
+						printf("\n");
+						fflush(0);
 					}
 
+					/*Synchronzing between count and debug here*/
+
+					if (read(sp_pipe_up[0], &count, sizeof(count)) != 4) {
+						perror("Read DBG: ");
+					}
+					if (write(sp_pipe_down[1], &count, sizeof(count)) != 4) {
+						perror("Write Count Handler: ");
+					}
 				}
 			}
-
 			for (int i = 0; i < NUM_PROCS; i++) {
 				close(debug_write[i][0]);
 				close(debug_write[i][1]);
 			}
-			close(sp_pipe[0]);
-			close(sp_pipe[1]);
+
+			close(sp_pipe_up[0]);
+			close(sp_pipe_up[1]);
+			close(sp_pipe_down[0]);
+			close(sp_pipe_down[1]);
 			exit(0);
 		}
 
@@ -839,8 +927,11 @@ int main(int argc, char *argv[]) {
 			close(file_write[i][0]);
 			close(file_write[i][1]);
 		}
-		close(sp_pipe[0]);
-		close(sp_pipe[1]);
+
+		close(sp_pipe_up[0]);
+		close(sp_pipe_up[1]);
+		close(sp_pipe_down[0]);
+		close(sp_pipe_down[1]);
 		wait_all_children();
 
 	} else {

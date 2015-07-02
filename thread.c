@@ -7,7 +7,7 @@
 #define NUM_THREADS 32
 
 #ifndef DEBUG_LEVEL
-#define DEBUG_LEVEL 0
+#define DEBUG_LEVEL 20
 #endif
 
 char w[MAX_N][MAX_N];
