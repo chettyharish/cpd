@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
-#define CHUNK_SIZE 5
+#include <math.h>
 #define MAX_N 8192
 
 #ifndef DEBUG_LEVEL
@@ -11,10 +11,13 @@ char w[MAX_N][MAX_N];
 char neww[MAX_N][MAX_N];
 
 int w_X, w_Y;
-
+int CHUNK_SIZE;
 void init1(int X, int Y) {
 	int i, j;
 	w_X = X, w_Y = Y;
+
+	CHUNK_SIZE = ceil(((w_X < w_Y) ? w_X : w_Y) / 200.0f);
+	printf("CHUNK_SIZE = %d\n", CHUNK_SIZE);
 
 #pragma omp parallel for private(i,j) shared(w,w_X,w_Y) schedule(static , CHUNK_SIZE) collapse(2)
 	for (i = 0; i < w_X; i++)
@@ -136,7 +139,7 @@ int main(int argc, char *argv[]) {
 			for (y = 0; y < w_Y; y++) {
 				w[y][x] = neww[y][x];
 				if (w[y][x] == 1) {
-						count++;
+					count++;
 				}
 			}
 		}
