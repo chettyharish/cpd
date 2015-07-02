@@ -4,11 +4,12 @@ all:
 	gcc -pthread -o thread thread.c -std=c99 -O3 -lm -pedantic
 	gcc -o process process.c  -std=c99 -O3 -pedantic -lm
 
-primedemo: seq omp thread process
-	time ./seq 1427 1553 > testseq
-	time ./omp 1427 1553 > testomp
-	time ./thread 1427 1553 > testthread
-	time ./process 1427 1553 > testprocess
+
+simpledemo: seq omp thread process
+	time ./seq 1000 1000 > testseq
+	time ./omp 1000 1000 > testomp
+	time ./thread 1000 1000 > testthread
+	time ./process 1000 1000 > testprocess
 	diff testseq testomp
 	diff testseq testthread
 	diff testseq testprocess
@@ -16,11 +17,11 @@ primedemo: seq omp thread process
 	diff final_worldseq.txt final_worldthread.txt
 	diff final_worldseq.txt final_worldprocess.txt
 
-simpledemo: seq omp thread process
-	time ./seq 1000 1000 > testseq
-	time ./omp 1000 1000 > testomp
-	time ./thread 1000 1000 > testthread
-	time ./process 1000 1000 > testprocess
+primedemo: seq omp thread process
+	time ./seq 1427 1553 > testseq
+	time ./omp 1427 1553 > testomp
+	time ./thread 1427 1553 > testthread
+	time ./process 1427 1553 > testprocess
 	diff testseq testomp
 	diff testseq testthread
 	diff testseq testprocess
