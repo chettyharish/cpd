@@ -45,16 +45,16 @@ debugdemo:
 	diff final_worldseq.txt final_worldprocess.txt	
 	
 seq: seq.c
-	gcc -o seq seq.c -std=c99 -O3 -pedantic
+	gcc -o seq seq.c -std=c99 -O3 -lm -pedantic
 
 omp: omp.c
-	gcc -fopenmp -o omp omp.c -std=c99 -O3 -pedantic
+	gcc -o omp omp.c -std=c99 -O3 -lm -pedantic -fopenmp
 	
 thread: thread.c
-	gcc -pthread -o thread thread.c -std=c99 -O3 -lm -pedantic
+	gcc -o thread thread.c -std=c99 -O3 -lm -pedantic -pthread
 
 process: process.c
-	gcc -o process process.c  -std=c99 -O3 -pedantic -lm
+	gcc -o process process.c  -std=c99 -O3 -lm -pedantic
 	
 clean:
 	rm -f seq omp thread process
