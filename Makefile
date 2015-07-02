@@ -29,10 +29,10 @@ simpledemo: seq omp thread process
 	diff final_worldseq.txt final_worldprocess.txt
 	
 debugdemo: seq omp thread process
-	time ./seq 30 30 > testseq
-	time ./omp 30 30 > testomp
-	time ./thread 30 30 > testthread
-	time ./process 30 30 > testprocess
+	time ./seq 100 100 > testseq
+	time ./omp 100 100 > testomp
+	time ./thread 100 100 > testthread
+	time ./process 100 100 > testprocess
 	diff testseq testomp
 	diff testseq testthread
 	diff testseq testprocess

@@ -12,7 +12,7 @@
 #include <math.h>
 
 #ifndef DEBUG_LEVEL
-#define DEBUG_LEVEL 20
+#define DEBUG_LEVEL 0
 #endif
 
 int NUM_PROCS = 8;
@@ -267,8 +267,6 @@ int main(int argc, char *argv[]) {
 					if (read(count_up[myid][0], &init_count, sizeof(init_count)) != 4) {
 						perror("Read START INIT: ");
 					}
-
-
 
 					count = init_count;
 
@@ -759,9 +757,12 @@ int main(int argc, char *argv[]) {
 			init_count = count;
 			/*Only for synchronizing
 			 * The data is discarded*/
-			if (read(sp_pipe_down[0], &temp, sizeof(temp)) != 4) {
-				perror("Read DBG: ");
+			if (DEBUG_LEVEL >= 10) {
+				if (read(sp_pipe_down[0], &temp, sizeof(temp)) != 4) {
+					perror("Read DBG: ");
+				}
 			}
+
 			for (iter = 0; (iter < 200) && (count < 50 * init_count) && (count > init_count / 50); iter++) {
 				int temp = 0;
 
