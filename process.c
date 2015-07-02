@@ -268,7 +268,20 @@ int main(int argc, char *argv[]) {
 						perror("Read START INIT: ");
 					}
 
+
+
 					count = init_count;
+
+					if (DEBUG_LEVEL >= 10) {
+						for (x = 0; x < w_X; x++) {
+							for (y = 1; y <= rows_per_blk; y++) {
+								if (write(debug_write[myid][1], &w[y][x], sizeof(w[y][x])) != 1) {
+									perror("FileWrite START : ");
+								}
+							}
+						}
+					}
+
 					/*Communicate with next process*/
 
 					for (iter = 0; (iter < 200) && (count < 50 * init_count) && (count > init_count / 50); iter++) {
@@ -308,6 +321,15 @@ int main(int argc, char *argv[]) {
 							}
 						}
 
+						/*Calculate the new pop*/
+						if (write(count_down[myid][1], &count, sizeof(count)) != 4) {
+							perror("Write START INIT: ");
+						}
+
+						if (read(count_up[myid][0], &count, sizeof(count)) != 4) {
+							perror("Read START INIT: ");
+						}
+
 						if (DEBUG_LEVEL >= 10) {
 							for (x = 0; x < w_X; x++) {
 								for (y = 1; y <= rows_per_blk; y++) {
@@ -316,15 +338,6 @@ int main(int argc, char *argv[]) {
 									}
 								}
 							}
-						}
-
-						/*Calculate the new pop*/
-						if (write(count_down[myid][1], &count, sizeof(count)) != 4) {
-							perror("Write START INIT: ");
-						}
-
-						if (read(count_up[myid][0], &count, sizeof(count)) != 4) {
-							perror("Read START INIT: ");
 						}
 
 					}
@@ -414,6 +427,20 @@ int main(int argc, char *argv[]) {
 					}
 
 					count = init_count;
+					if (DEBUG_LEVEL >= 10) {
+						for (x = 0; x < w_X; x++) {
+							for (y = 1; y <= rows_per_blk; y++) {
+								if (myid * rows_per_blk + y <= w_Y) {
+									if (write(debug_write[myid][1], &w[y][x], sizeof(w[y][x])) != 1) {
+										perror("FileWrite END : ");
+									}
+								} else {
+									break;
+								}
+							}
+						}
+					}
+
 					for (iter = 0; (iter < 200) && (count < 50 * init_count) && (count > init_count / 50); iter++) {
 						/*Communicate with previous process*/
 						for (int i = 0; i < w_X; i++) {
@@ -470,6 +497,15 @@ int main(int argc, char *argv[]) {
 							}
 						}
 
+						/*Calculate the new pop*/
+						if (write(count_down[myid][1], &count, sizeof(count)) != 4) {
+							perror("Write START INIT: ");
+						}
+
+						if (read(count_up[myid][0], &count, sizeof(count)) != 4) {
+							perror("Read START INIT: ");
+						}
+
 						if (DEBUG_LEVEL >= 10) {
 							for (x = 0; x < w_X; x++) {
 								for (y = 1; y <= rows_per_blk; y++) {
@@ -483,15 +519,6 @@ int main(int argc, char *argv[]) {
 								}
 							}
 						}
-						/*Calculate the new pop*/
-						if (write(count_down[myid][1], &count, sizeof(count)) != 4) {
-							perror("Write START INIT: ");
-						}
-
-						if (read(count_up[myid][0], &count, sizeof(count)) != 4) {
-							perror("Read START INIT: ");
-						}
-
 					}
 
 					for (x = 0; x < w_X; x++) {
@@ -578,6 +605,16 @@ int main(int argc, char *argv[]) {
 					}
 
 					count = init_count;
+					if (DEBUG_LEVEL >= 10) {
+						for (x = 0; x < w_X; x++) {
+							for (y = 1; y <= rows_per_blk; y++) {
+								if (write(debug_write[myid][1], &w[y][x], sizeof(w[y][x])) != 1) {
+									perror("FileWrite START : ");
+								}
+							}
+						}
+					}
+
 					for (iter = 0; (iter < 200) && (count < 50 * init_count) && (count > init_count / 50); iter++) {
 						/*Communicate with previous process*/
 						for (int i = 0; i < w_X; i++) {
@@ -629,6 +666,15 @@ int main(int argc, char *argv[]) {
 							}
 						}
 
+						/*Calculate the new pop*/
+						if (write(count_down[myid][1], &count, sizeof(count)) != 4) {
+							perror("Write START INIT: ");
+						}
+
+						if (read(count_up[myid][0], &count, sizeof(count)) != 4) {
+							perror("Read START INIT: ");
+						}
+
 						if (DEBUG_LEVEL >= 10) {
 							for (x = 0; x < w_X; x++) {
 								for (y = 1; y <= rows_per_blk; y++) {
@@ -637,14 +683,6 @@ int main(int argc, char *argv[]) {
 									}
 								}
 							}
-						}
-						/*Calculate the new pop*/
-						if (write(count_down[myid][1], &count, sizeof(count)) != 4) {
-							perror("Write START INIT: ");
-						}
-
-						if (read(count_up[myid][0], &count, sizeof(count)) != 4) {
-							perror("Read START INIT: ");
 						}
 
 					}
@@ -683,7 +721,6 @@ int main(int argc, char *argv[]) {
 		/*############################################################################################################*/
 		if (fork() == 0) {
 			/*The count handler*/
-
 			int count = 0;
 			int temp;
 			for (int i = 0; i < num_pipe; i++) {
@@ -720,6 +757,11 @@ int main(int argc, char *argv[]) {
 				}
 			}
 			init_count = count;
+			/*Only for synchronizing
+			 * The data is discarded*/
+			if (read(sp_pipe_down[0], &temp, sizeof(temp)) != 4) {
+				perror("Read DBG: ");
+			}
 			for (iter = 0; (iter < 200) && (count < 50 * init_count) && (count > init_count / 50); iter++) {
 				int temp = 0;
 
@@ -861,8 +903,41 @@ int main(int argc, char *argv[]) {
 				}
 
 				count = init_count;
-				for (iter = 0; (iter < 200) && (count < 50 * init_count) && (count > init_count / 50); iter++) {
 
+				for (x = 0; x < w_X; x++) {
+					for (int i = 0; i < NUM_PROCS; i++) {
+						if (i == NUM_PROCS - 1) {
+							for (y = 1; y <= rows_per_blk; y++) {
+								if (i * rows_per_blk + y <= w_Y) {
+									char c;
+									if (read(debug_write[i][0], &c, sizeof(c)) != 1) {
+										perror("FileWrite Handler: ");
+									}
+									printf("%d", (int) c);
+								} else {
+									break;
+								}
+							}
+						} else {
+							for (y = 1; y <= rows_per_blk; y++) {
+								char c;
+								if (read(debug_write[i][0], &c, sizeof(c)) != 1) {
+									perror("FileWrite Handler: ");
+								}
+								printf("%d", (int) c);
+							}
+						}
+					}
+					printf("\n");
+					fflush(0);
+				}
+
+				/*Synchronzing between count and debug here*/
+				if (write(sp_pipe_down[1], &count, sizeof(count)) != 4) {
+					perror("Write Count Handler: ");
+				}
+
+				for (iter = 0; (iter < 200) && (count < 50 * init_count) && (count > init_count / 50); iter++) {
 
 					if (read(sp_pipe_up[0], &count, sizeof(count)) != 4) {
 						perror("Read DBG: ");
