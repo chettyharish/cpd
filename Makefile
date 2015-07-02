@@ -1,8 +1,5 @@
-all:
-	gcc -o seq seq.c -std=c99 -O3 -pedantic
-	gcc -fopenmp -o omp omp.c -std=c99 -O3  -lm -pedantic
-	gcc -pthread -o thread thread.c -std=c99 -O3 -lm -pedantic
-	gcc -o process process.c  -std=c99 -O3 -pedantic -lm
+all: seq omp thread process
+	#Done
 
 
 simpledemo: seq omp thread process
