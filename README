@@ -1,0 +1,25 @@
+#To Compile:
+Use make to compile all 3 files
+omp.c --> Carries out GOE using openmp
+thread.c --> Carries out GOE using multi-threading.
+process.c --> Carries out GOE using multi-processing.
+
+#To run
+Use the form ./program_name num_rows num_cols
+e.g :
+./process 1000 1000
+./omp 1000 1000
+./thread 1000 1000
+
+#Testing
+All the three different tests compile run and diff-check the output.
+diff checks the lines to ensure that they are exactly the same.
+Every programs output is redirected to a file test(programname).
+Every programs final world is redirected to a file final_world(programname).txt.
+
+--> Use 'make simpledemo' to test the working of all programs
+--> Use 'make primedemo' to test boundaries which ensures that all
+	boundaries are correct (Since prime numbers are not divisible)
+--> Use 'make debugdemo' to test out for debugger print
+	(Uses a smaller number of rows and columns to meet disk usage boundaries)
+
