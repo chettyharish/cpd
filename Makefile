@@ -5,10 +5,10 @@ all:
 	gcc -o process process.c  -std=c99 -O3 -pedantic -lm
 
 primedemo: seq omp thread process
-	time ./seq 1093 1277 > testseq
-	time ./omp 1093 1277 > testomp
-	time ./thread 1093 1277 > testthread
-	time ./process 1093 1277 > testprocess
+	time ./seq 1427 1553 > testseq
+	time ./omp 1427 1553 > testomp
+	time ./thread 1427 1553 > testthread
+	time ./process 1427 1553 > testprocess
 	diff testseq testomp
 	diff testseq testthread
 	diff testseq testprocess
