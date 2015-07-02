@@ -19,12 +19,17 @@ e.g :
 #Testing
 All the three different tests compile run and diff-check the output.
 diff checks the lines to ensure that they are exactly the same.
-Every programs output is redirected to a file test(programname).
-Every programs final world is redirected to a file final_world(programname).txt.
+Every programs output is redirected to a file test[programname] (e.g testomp).
+Every programs final world is redirected to a file final_world[programname].txt (e.g. final_worldomp.txt).
 
 --> Use 'make simpledemo' to test the working of all programs
---> Use 'make primedemo' to test boundaries which ensures that all
-	boundaries are correct (Since prime numbers are not divisible)
+--> Use 'make boundarydemo' to test boundaries which ensures that all
+	boundaries are correct. There are 5 different tests.
+	The first tests the boundaries for prime numbers.
+	The second tests the boundaries for a single column.
+	The third tests the boundaries for a single row.
+	The fourth tests the boundaries for a single element.
+	The fifth tests the boundaries for a small matrix.
 --> Use 'make debugdemo' to test out for debugger print . This uses the debugging
 	version of the code which has DEBUG_LEVEL > 10.
 

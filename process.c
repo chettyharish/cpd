@@ -37,7 +37,7 @@ void set_real_procs() {
 		NUM_PROCS = w_Y;
 
 	/*Falling back to 2 processes when distributing equal work in top N-1 processes is complex*/
-	if (w_Y > 8 && w_Y < 30)
+	if (w_Y > 8 && w_Y < 30 && NUM_PROCS > 2)
 		NUM_PROCS = 2;
 
 }
@@ -84,7 +84,6 @@ void init_seq(int X, int Y) {
 
 int neighborcount_seq(int x, int y) {
 	int count = 0;
-
 	if ((x < 0) || (x >= w_X)) {
 		printf("neighborcount: (%d %d) out of bound (0..%d, 0..%d).\n", x, y, w_X, w_Y);
 		exit(0);
@@ -100,9 +99,9 @@ int neighborcount_seq(int x, int y) {
 		if (y == 0) {
 			count = w[y + 1][x];
 		} else if (y == w_Y - 1) {
-			count = w[y - 1][x];
-		} else {
-			count = w[y - 1][x] + w[y + 1][x];
+                       	count = w[y - 1][x];
+		} else {	
+                      	count = w[y - 1][x] + w[y + 1][x];
 		}
 	} else if (w_Y == 1) {
 		if (x == 0) {
