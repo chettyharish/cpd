@@ -1,3 +1,5 @@
+
+int chunk_size = 100;
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -107,7 +109,6 @@ int main(int argc, char *argv[]) {
 	if (DEBUG_LEVEL > 10)
 		print_world();
 
-	int chunk_size = 100;
 	for (iter = 0; (iter < 200) && (count < 50 * init_count) && (count > init_count / 50); iter++) {
 #pragma omp parallel for private(x,y,c) shared(neww,w,w_X,w_Y) schedule(static , chunk_size) collapse(2)
 		for (x = 0; x < w_X; x++) {
