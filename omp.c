@@ -17,7 +17,6 @@ void init1(int X, int Y) {
 	w_X = X, w_Y = Y;
 
 	CHUNK_SIZE = ceil(((w_X < w_Y) ? w_X : w_Y) / 200.0f);
-	printf("CHUNK_SIZE = %d\n", CHUNK_SIZE);
 
 #pragma omp parallel for private(i,j) shared(w,w_X,w_Y) schedule(static , CHUNK_SIZE) collapse(2)
 	for (i = 0; i < w_X; i++)
