@@ -1,8 +1,13 @@
 #To Compile:
 Use make to compile all 3 files
+seq.c --> Original sequentail GOE
 omp.c --> Carries out GOE using openmp
 thread.c --> Carries out GOE using multi-threading.
 process.c --> Carries out GOE using multi-processing.
+seq_debug.c --> seq.c with debugging ON.
+omp_debug.c --> omp.c with debugging ON.
+thread_debug.c --> thread.c with debugging ON.
+process_debug.c --> process.c with debugging ON.
 
 #To run
 Use the form ./program_name num_rows num_cols
@@ -20,6 +25,6 @@ Every programs final world is redirected to a file final_world(programname).txt.
 --> Use 'make simpledemo' to test the working of all programs
 --> Use 'make primedemo' to test boundaries which ensures that all
 	boundaries are correct (Since prime numbers are not divisible)
---> Use 'make debugdemo' to test out for debugger print
-	(Uses a smaller number of rows and columns to meet disk usage boundaries)
+--> Use 'make debugdemo' to test out for debugger print . This uses the debugging
+	version of the code which has DEBUG_LEVEL > 10.
 
