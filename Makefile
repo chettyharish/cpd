@@ -1,6 +1,5 @@
 all: seq omp thread process
-	#Done
-
+	#Done Compiling
 
 simpledemo: seq omp thread process
 	time ./seq 1000 1000 > testseq
@@ -14,7 +13,8 @@ simpledemo: seq omp thread process
 	diff final_worldseq.txt final_worldthread.txt
 	diff final_worldseq.txt final_worldprocess.txt
 
-primedemo: seq omp thread process
+boundarydemo: seq omp thread process
+	#Testing with prime numbers for unequal work
 	time ./seq 1427 1553 > testseq
 	time ./omp 1427 1553 > testomp
 	time ./thread 1427 1553 > testthread
@@ -25,7 +25,51 @@ primedemo: seq omp thread process
 	diff final_worldseq.txt final_worldomp.txt
 	diff final_worldseq.txt final_worldthread.txt
 	diff final_worldseq.txt final_worldprocess.txt
-	
+	#Testing for a single col of data
+	time ./seq 1 20 > testseq
+	time ./omp 1 20 > testomp
+	time ./thread 1 20 > testthread
+	time ./process 1 20 > testprocess
+	diff testseq testomp
+	diff testseq testthread
+	diff testseq testprocess
+	diff final_worldseq.txt final_worldomp.txt
+	diff final_worldseq.txt final_worldthread.txt
+	diff final_worldseq.txt final_worldprocess.txt
+	#Testing for a single row of data
+	time ./seq 20 1 > testseq
+	time ./omp 20 1 > testomp
+	time ./thread 20 1 > testthread
+	time ./process 20 1 > testprocess
+	diff testseq testomp
+	diff testseq testthread
+	diff testseq testprocess
+	diff final_worldseq.txt final_worldomp.txt
+	diff final_worldseq.txt final_worldthread.txt
+	diff final_worldseq.txt final_worldprocess.txt
+	#Testing for a single element
+	time ./seq 1 1 > testseq
+	time ./omp 1 1 > testomp
+	time ./thread 1 1 > testthread
+	time ./process 1 1 > testprocess
+	diff testseq testomp
+	diff testseq testthread
+	diff testseq testprocess
+	diff final_worldseq.txt final_worldomp.txt
+	diff final_worldseq.txt final_worldthread.txt
+	diff final_worldseq.txt final_worldprocess.txt
+	#Testing for a small matrix
+	time ./seq 10 10 > testseq
+	time ./omp 10 10 > testomp
+	time ./thread 10 10 > testthread
+	time ./process 10 10 > testprocess
+	diff testseq testomp
+	diff testseq testthread
+	diff testseq testprocess
+	diff final_worldseq.txt final_worldomp.txt
+	diff final_worldseq.txt final_worldthread.txt
+	diff final_worldseq.txt final_worldprocess.txt
+
 debugdemo:
 	gcc -o seq_debug seq_debug.c -std=c99 -O3 -lm -pedantic
 	gcc -o omp_debug omp_debug.c -std=c99 -O3 -lm -pedantic -fopenmp 
