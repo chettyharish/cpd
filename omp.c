@@ -1,5 +1,5 @@
 
-int chunk_size = 100;
+int chunk_size = 10;
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -17,12 +17,17 @@ int w_X, w_Y;
 void init1(int X, int Y) {
 	int i, j;
 	w_X = X, w_Y = Y;
+
+#pragma omp parallel for private(i,j) shared(w,w_X,w_Y) schedule(static , chunk_size) collapse(2)
 	for (i = 0; i < w_X; i++)
 		for (j = 0; j < w_Y; j++)
 			w[j][i] = 0;
 
+#pragma omp parallel for private(i) shared(w,w_X) schedule(static , chunk_size)
 	for (i = 0; i < w_X; i++)
 		w[0][i] = 1;
+
+#pragma omp parallel for private(i) shared(w,w_Y) schedule(static , chunk_size)
 	for (i = 0; i < w_Y; i++)
 		w[i][0] = 1;
 }
@@ -95,6 +100,7 @@ int main(int argc, char *argv[]) {
 	init1(atoi(argv[1]), atoi(argv[2]));
 
 	c = 0;
+#pragma omp parallel for private(x,y) shared(w,w_X,w_Y) reduction(+:c) schedule(static , chunk_size) collapse(2)
 	for (x = 0; x < w_X; x++) {
 		for (y = 0; y < w_Y; y++) {
 			if (w[y][x] == 1)
@@ -127,7 +133,7 @@ int main(int argc, char *argv[]) {
 
 		/* copy the world, and count the current lives */
 		count = 0;
-#pragma omp parallel for private(x,y) shared(neww,w,w_X,w_Y) reduction(+:count)
+#pragma omp parallel for private(x,y) shared(neww,w,w_X,w_Y) reduction(+:count) schedule(static , chunk_size) collapse(2)
 		for (x = 0; x < w_X; x++) {
 			for (y = 0; y < w_Y; y++) {
 				w[y][x] = neww[y][x];
