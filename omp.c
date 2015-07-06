@@ -101,6 +101,7 @@ int main(int argc, char *argv[]) {
 	/* more than three parameters */
 	CHUNK_SIZE = atoi(argv[2]);
 	init1(atoi(argv[1]), atoi(argv[2]));
+	printf("CHUNK SIZE = %d", CHUNK_SIZE);
 	c = 0;
 #pragma omp parallel for private(x,y) shared(w,w_X,w_Y) reduction(+:c) schedule(static , CHUNK_SIZE) collapse(2)
 	for (x = 0; x < w_X; x++) {
