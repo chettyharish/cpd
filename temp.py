@@ -6,3 +6,4 @@ if __name__ == "__main__":
         cmd = "time ./omp 1427 1553 " + str(i) + " >> tempomp "
         print(cmd)
         os.system(cmd)
+        print("")

@@ -16,10 +16,10 @@ void init1(int X, int Y) {
 	int i, j;
 	w_X = X, w_Y = Y;
 
-	if (CHUNK_SIZE % 5 == 0)
-		CHUNK_SIZE = 5;
-	else
-		CHUNK_SIZE = 97;
+//	if (CHUNK_SIZE % 5 == 0)
+//		CHUNK_SIZE = 5;
+//	else
+//		CHUNK_SIZE = 97;
 #pragma omp parallel for private(i,j) shared(w,w_X,w_Y) schedule(static , CHUNK_SIZE) collapse(2)
 	for (i = 0; i < w_X; i++)
 		for (j = 0; j < w_Y; j++)
@@ -99,6 +99,7 @@ int main(int argc, char *argv[]) {
 	}
 
 	/* more than three parameters */
+	CHUNK_SIZE = atoi(argv[2]);
 	init1(atoi(argv[1]), atoi(argv[2]));
 	c = 0;
 #pragma omp parallel for private(x,y) shared(w,w_X,w_Y) reduction(+:c) schedule(static , CHUNK_SIZE) collapse(2)
