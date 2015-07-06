@@ -16,7 +16,7 @@ void init1(int X, int Y) {
 	int i, j;
 	w_X = X, w_Y = Y;
 
-	if (CHUNK_SIZE % 5 == 0)
+	if (w_X % 5 == 0 || w_Y % 5 == 0 )
 		CHUNK_SIZE = 5;
 	else
 		CHUNK_SIZE = 97;
@@ -94,7 +94,7 @@ int main(int argc, char *argv[]) {
 	int count;
 
 	if (argc == 1) {
-		printf("Usage: ./a.out w_X w_Y\n");
+		printf("Usage: ./omp w_X w_Y\n");
 		exit(0);
 	}
 
