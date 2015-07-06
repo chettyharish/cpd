@@ -94,12 +94,12 @@ int main(int argc, char *argv[]) {
 	int count;
 
 	if (argc == 1) {
-		printf("Usage: ./a.out w_X w_Y\n");
+		printf("Usage: ./omp w_X w_Y\n");
 		exit(0);
 	}
 
 	/* more than three parameters */
-	CHUNK_SIZE = atoi(argv[2]);
+	CHUNK_SIZE = atoi(argv[3]);
 	init1(atoi(argv[1]), atoi(argv[2]));
 	printf("CHUNK SIZE = %d\n", CHUNK_SIZE);
 	c = 0;
