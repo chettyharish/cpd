@@ -83,8 +83,8 @@ boundarydemo: seq omp thread process
 debugdemo: seq omp thread process
 	time ./seq 100 100 -d 20 > testseq
 	time ./omp 100 100 -d 20 > testomp
-	time ./thread 100 100 -d 20> testthread
-	time ./process 100 100 -d 20> testprocess
+	time ./thread 100 100 -d 20 > testthread
+	time ./process 100 100 -d 20 > testprocess
 	diff testseq testomp
 	diff testseq testthread
 	diff testseq testprocess

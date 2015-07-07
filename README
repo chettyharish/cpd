@@ -1,17 +1,22 @@
 #To Compile:
 Use make to compile all 3 files
-seq.c --> Original sequentail GOE
+seq.c --> Original sequential GOE
 omp.c --> Carries out GOE using openmp
 thread.c --> Carries out GOE using multi-threading.
 process.c --> Carries out GOE using multi-processing.
 
 #To run
-Use the form ./program_name num_rows num_cols [options] . -n is for number of process / number of threads 
-(based on the program) and -d defines the DEBUG_LVL ( > 10 triggers the debug output). The default value of
--d is 0 and of -n in process.c is 8 and thread.c is 32.
+Use the form ./program_name num_rows num_cols [options] . 
+OPTIONS:
+-n is for number of process / number of threads (based on the program)
+-d defines the DEBUG_LVL ( > 10 triggers the debug output). 
+The default value of -d is 0 and of -n in process.c is 8 and thread.c is 32.
 e.g :
-./seq 1000 1000 -d 20 
 ./process 1000 1000
+./seq 1000 1000
+./omp 1000 1000
+./thread 1000 1000
+./seq 1000 1000 -d 20 
 ./process 1000 1000 -d 20 -n 8
 ./omp 1000 1000 -d 20
 ./thread 1000 1000 -d 20 -n 32
