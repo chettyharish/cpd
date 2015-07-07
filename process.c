@@ -11,10 +11,7 @@
 #include <unistd.h>
 #include <math.h>
 
-#ifndef DEBUG_LEVEL
-#define DEBUG_LEVEL 0
-#endif
-
+int DEBUG_LEVEL = 0;
 int NUM_PROCS = 8;
 int rows_per_blk;
 int w_X, w_Y;
@@ -69,9 +66,8 @@ void init_new(int myid) {
 		w[i][0] = 1;
 }
 
-void init_seq(int X, int Y) {
+void init_seq() {
 	int i, j;
-	w_X = X, w_Y = Y;
 	for (i = 0; i < w_X; i++)
 		for (j = 0; j < w_Y; j++)
 			w[j][i] = 0;
@@ -99,9 +95,9 @@ int neighborcount_seq(int x, int y) {
 		if (y == 0) {
 			count = w[y + 1][x];
 		} else if (y == w_Y - 1) {
-                       	count = w[y - 1][x];
-		} else {	
-                      	count = w[y - 1][x] + w[y + 1][x];
+			count = w[y - 1][x];
+		} else {
+			count = w[y - 1][x] + w[y + 1][x];
 		}
 	} else if (w_Y == 1) {
 		if (x == 0) {
@@ -147,14 +143,30 @@ int main(int argc, char *argv[]) {
 	int c;
 	int init_count = -1;
 	int count;
-	if (setvbuf(stdout, NULL, _IONBF, BUFSIZ))
-		printf("Usage: ./a.out w_X w_Y\n");
-	if (argc == 1) {
-		printf("Usage: ./a.out w_X w_Y\n");
+	if (setvbuf(stdout, NULL, _IONBF, BUFSIZ)) {
+		perror("setvbuf : ");
+	}
+
+
+	if (argc < 3) {
+		printf("Usage: ./process w_X w_Y [options]\n");
 		exit(0);
 	}
 
-	w_X = atoi(argv[1]), w_Y = atoi(argv[2]);
+	/* more than three parameters */
+	for (int i = 1; i < argc; i++) {
+		if (i == 1) {
+			w_X = atoi(argv[1]);
+		} else if (i == 2) {
+			w_Y = atoi(argv[2]);
+		} else if (strcmp(argv[i], "-d") == 0) {
+			DEBUG_LEVEL = atoi(argv[++i]);
+		}else if (strcmp(argv[i], "-n") == 0) {
+			NUM_PROCS = atoi(argv[++i]);
+		}
+	}
+	/* more than three parameters */
+//	printf("w_X = %d\tw_Y = %d\tDEBUG_LEVEL = %d\t NUM_THREADS = %d\n", w_X, w_Y, DEBUG_LEVEL, NUM_PROCS);
 
 	set_real_procs();
 	if (NUM_PROCS > 1) {
@@ -1028,7 +1040,7 @@ int main(int argc, char *argv[]) {
 		}
 
 		/*Handling single process as a sequential process*/
-		init_seq(atoi(argv[1]), atoi(argv[2]));
+		init_seq();
 
 		c = 0;
 		for (x = 0; x < w_X; x++) {

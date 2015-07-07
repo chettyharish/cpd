@@ -1,22 +1,20 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+#include <string.h>
 #define MAX_N 8192
-
-#ifndef DEBUG_LEVEL
-#define DEBUG_LEVEL 0
-#endif
 
 char w[MAX_N][MAX_N];
 char neww[MAX_N][MAX_N];
 
 int w_X, w_Y;
 int CHUNK_SIZE;
-void init1(int X, int Y) {
-	int i, j;
-	w_X = X, w_Y = Y;
+int DEBUG_LEVEL = 0;
 
-	if (w_X % 5 == 0 || w_Y % 5 == 0 )
+void init1() {
+	int i, j;
+
+	if (w_X % 5 == 0 || w_Y % 5 == 0)
 		CHUNK_SIZE = 5;
 	else
 		CHUNK_SIZE = 97;
@@ -93,13 +91,23 @@ int main(int argc, char *argv[]) {
 	int init_count;
 	int count;
 
-	if (argc == 1) {
-		printf("Usage: ./omp w_X w_Y\n");
+	if (argc < 3) {
+		printf("Usage: ./omp w_X w_Y [options]\n");
 		exit(0);
 	}
 
 	/* more than three parameters */
-	init1(atoi(argv[1]), atoi(argv[2]));
+	for (int i = 1; i < argc; i++) {
+		if (i == 1) {
+			w_X = atoi(argv[1]);
+		} else if (i == 2) {
+			w_Y = atoi(argv[2]);
+		} else if (strcmp(argv[i], "-d") == 0) {
+			DEBUG_LEVEL = atoi(argv[++i]);
+		}
+	}
+//	printf("w_X = %d\tw_Y = %d\tDEBUG_LEVEL = %d\n", w_X, w_Y, DEBUG_LEVEL);
+	init1();
 	c = 0;
 #pragma omp parallel for private(x,y) shared(w,w_X,w_Y) reduction(+:c) schedule(static , CHUNK_SIZE) collapse(2)
 	for (x = 0; x < w_X; x++) {

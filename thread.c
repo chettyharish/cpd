@@ -1,23 +1,20 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
+#include <string.h>
 #include <math.h>
 
 #define MAX_N 8192
-#define NUM_THREADS 32
-
-#ifndef DEBUG_LEVEL
-#define DEBUG_LEVEL 0
-#endif
+int NUM_THREADS = 32;
+int DEBUG_LEVEL = 0;
 
 char w[MAX_N][MAX_N];
 char neww[MAX_N][MAX_N];
-int counters[NUM_THREADS];
+int *counters;
 int w_X, w_Y;
 
-void init1(int X, int Y) {
+void init1() {
 	int i, j;
-	w_X = X, w_Y = Y;
 	for (i = 0; i < w_X; i++)
 		for (j = 0; j < w_Y; j++)
 			w[j][i] = 0;
@@ -128,12 +125,27 @@ int main(int argc, char *argv[]) {
 	int init_count;
 	int count;
 
-	if (argc == 1) {
-		printf("Usage: ./a.out w_X w_Y\n");
+	if (argc < 3) {
+		printf("Usage: ./thread w_X w_Y [options]\n");
 		exit(0);
 	}
+
 	/* more than three parameters */
-	init1(atoi(argv[1]), atoi(argv[2]));
+	for (int i = 1; i < argc; i++) {
+		if (i == 1) {
+			w_X = atoi(argv[1]);
+		} else if (i == 2) {
+			w_Y = atoi(argv[2]);
+		} else if (strcmp(argv[i], "-d") == 0) {
+			DEBUG_LEVEL = atoi(argv[++i]);
+		}else if (strcmp(argv[i], "-n") == 0) {
+			NUM_THREADS = atoi(argv[++i]);
+		}
+	}
+	/* more than three parameters */
+	counters= malloc(sizeof(int)*NUM_THREADS);
+//	printf("w_X = %d\tw_Y = %d\tDEBUG_LEVEL = %d\t NUM_THREADS = %d\n", w_X, w_Y, DEBUG_LEVEL, NUM_THREADS);
+	init1();
 
 	c = 0;
 	for (x = 0; x < w_X; x++) {
