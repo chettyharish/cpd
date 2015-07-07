@@ -106,7 +106,6 @@ process: process.c
 	
 clean:
 	rm -f seq omp thread process
-	rm -f seq_debug omp_debug thread_debug process_debug
 	rm -f testseq testomp testthread testprocess
 	rm -f final_worldomp.txt final_worldseq.txt final_worldprocess.txt final_worldthread.txt
 
