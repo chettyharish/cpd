@@ -6,8 +6,11 @@ thread.c --> Carries out GOE using multi-threading.
 process.c --> Carries out GOE using multi-processing.
 
 #To run
-Use the form ./program_name num_rows num_cols [options]
+Use the form ./program_name num_rows num_cols [options] . -n is for number of process / number of threads 
+(based on the program) and -d defines the DEBUG_LVL ( > 10 triggers the debug output). The default value of
+-d is 0 and of -n in process.c is 8 and thread.c is 32.
 e.g :
+./seq 1000 1000 -d 20 
 ./process 1000 1000
 ./process 1000 1000 -d 20 -n 8
 ./omp 1000 1000 -d 20
