@@ -80,15 +80,11 @@ boundarydemo: seq omp thread process
 	diff final_worldseq.txt final_worldthread.txt
 	diff final_worldseq.txt final_worldprocess.txt
 
-debugdemo:
-	gcc -o seq_debug seq_debug.c -std=c99 -O3 -lm -pedantic
-	gcc -o omp_debug omp_debug.c -std=c99 -O3 -lm -pedantic -fopenmp 
-	gcc -o thread_debug thread_debug.c -std=c99 -O3 -lm -pedantic -pthread
-	gcc -o process_debug process_debug.c  -std=c99 -O3 -lm -pedantic 
-	time ./seq_debug 100 100 > testseq
-	time ./omp_debug 100 100 > testomp
-	time ./thread_debug 100 100 > testthread
-	time ./process_debug 100 100 > testprocess
+debugdemo: seq omp thread process
+	time ./seq 100 100 -d 20 > testseq
+	time ./omp 100 100 -d 20 > testomp
+	time ./thread 100 100 -d 20> testthread
+	time ./process 100 100 -d 20> testprocess
 	diff testseq testomp
 	diff testseq testthread
 	diff testseq testprocess

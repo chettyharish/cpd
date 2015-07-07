@@ -4,17 +4,14 @@ seq.c --> Original sequentail GOE
 omp.c --> Carries out GOE using openmp
 thread.c --> Carries out GOE using multi-threading.
 process.c --> Carries out GOE using multi-processing.
-seq_debug.c --> seq.c with debugging ON.
-omp_debug.c --> omp.c with debugging ON.
-thread_debug.c --> thread.c with debugging ON.
-process_debug.c --> process.c with debugging ON.
 
 #To run
-Use the form ./program_name num_rows num_cols
+Use the form ./program_name num_rows num_cols [options]
 e.g :
 ./process 1000 1000
-./omp 1000 1000
-./thread 1000 1000
+./process 1000 1000 -d 20 -n 8
+./omp 1000 1000 -d 20
+./thread 1000 1000 -d 20 -n 32
 
 #Testing
 All the three different tests compile run and diff-check the output.
@@ -30,6 +27,5 @@ Every programs final world is redirected to a file final_world[programname].txt 
 	The third tests the boundaries for a single row.
 	The fourth tests the boundaries for a single element.
 	The fifth tests the boundaries for a small matrix.
---> Use 'make debugdemo' to test out for debugger print . This uses the debugging
-	version of the code which has DEBUG_LEVEL > 10.
+--> Use 'make debugdemo' to test out for debugger print . Uses a small example to run the code quickly.
 
