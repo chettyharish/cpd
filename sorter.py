@@ -1,46 +1,61 @@
 import random
 import sys
+import time
 
 
-def radixsort(aList):
-    RADIX = 10
-    maxLength = False
-    tmp, placement = -1, 1
+def issorted(data):
+    for i in range(len(data) - 1):
+        if data[i] > data[i + 1]:
+            return False
 
-    while not maxLength:
-        maxLength = True
-        # declare and initialize buckets
-        buckets = [list() for _ in range(RADIX)]
+    return True
 
-        # split aList between lists
-        for i in aList:
-            tmp = int(i / placement)
-            buckets[tmp % RADIX].append(i)
-            if maxLength and tmp > 0:
-                maxLength = False
 
-        # empty lists into aList array
-        a = 0
-        for b in range(RADIX):
-            buck = buckets[b]
-            for i in buck:
-                aList[a] = i
-                a += 1
+def radixsort(data):
+    base, maxlen, pos, div = (10, False, -1, 1)
 
-        # move to next digit
-        placement *= RADIX
+    while (maxlen == False):
+        maxlen = True
+        buckets = [list() for _ in range(base)]
+
+# Parallelizable completely except buckets
+        for i in data:
+            temp = int(i / div)
+            buckets[temp % base].append(i)
+            if maxlen and temp > 0:
+                maxlen = False
+
+        div *= base
+
+# Not parallelizable directly
+        k = 0
+        for i in range(base):
+            for j in buckets[i]:
+                data[k] = j
+                k += 1
+
 
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
+    if len(sys.argv) < 3:
         print("More args!")
         exit(0)
 
 #     A = [18, 5, 100, 3, 1, 19, 6, 0, 7, 4, 2]
-    A = random.sample(range(0,10**10) , 10**6) 
-    if int(sys.argv[1]) == 0:
+    start = time.time()
+    size = int(float(sys.argv[1]))
+    print(8 * 10e9 / size)
+    A = random.sample(range(0,10**10) , size)
+    curr = time.time()
+    print("FIRST : " + str(curr - start))
+    if int(sys.argv[2]) == 0:
         print("RadixSort")
         radixsort(A)
     else:
         print("TimSort")
         sorted(A)
-#     print(A)
+    print("END : " + str(time.time() - curr))
+
+    if(issorted(A)):
+        print("Sorted Correctly")
+    else:
+        print("Error sorting")
