@@ -1,0 +1,39 @@
+#To Compile:
+Use make to compile all 3 files
+seq.c --> Original sequential GOE
+omp.c --> Carries out GOE using openmp
+thread.c --> Carries out GOE using multi-threading.
+process.c --> Carries out GOE using multi-processing.
+
+#To run
+Use the form ./program_name num_rows num_cols [options] . 
+OPTIONS:
+-n is for number of process / number of threads (based on the program)
+-d defines the DEBUG_LVL ( > 10 triggers the debug output). 
+The default value of -d is 0 and of -n in process.c is 8 and thread.c is 32.
+e.g :
+./process 1000 1000
+./seq 1000 1000
+./omp 1000 1000
+./thread 1000 1000
+./seq 1000 1000 -d 20 
+./process 1000 1000 -d 20 -n 8
+./omp 1000 1000 -d 20
+./thread 1000 1000 -d 20 -n 32
+
+#Testing
+All the three different tests compile run and diff-check the output.
+diff checks the lines to ensure that they are exactly the same.
+Every programs output is redirected to a file test[programname] (e.g testomp).
+Every programs final world is redirected to a file final_world[programname].txt (e.g. final_worldomp.txt).
+
+--> Use 'make simpledemo' to test the working of all programs
+--> Use 'make boundarydemo' to test boundaries which ensures that all
+	boundaries are correct. There are 5 different tests.
+	The first tests the boundaries for prime numbers.
+	The second tests the boundaries for a single column.
+	The third tests the boundaries for a single row.
+	The fourth tests the boundaries for a single element.
+	The fifth tests the boundaries for a small matrix.
+--> Use 'make debugdemo' to test out for debugger print . Uses a small example to run the code quickly.
+
