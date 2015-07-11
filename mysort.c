@@ -21,7 +21,7 @@ int myid[NUM_THREADS];
 pthread_t tid[NUM_THREADS];
 
 bool is_sorted(int start, int end) {
-	printf("Testing start = %d\t end = %d\n", start, end);
+//	printf("Testing start = %d\t end = %d\n", start, end);
 	int err_ct = 0;
 	for (int i = start; i <= end - 1; i++) {
 		if (data[i] > data[i + 1]) {
@@ -98,7 +98,7 @@ void *k_way_merger_single(void *arg) {
 
 	int curr1 = start1, curr2 = start2;
 
-	printf("TID = %10d\t\tstart1 = %10d\tend1 = %10d\tstart2 = %10d\tend2 = %10d\tcurr1 = %10d\tcurr2 = %10d\n", myid, start1, end1, start2, end2, curr1, curr2);
+//	printf("TID = %10d\t\tstart1 = %10d\tend1 = %10d\tstart2 = %10d\tend2 = %10d\tcurr1 = %10d\tcurr2 = %10d\n", myid, start1, end1, start2, end2, curr1, curr2);
 	int i = start1;
 	while (curr1 <= end1 && curr2 <= end2) {
 		if (data[curr1] <= data[curr2])
@@ -133,24 +133,24 @@ void k_way_single() {
 			pthread_join(tid[i], NULL);
 		}
 
-		printf("Starting tests \n");
-		/*For testing*/
-		for (int i = 0; i < CURR_THREADS; i++) {
-			int myid = i;
-			int num_ele = ceil((SIZE * 1.0f) / CURR_THREADS);
-			int start1 = myid * num_ele;
-			int end1 = myid * num_ele + num_ele / 2 - 1;
-			int start2 = myid * num_ele + num_ele / 2;
-			int end2 = (myid + 1) * num_ele - 1;
-			if (end2 >= SIZE) {
-				end2 = SIZE - 1;
-			}
-			if (is_sorted(start1, end2) == true) {
-				printf("TID = %d \t Sorted correctly\n", i);
-			} else {
-				printf("TID = %d \t Sorting error\n", i);
-			}
-		}
+//		printf("Starting tests \n");
+//		/*For testing*/
+//		for (int i = 0; i < CURR_THREADS; i++) {
+//			int myid = i;
+//			int num_ele = ceil((SIZE * 1.0f) / CURR_THREADS);
+//			int start1 = myid * num_ele;
+//			int end1 = myid * num_ele + num_ele / 2 - 1;
+//			int start2 = myid * num_ele + num_ele / 2;
+//			int end2 = (myid + 1) * num_ele - 1;
+//			if (end2 >= SIZE) {
+//				end2 = SIZE - 1;
+//			}
+//			if (is_sorted(start1, end2) == true) {
+//				printf("TID = %d \t Sorted correctly\n", i);
+//			} else {
+//				printf("TID = %d \t Sorting error\n", i);
+//			}
+//		}
 
 		CURR_THREADS /= 2;
 	}
@@ -190,7 +190,7 @@ int main(int argc, char **argv) {
 		int myid = i;
 		int num_ele = ceil((SIZE * 1.0f) / NUM_THREADS);
 		int start = myid * num_ele;
-		int end = (((myid + 1) * num_ele) < SIZE ? ((myid + 1) * num_ele) : SIZE);
+		int end = (((myid + 1) * num_ele) < SIZE ? ((myid + 1) * num_ele) : SIZE - 1);
 		if (is_sorted(start, end) == true) {
 			printf("TID = %d \t Sorted correctly\n", i);
 		} else {
