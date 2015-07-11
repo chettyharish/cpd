@@ -3,18 +3,18 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
-#include <signal.h>
+#include <fcntl.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
 #include <sys/time.h>
-#include <fcntl.h>
+#include <sys/mman.h>
 #include <unistd.h>
 #include <math.h>
 #include <pthread.h>
-#include <omp.h>
+#include <unistd.h>
+#include <errno.h>
 
-#include <sys/mman.h>
 #define NUM_THREADS 16
 long int *data;
 long int *temp;
@@ -69,17 +69,21 @@ void insertionsort(int lo, int hi) {
 }
 
 void mergesort(int lo, int hi) {
-	if (hi - lo <= 8) {
+	if (hi - lo <= 7) {
+		/*Use insertion sort at finer grain level*/
 		insertionsort(lo, hi);
 		return;
 	}
+//	if (hi <= lo ) {
+//		return;
+//	}
 	int mid = lo + (hi - lo) / 2;
 	mergesort(lo, mid);
 	mergesort(mid + 1, hi);
-//	if (!(data[mid] < data[mid + 1])) {
+	if (!(data[mid] < data[mid + 1])) {
 //		No need to merge if already sorted
-	merge(lo, mid, hi);
-//	}
+		merge(lo, mid, hi);
+	}
 }
 
 void *mergesort_caller(void *arg) {
@@ -135,8 +139,6 @@ void *k_way_merger_single(void *arg) {
 
 	for (int i = start1; i <= end2; i++)
 		data[i] = temp[i];
-//	printf("TID = %10d\t\tstart1 = %10d\tend1 = %10d\tstart2 = %10d\tend2 = %10d\tcurr1 = %10d\tcurr2 = %10d\n", myid, start1, end1, start2, end2, curr1, curr2);
-
 }
 
 void k_way_single() {
@@ -180,9 +182,7 @@ int main(int argc, char **argv) {
 	double start_time, end_time;
 	struct timeval t;
 	int count = 0;
-	long int waste;
 	FILE *file = fopen(argv[1], "r");
-	printf("BUFSIZE = %d\n", BUFSIZ);
 	if (!file) {
 		printf("Input file missing\n");
 		exit(0);
@@ -195,36 +195,50 @@ int main(int argc, char **argv) {
 	data = malloc(sizeof(long int) * SIZE);
 	temp = malloc(sizeof(long int) * SIZE);
 
-	if (data && temp) {
-	} else {
-		perro("Malloc");
+	if (data == NULL && temp == NULL) {
+		perror("Malloc :");
+		exit(1);
 	}
-
 	fseek(file, 0, SEEK_SET);
+	printf("BUFSIZ = %d\t NUM_THREADS = %d\t SIZE = %d\n", BUFSIZ, NUM_THREADS, SIZE);
 
 	gettimeofday(&t, NULL);
 	start_time = 1.0e-6 * t.tv_usec + t.tv_sec;
 	printf("Reading data started \n");
-	while (fread(&data[count++], sizeof(long int), 1, file))
-		;
-//	int buf_num = BUFSIZ/8;
-//	while(fread(&data[count], sizeof(long int), buf_num, file))
-//	{
-//		count += buf_num;
-//	}
-//	printf("SIZE = %d\t FSIZE = %d\t buf = %d", SIZE, FSIZE, buf_num);
-//	printf("count = %d\n" , count);
-//	int fd = open(argv[1], O_RDONLY);
-//	int pageoffset = FSIZE % 4096;
-//	long int *map = (long int *) mmap(0, FSIZE, PROT_READ, MAP_PRIVATE, fd, 0);
-//
-//	for (int i = 0; i < SIZE; i++) {
-//		data[i] = map[i];
-//	}
 
-//	if (fread(data, FSIZE, 1, file) == -1) {
-//		perror("fread");
-//	}
+	int cond = atoi(argv[2]);
+	if (cond == 1) {
+		while (fread(&data[count++], sizeof(long int), 1, file))
+			;
+	}
+
+	if (cond == 2) {
+
+		int buf_num = BUFSIZ / 8;
+		while (fread(&data[count], sizeof(long int), buf_num, file)) {
+			count += buf_num;
+		}
+	}
+
+	if (cond == 3) {
+		int fd = open(argv[1], O_RDONLY);
+		long int *map = mmap(0, FSIZE, PROT_READ, MAP_SHARED, fd, 0);
+		if (map == MAP_FAILED) {
+			perror("mmap : ");
+			exit(1);
+		}
+
+		for (int i = 0; i < SIZE; i++) {
+			data[i] = map[i];
+		}
+	}
+
+	if (cond == 4) {
+		if (fread(data, FSIZE, 1, file) == -1) {
+			perror("fread");
+			exit(1);
+		}
+	}
 
 	gettimeofday(&t, NULL);
 	end_time = 1.0e-6 * t.tv_usec + t.tv_sec;

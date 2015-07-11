@@ -1,6 +1,12 @@
 all:
-	gcc -o splitter splitter.c -O3 -std=c99
-	gcc -o mysort mysort.c -O3 -std=c99 -lm -pedantic -pthread -D_POSIX_SOURCE
+	gcc -o splitter splitter.c -O3 -std=c99 -lm -pedantic -pthread
+	gcc -o mysort mysort.c -O3 -std=c99 -lm -pedantic -pthread
 
-demo:all
-	time ./mysort op
+first: all
+	time ./mysort op 1
+second: all
+	time ./mysort op 2
+third: all
+	time ./mysort op 3
+four: all
+	time ./mysort op 4
