@@ -16,6 +16,8 @@
 #include <errno.h>
 
 #define NUM_THREADS 16
+#define SWAP(x,y,lo) if (data[lo+y] < data[lo+x]) { int tmp = data[lo+x]; data[lo+x] = data[lo+y]; data[lo+y] = tmp; }
+
 long int *data;
 long int *temp;
 int CURR_THREADS;
@@ -38,11 +40,100 @@ bool is_sorted(int start, int end) {
 	return true;
 }
 
+static __inline__ void sort8(long int * data, int lo) {
+	SWAP(0, 1, lo);
+	SWAP(2, 3, lo);
+	SWAP(4, 5, lo);
+	SWAP(6, 7, lo);
+
+	SWAP(0, 2, lo);
+	SWAP(1, 3, lo);
+	SWAP(4, 6, lo);
+	SWAP(5, 7, lo);
+
+	SWAP(1, 2, lo);
+	SWAP(5, 6, lo);
+	SWAP(0, 4, lo);
+	SWAP(3, 7, lo);
+
+	SWAP(1, 5, lo);
+	SWAP(2, 6, lo);
+
+	SWAP(1, 4, lo);
+	SWAP(3, 6, lo);
+
+	SWAP(2, 4, lo);
+	SWAP(3, 5, lo);
+
+	SWAP(3, 4, lo);
+}
+static __inline__ void sort7(long int * data, int lo) {
+	SWAP(1, 2, lo);
+	SWAP(0, 2, lo);
+	SWAP(0, 1, lo);
+	SWAP(3, 4, lo);
+	SWAP(5, 6, lo);
+	SWAP(3, 5, lo);
+	SWAP(4, 6, lo);
+	SWAP(4, 5, lo);
+	SWAP(0, 4, lo);
+	SWAP(0, 3, lo);
+	SWAP(1, 5, lo);
+	SWAP(2, 6, lo);
+	SWAP(2, 5, lo);
+	SWAP(1, 3, lo);
+	SWAP(2, 4, lo);
+	SWAP(2, 3, lo);
+}
+
+static __inline__ void sort6(long int * data, int lo) {
+	SWAP(1, 2, lo);
+	SWAP(0, 2, lo);
+	SWAP(0, 1, lo);
+	SWAP(4, 5, lo);
+	SWAP(3, 5, lo);
+	SWAP(3, 4, lo);
+	SWAP(0, 3, lo);
+	SWAP(1, 4, lo);
+	SWAP(2, 5, lo);
+	SWAP(2, 4, lo);
+	SWAP(1, 3, lo);
+	SWAP(2, 3, lo);
+}
+
+static __inline__ void sort5(long int * data, int lo) {
+	SWAP(0, 1, lo);
+	SWAP(3, 4, lo);
+	SWAP(2, 4, lo);
+	SWAP(2, 3, lo);
+	SWAP(0, 3, lo);
+	SWAP(0, 2, lo);
+	SWAP(1, 4, lo);
+	SWAP(1, 3, lo);
+	SWAP(1, 2, lo);
+}
+
+static __inline__ void sort4(long int * data, int lo) {
+	SWAP(0, 1, lo);
+	SWAP(2, 3, lo);
+	SWAP(0, 2, lo);
+	SWAP(1, 3, lo);
+	SWAP(1, 2, lo);
+}
+
+static __inline__ void sort3(long int * data, int lo) {
+	SWAP(1, 2, lo);
+	SWAP(0, 2, lo);
+	SWAP(0, 1, lo);
+}
+
+static __inline__ void sort2(long int * data, int lo) {
+	SWAP(0, 1, lo);
+}
+
 void merge(int lo, int mid, int hi) {
 	int i, j, k;
-	for (i = lo; i <= hi; ++i) {
-		temp[i] = data[i];
-	}
+	memcpy(&temp[lo], &data[lo], (hi - lo + 1) * sizeof(long int));
 	i = lo, j = mid + 1;
 
 	for (k = lo; k <= hi; k++) {
@@ -69,14 +160,44 @@ void insertionsort(int lo, int hi) {
 }
 
 void mergesort(int lo, int hi) {
-	if (hi - lo <= 7) {
-		/*Use insertion sort at finer grain level*/
-		insertionsort(lo, hi);
-		return;
-	}
-//	if (hi <= lo ) {
+	int num = hi - lo + 1;
+//	if (hi - lo < 7) {
+//		/*Use insertion sort at finer grain level*/
+//		insertionsort(lo, hi);
 //		return;
 //	}
+
+	if (num <= 8) {
+		if (num == 0 || num == 1)
+			return;
+		switch (num) {
+		case 2:
+			sort2(data, lo);
+			return;
+		case 3:
+			sort3(data, lo);
+			return;
+		case 4:
+			sort4(data, lo);
+			return;
+		case 5:
+			sort5(data, lo);
+			return;
+		case 6:
+			sort6(data, lo);
+			return;
+		case 7:
+			sort7(data, lo);
+			return;
+		case 8:
+			sort8(temp, lo);
+			return;
+		default:
+			printf("Negative index in mergesort\n");
+			exit(1);
+		}
+	}
+
 	int mid = lo + (hi - lo) / 2;
 	mergesort(lo, mid);
 	mergesort(mid + 1, hi);
@@ -92,7 +213,6 @@ void *mergesort_caller(void *arg) {
 	int start = myid * num_ele;
 	int end = (((myid + 1) * num_ele - 1) < (SIZE - 1)) ? ((myid + 1) * num_ele - 1) : (SIZE - 1);
 	mergesort(start, end);
-
 }
 
 int find_min(long int *vals) {
@@ -142,7 +262,7 @@ void *k_way_merger_single(void *arg) {
 }
 
 void k_way_single() {
-	CURR_THREADS = NUM_THREADS / 2;
+	CURR_THREADS = NUM_THREADS >> 1;
 	while (CURR_THREADS != 0) {
 		for (int i = 0; i < CURR_THREADS; i++) {
 			myid[i] = i;
@@ -153,26 +273,7 @@ void k_way_single() {
 			pthread_join(tid[i], NULL);
 		}
 
-//		printf("Starting tests \n");
-//		/*For testing*/
-//		for (int i = 0; i < CURR_THREADS; i++) {
-//			int myid = i;
-//			int num_ele = ceil((SIZE * 1.0f) / CURR_THREADS);
-//			int start1 = myid * num_ele;
-//			int end1 = myid * num_ele + num_ele / 2 - 1;
-//			int start2 = myid * num_ele + num_ele / 2;
-//			int end2 = (myid + 1) * num_ele - 1;
-//			if (end2 >= SIZE) {
-//				end2 = SIZE - 1;
-//			}
-//			if (is_sorted(start1, end2) == true) {
-//				printf("TID = %d \t Sorted correctly\n", i);
-//			} else {
-//				printf("TID = %d \t Sorting error\n", i);
-//			}
-//		}
-
-		CURR_THREADS /= 2;
+		CURR_THREADS = CURR_THREADS >> 1;
 	}
 
 }
