@@ -98,7 +98,7 @@ void *k_way_merger_single(void *arg) {
 
 	int curr1 = start1, curr2 = start2;
 
-	printf("THREAD = TID = %10d\t\tstart1 = %10d\tend1 = %10d\tstart2 = %10d\tend2 = %10d\tcurr1 = %10d\tcurr2 = %10d\n", myid, start1, end1, start2, end2, curr1, curr2);
+	printf("TID = %10d\t\tstart1 = %10d\tend1 = %10d\tstart2 = %10d\tend2 = %10d\tcurr1 = %10d\tcurr2 = %10d\n", myid, start1, end1, start2, end2, curr1, curr2);
 	int i = start1;
 	while (curr1 <= end1 && curr2 <= end2) {
 		if (data[curr1] <= data[curr2])
@@ -123,7 +123,7 @@ void *k_way_merger_single(void *arg) {
 
 void k_way_single() {
 	CURR_THREADS = NUM_THREADS / 2;
-	while (CURR_THREADS != 1) {
+	while (CURR_THREADS != 0) {
 		for (int i = 0; i < CURR_THREADS; i++) {
 			myid[i] = i;
 			pthread_create(&tid[i], NULL, &k_way_merger_single, &myid[i]);
@@ -199,7 +199,7 @@ int main(int argc, char **argv) {
 	}
 
 	printf("\nTesting total array\n");
-	if (is_sorted(0, SIZE) == true) {
+	if (is_sorted(0, SIZE - 1) == true) {
 		printf("Sorted correctly\n");
 	} else {
 		printf("Sorting error\n");
