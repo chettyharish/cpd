@@ -21,10 +21,13 @@ int myid[NUM_THREADS];
 pthread_t tid[NUM_THREADS];
 
 bool is_sorted(int start, int end) {
+	printf("Testing start = %d\t end = %d\n", start, end);
 	int err_ct = 0;
-	for (int i = start; i < end - 1; i++) {
-		if (data[i] > data[i + 1])
+	for (int i = start; i <= end - 1; i++) {
+		if (data[i] > data[i + 1]) {
+			printf("ERROR : %ld\t%ld\t%d\t%d\n" , data[i] , data[i+1] , i , i + 1);
 			err_ct++;
+		}
 	}
 	if (err_ct > 0) {
 		printf("err_ct = %d\n", err_ct);
@@ -94,39 +97,62 @@ void *k_way_merger_single(void *arg) {
 	}
 
 	int curr1 = start1, curr2 = start2;
+
+	printf("THREAD = TID = %10d\t\tstart1 = %10d\tend1 = %10d\tstart2 = %10d\tend2 = %10d\tcurr1 = %10d\tcurr2 = %10d\n", myid, start1, end1, start2, end2, curr1, curr2);
 	int i = start1;
-	while (curr1 != end1 && curr2 != end2) {
+	while (curr1 <= end1 && curr2 <= end2) {
 		if (data[curr1] <= data[curr2])
 			temp[i++] = data[curr1++];
 		else
 			temp[i++] = data[curr2++];
 	}
 
-	while (curr1 != end1) {
+	while (curr1 <= end1) {
 		temp[i++] = data[curr1++];
 	}
 
-	while (curr2 != end2) {
+	while (curr2 <= end2) {
 		temp[i++] = data[curr2++];
 	}
 
-	for (int i = start1; i < end2; i++)
+	for (int i = start1; i <= end2; i++)
 		data[i] = temp[i];
+//	printf("TID = %10d\t\tstart1 = %10d\tend1 = %10d\tstart2 = %10d\tend2 = %10d\tcurr1 = %10d\tcurr2 = %10d\n", myid, start1, end1, start2, end2, curr1, curr2);
 
 }
 
 void k_way_single() {
-	CURR_THREADS = NUM_THREADS;
+	CURR_THREADS = NUM_THREADS / 2;
 	while (CURR_THREADS != 1) {
-		CURR_THREADS /= 2;
 		for (int i = 0; i < CURR_THREADS; i++) {
 			myid[i] = i;
 			pthread_create(&tid[i], NULL, &k_way_merger_single, &myid[i]);
 		}
 
-		for (int i = 0; i < NUM_THREADS; i++) {
+		for (int i = 0; i < CURR_THREADS; i++) {
 			pthread_join(tid[i], NULL);
 		}
+
+		printf("Starting tests \n");
+		/*For testing*/
+		for (int i = 0; i < CURR_THREADS; i++) {
+			int myid = i;
+			int num_ele = ceil((SIZE * 1.0f) / CURR_THREADS);
+			int start1 = myid * num_ele;
+			int end1 = myid * num_ele + num_ele / 2 - 1;
+			int start2 = myid * num_ele + num_ele / 2;
+			int end2 = (myid + 1) * num_ele - 1;
+			if (end2 >= SIZE) {
+				end2 = SIZE - 1;
+			}
+			if (is_sorted(start1, end2) == true) {
+				printf("TID = %d \t Sorted correctly\n", i);
+			} else {
+				printf("TID = %d \t Sorting error\n", i);
+			}
+		}
+
+		CURR_THREADS /= 2;
 	}
 
 }
@@ -158,7 +184,7 @@ int main(int argc, char **argv) {
 
 	k_way_single();
 
-	printf("Starting tests \n");
+	printf("\nTesting each chunk \n");
 	/*For testing*/
 	for (int i = 0; i < NUM_THREADS; i++) {
 		int myid = i;
@@ -172,7 +198,14 @@ int main(int argc, char **argv) {
 		}
 	}
 
-	printf("Writing back\n");
+	printf("\nTesting total array\n");
+	if (is_sorted(0, SIZE) == true) {
+		printf("Sorted correctly\n");
+	} else {
+		printf("Sorting error\n");
+	}
+
+	printf("\nWriting back\n");
 	for (int i = 0; i < SIZE; i++) {
 		if (i % 1000 == 0) {
 			fprintf(file2, " i = %04d \t num = %ld\n", i, data[i]);
