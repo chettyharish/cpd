@@ -16,8 +16,11 @@
 #include <errno.h>
 
 #define NUM_THREADS 16
-#define SWAP(x,y,lo) if (data[lo+y] < data[lo+x]) { int tmp = data[lo+x]; data[lo+x] = data[lo+y]; data[lo+y] = tmp; }
 
+#define MIN(x, y) (y ^ ((x ^ y) & -(x < y)))
+#define MAX(x, y) (x ^ ((x ^ y) & -(x < y)))
+#define SWAP(x,y , lo) { int tmp = MIN(data[lo+x], data[lo+y]); data[lo+y] = MAX(data[lo+x], data[lo+y]); data[lo+x] = tmp; }
+//#define SWAP(x,y,lo) if (data[lo+y] < data[lo+x]) { int tmp = data[lo+x]; data[lo+x] = data[lo+y]; data[lo+y] = tmp; }
 long int *data;
 long int *temp;
 int CURR_THREADS;
@@ -45,26 +48,20 @@ static __inline__ void sort8(long int * data, int lo) {
 	SWAP(2, 3, lo);
 	SWAP(4, 5, lo);
 	SWAP(6, 7, lo);
-
 	SWAP(0, 2, lo);
 	SWAP(1, 3, lo);
 	SWAP(4, 6, lo);
 	SWAP(5, 7, lo);
-
 	SWAP(1, 2, lo);
 	SWAP(5, 6, lo);
 	SWAP(0, 4, lo);
 	SWAP(3, 7, lo);
-
 	SWAP(1, 5, lo);
 	SWAP(2, 6, lo);
-
 	SWAP(1, 4, lo);
 	SWAP(3, 6, lo);
-
 	SWAP(2, 4, lo);
 	SWAP(3, 5, lo);
-
 	SWAP(3, 4, lo);
 }
 static __inline__ void sort7(long int * data, int lo) {
@@ -148,24 +145,8 @@ void merge(int lo, int mid, int hi) {
 	}
 }
 
-void insertionsort(int lo, int hi) {
-	int temp;
-	for (int i = lo; i <= hi; i++) {
-		for (int j = i; j > lo && data[j] < data[j - 1]; j--) {
-			temp = data[j];
-			data[j] = data[j - 1];
-			data[j - 1] = temp;
-		}
-	}
-}
-
 void mergesort(int lo, int hi) {
 	int num = hi - lo + 1;
-//	if (hi - lo < 7) {
-//		/*Use insertion sort at finer grain level*/
-//		insertionsort(lo, hi);
-//		return;
-//	}
 
 	if (num <= 8) {
 		if (num == 0 || num == 1)
@@ -282,16 +263,29 @@ int main(int argc, char **argv) {
 
 	double start_time, end_time;
 	struct timeval t;
+	char outfile[100];
 	int count = 0;
-	FILE *file = fopen(argv[1], "r");
-	if (!file) {
+
+	if (argc < 3) {
+		printf("./mysort input_file chunk_size \n");
+		exit(1);
+	}
+	FILE *in_file = fopen(argv[1], "r");
+	if (!in_file) {
 		printf("Input file missing\n");
 		exit(0);
 	}
 
-	FILE *file2 = fopen("answer.txt", "w+");
-	fseek(file, 0, SEEK_END);
-	int FSIZE = ftell(file);
+	sprintf(outfile, "temp_lvl%d_num%d", 0, 0);
+
+	FILE *out_file = fopen(outfile, "w+");
+	if (!out_file) {
+		printf("Unable to create output file\n");
+		exit(0);
+	}
+
+	fseek(in_file, 0, SEEK_END);
+	int FSIZE = ftell(in_file);
 	SIZE = FSIZE / 8;
 	data = malloc(sizeof(long int) * SIZE);
 	temp = malloc(sizeof(long int) * SIZE);
@@ -300,42 +294,24 @@ int main(int argc, char **argv) {
 		perror("Malloc :");
 		exit(1);
 	}
-	fseek(file, 0, SEEK_SET);
-	printf("BUFSIZ = %d\t NUM_THREADS = %d\t SIZE = %d\n", BUFSIZ, NUM_THREADS, SIZE);
+	fseek(in_file, 0, SEEK_SET);
+	printf("BUFSIZ = %d\t NUM_THREADS = %d\t SIZE = %d\t NUM_BLK = %ld\n", BUFSIZ, NUM_THREADS, SIZE, 8000000000 / SIZE);
 
 	gettimeofday(&t, NULL);
 	start_time = 1.0e-6 * t.tv_usec + t.tv_sec;
-	printf("Reading data started \n");
 
 	int cond = atoi(argv[2]);
-	if (cond == 1) {
-		while (fread(&data[count++], sizeof(long int), 1, file))
-			;
-	}
 
-	if (cond == 2) {
+	if (cond == 1) {
 
 		int buf_num = BUFSIZ / 8;
-		while (fread(&data[count], sizeof(long int), buf_num, file)) {
+		while (fread(&data[count], sizeof(long int), buf_num, in_file)) {
 			count += buf_num;
 		}
 	}
 
-	if (cond == 3) {
-		int fd = open(argv[1], O_RDONLY);
-		long int *map = mmap(0, FSIZE, PROT_READ, MAP_SHARED, fd, 0);
-		if (map == MAP_FAILED) {
-			perror("mmap : ");
-			exit(1);
-		}
-
-		for (int i = 0; i < SIZE; i++) {
-			data[i] = map[i];
-		}
-	}
-
-	if (cond == 4) {
-		if (fread(data, FSIZE, 1, file) == -1) {
+	if (cond == 2) {
+		if (fread(data, FSIZE, 1, in_file) == -1) {
 			perror("fread");
 			exit(1);
 		}
@@ -347,7 +323,6 @@ int main(int argc, char **argv) {
 
 	gettimeofday(&t, NULL);
 	start_time = 1.0e-6 * t.tv_usec + t.tv_sec;
-	printf("Split Merge Sort started \n");
 	for (int i = 0; i < NUM_THREADS; i++) {
 		myid[i] = i;
 		pthread_create(&tid[i], NULL, &mergesort_caller, &myid[i]);
@@ -362,7 +337,6 @@ int main(int argc, char **argv) {
 
 	gettimeofday(&t, NULL);
 	start_time = 1.0e-6 * t.tv_usec + t.tv_sec;
-	printf("K-Way Merge started \n");
 	k_way_single();
 	gettimeofday(&t, NULL);
 	end_time = 1.0e-6 * t.tv_usec + t.tv_sec;
@@ -370,24 +344,11 @@ int main(int argc, char **argv) {
 
 	gettimeofday(&t, NULL);
 	start_time = 1.0e-6 * t.tv_usec + t.tv_sec;
-//	printf("Testing started \n");
-//	for (int i = 0; i < NUM_THREADS; i++) {
-//		int myid = i;
-//		int num_ele = ceil((SIZE * 1.0f) / NUM_THREADS);
-//		int start = myid * num_ele;
-//		int end = (((myid + 1) * num_ele) < SIZE ? ((myid + 1) * num_ele) : SIZE - 1);
-//		if (is_sorted(start, end) == true) {
-//			printf("TID = %d \t Sorted correctly\n", i);
-//		} else {
-//			printf("TID = %d \t Sorting error\n", i);
-//		}
-//	}
 
-	printf("Testing total array\n");
 	if (is_sorted(0, SIZE - 1) == true) {
-		printf("Sorted correctly\n");
+		printf("Sorted correctly %s\n", outfile);
 	} else {
-		printf("Sorting error\n");
+		printf("Sorting error %s\n", outfile);
 	}
 
 	gettimeofday(&t, NULL);
@@ -396,15 +357,29 @@ int main(int argc, char **argv) {
 
 	gettimeofday(&t, NULL);
 	start_time = 1.0e-6 * t.tv_usec + t.tv_sec;
-	printf("\nWriting back\n");
-	for (int i = 0; i < SIZE; i++) {
-		if (i % 1000 == 0) {
-			fprintf(file2, " i = %04d \t num = %ld\n", i, data[i]);
-			fflush(file2);
+
+	if (cond == 1) {
+		int count = 0;
+		int buf_num = BUFSIZ / 8;
+		while (count < SIZE) {
+			fwrite(&data[count], sizeof(long int), buf_num, out_file);
+			count += buf_num;
+		}
+	}
+
+	if (cond == 2) {
+		if (fwrite(data, FSIZE, 1, out_file) == -1) {
+			perror("fwrite");
+			exit(1);
 		}
 	}
 
 	gettimeofday(&t, NULL);
 	end_time = 1.0e-6 * t.tv_usec + t.tv_sec;
-	printf("Writing completed \t Execution time =  %lf seconds\n", end_time - start_time);
+	printf("Writing completed to file %s\t Execution time =  %lf seconds\n", outfile, end_time - start_time);
+
+	free(data);
+	free(temp);
+	printf("Completed");
+	return 0;
 }
