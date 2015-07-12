@@ -17,14 +17,18 @@
 
 #define NUM_THREADS 16
 
-#define MIN(x, y) (y ^ ((x ^ y) & -(x < y)))
-#define MAX(x, y) (x ^ ((x ^ y) & -(x < y)))
-#define SWAP(x,y , lo) { int tmp = MIN(data[lo+x], data[lo+y]); data[lo+y] = MAX(data[lo+x], data[lo+y]); data[lo+x] = tmp; }
-//#define SWAP(x,y,lo) if (data[lo+y] < data[lo+x]) { int tmp = data[lo+x]; data[lo+x] = data[lo+y]; data[lo+y] = tmp; }
+//#define MIN(x, y) (y ^ ((x ^ y) & -(x < y)))
+//#define MAX(x, y) (x ^ ((x ^ y) & -(x < y)))
+//#define SWAP(x,y , lo) { int tmp = MIN(data[lo+x], data[lo+y]); data[lo+y] = MAX(data[lo+x], data[lo+y]); data[lo+x] = tmp; }
+#define SWAP(x,y,lo) if (data[lo+y] < data[lo+x]) { int tmp = data[lo+x]; data[lo+x] = data[lo+y]; data[lo+y] = tmp; }
+//
 long int *data;
 long int *temp;
 int CURR_THREADS;
+int NUM_BLK;
 int SIZE;
+long int FSIZE;
+int RSIZE;
 int myid[NUM_THREADS];
 pthread_t tid[NUM_THREADS];
 
@@ -32,7 +36,7 @@ bool is_sorted(int start, int end) {
 	int err_ct = 0;
 	for (int i = start; i <= end - 1; i++) {
 		if (data[i] > data[i + 1]) {
-			printf("ERROR : %ld\t%ld\t%d\t%d\n", data[i], data[i + 1], i, i + 1);
+//			printf("ERROR : %ld\t%ld\t%d\t%d\n", data[i], data[i + 1], i, i + 1);
 			err_ct++;
 		}
 	}
@@ -148,42 +152,45 @@ void merge(int lo, int mid, int hi) {
 void mergesort(int lo, int hi) {
 	int num = hi - lo + 1;
 
-	if (num <= 8) {
-		if (num == 0 || num == 1)
-			return;
-		switch (num) {
-		case 2:
-			sort2(data, lo);
-			return;
-		case 3:
-			sort3(data, lo);
-			return;
-		case 4:
-			sort4(data, lo);
-			return;
-		case 5:
-			sort5(data, lo);
-			return;
-		case 6:
-			sort6(data, lo);
-			return;
-		case 7:
-			sort7(data, lo);
-			return;
-		case 8:
-			sort8(temp, lo);
-			return;
-		default:
-			printf("Negative index in mergesort\n");
-			exit(1);
-		}
-	}
+//	if (num <= 8) {
+//		if (num == 0 || num == 1)
+//			return;
+//		switch (num) {
+//		case 2:
+//			sort2(data, lo);
+//			return;
+//		case 3:
+//			sort3(data, lo);
+//			return;
+//		case 4:
+//			sort4(data, lo);
+//			return;
+//		case 5:
+//			sort5(data, lo);
+//			return;
+//		case 6:
+//			sort6(data, lo);
+//			return;
+//		case 7:
+//			sort7(data, lo);
+//			return;
+//		case 8:
+//			sort8(temp, lo);
+//			return;
+//		default:
+//			printf("Negative index in mergesort\n");
+//			exit(1);
+//		}
+//	}
+
+	if (hi <= lo)
+		return;
 
 	int mid = lo + (hi - lo) / 2;
 	mergesort(lo, mid);
 	mergesort(mid + 1, hi);
 	if (!(data[mid] < data[mid + 1])) {
-//		No need to merge if already sorted
+//		Merge only if data is sorted
 		merge(lo, mid, hi);
 	}
 }
@@ -261,13 +268,15 @@ void k_way_single() {
 
 int main(int argc, char **argv) {
 
-	double start_time, end_time;
+	double start_time, end_time, orig_time;
 	struct timeval t;
 	char outfile[100];
-	int count = 0;
+
+	gettimeofday(&t, NULL);
+	orig_time = 1.0e-6 * t.tv_usec + t.tv_sec;
 
 	if (argc < 3) {
-		printf("./mysort input_file chunk_size \n");
+		printf("./mysort input_file num_blk mode \n");
 		exit(1);
 	}
 	FILE *in_file = fopen(argv[1], "r");
@@ -276,17 +285,18 @@ int main(int argc, char **argv) {
 		exit(0);
 	}
 
-	sprintf(outfile, "temp_lvl%d_num%d", 0, 0);
-
-	FILE *out_file = fopen(outfile, "w+");
-	if (!out_file) {
-		printf("Unable to create output file\n");
-		exit(0);
-	}
+	NUM_BLK = atoi(argv[2]);
+	int cond = atoi(argv[3]);
 
 	fseek(in_file, 0, SEEK_END);
-	int FSIZE = ftell(in_file);
-	SIZE = FSIZE / 8;
+	FSIZE = ftell(in_file);
+	fseek(in_file, 0, SEEK_SET);
+	fclose(in_file);
+	SIZE = (FSIZE / 8) / NUM_BLK;
+	RSIZE = FSIZE / NUM_BLK;
+
+	printf("BUFSIZ = %d\t NUM_THREADS = %d\t FSIZE = %ld\t SIZE = %d\t NUM_BLK = %d \t FITTING %f\n", BUFSIZ, NUM_THREADS, FSIZE, SIZE, NUM_BLK, SIZE / NUM_THREADS * 1.0f);
+
 	data = malloc(sizeof(long int) * SIZE);
 	temp = malloc(sizeof(long int) * SIZE);
 
@@ -294,92 +304,238 @@ int main(int argc, char **argv) {
 		perror("Malloc :");
 		exit(1);
 	}
-	fseek(in_file, 0, SEEK_SET);
-	printf("BUFSIZ = %d\t NUM_THREADS = %d\t SIZE = %d\t NUM_BLK = %ld\n", BUFSIZ, NUM_THREADS, SIZE, 8000000000 / SIZE);
 
-	gettimeofday(&t, NULL);
-	start_time = 1.0e-6 * t.tv_usec + t.tv_sec;
+	for (int blk = 0; blk < NUM_BLK; blk++) {
+		printf("\nStarting file : %d\n", blk);
+		sprintf(outfile, "temp_lvl%d_num%d", 0, blk);
 
-	int cond = atoi(argv[2]);
-
-	if (cond == 1) {
-
-		int buf_num = BUFSIZ / 8;
-		while (fread(&data[count], sizeof(long int), buf_num, in_file)) {
-			count += buf_num;
+		FILE *out_file = fopen(outfile, "w+");
+		if (!out_file) {
+			printf("Unable to create output file\n");
+			exit(0);
 		}
-	}
+		gettimeofday(&t, NULL);
+		start_time = 1.0e-6 * t.tv_usec + t.tv_sec;
 
-	if (cond == 2) {
-		if (fread(data, FSIZE, 1, in_file) == -1) {
-			perror("fread");
+		FILE *in_file = fopen(argv[1], "r");
+		fseek(in_file, blk * RSIZE, SEEK_SET);
+		if (cond == 1) {
+			int count = 0;
+			int buf_num = BUFSIZ / 8;
+			bool flag = false;
+			while (flag == false) {
+
+				if (count + buf_num >= SIZE) {
+					flag = true;
+					buf_num = (SIZE - count);
+				}
+				if (fread(&data[count], sizeof(long int), buf_num, in_file) == -1) {
+					perror("fread");
+					exit(1);
+				}
+
+				count += buf_num;
+			}
+		}
+		fclose(in_file);
+
+//		if (cond == 2) {
+//			int val = 0;
+//			if ((val = fread(data, RSIZE, 1, in_file)) == -1) {
+//				perror("fread");
+//				exit(1);
+//			}
+//			printf("Read Bytes %d\n", val);
+//		}
+
+		gettimeofday(&t, NULL);
+		end_time = 1.0e-6 * t.tv_usec + t.tv_sec;
+		printf("Reading data completed \t Execution time =  %lf seconds\n", end_time - start_time);
+
+		gettimeofday(&t, NULL);
+		start_time = 1.0e-6 * t.tv_usec + t.tv_sec;
+		for (int i = 0; i < NUM_THREADS; i++) {
+			myid[i] = i;
+			pthread_create(&tid[i], NULL, &mergesort_caller, &myid[i]);
+		}
+
+		for (int i = 0; i < NUM_THREADS; i++) {
+			pthread_join(tid[i], NULL);
+		}
+		gettimeofday(&t, NULL);
+		end_time = 1.0e-6 * t.tv_usec + t.tv_sec;
+
+		printf("Testing started \n");
+		for (int i = 0; i < NUM_THREADS; i++) {
+			int myid = i;
+			int num_ele = ceil((SIZE * 1.0f) / NUM_THREADS);
+			int start = myid * num_ele;
+			int end = (((myid + 1) * num_ele - 1) < (SIZE - 1)) ? ((myid + 1) * num_ele - 1) : (SIZE - 1);
+			if (is_sorted(start, end) == true) {
+				printf("TID = %d \t Sorted correctly\n", i);
+			} else {
+				printf("TID = %d \t Sorting error\n", i);
+				exit(1);
+			}
+		}
+		printf("Split Merge Sort completed \t Execution time =  %lf seconds\n", end_time - start_time);
+
+		gettimeofday(&t, NULL);
+		start_time = 1.0e-6 * t.tv_usec + t.tv_sec;
+		k_way_single();
+		gettimeofday(&t, NULL);
+		end_time = 1.0e-6 * t.tv_usec + t.tv_sec;
+		printf("K-Way Merge completed \t Execution time =  %lf seconds\n", end_time - start_time);
+
+		gettimeofday(&t, NULL);
+		start_time = 1.0e-6 * t.tv_usec + t.tv_sec;
+
+		printf("Testing started \n");
+		for (int i = 0; i < NUM_THREADS; i++) {
+			int myid = i;
+			int num_ele = ceil((SIZE * 1.0f) / NUM_THREADS);
+			int start = myid * num_ele;
+			int end = (((myid + 1) * num_ele - 1) < (SIZE - 1)) ? ((myid + 1) * num_ele - 1) : (SIZE - 1);
+			if (is_sorted(start, end) == true) {
+				printf("TID = %d \t Sorted correctly\n", i);
+			} else {
+				printf("TID = %d \t Sorting error\n", i);
+				exit(1);
+			}
+		}
+
+		if (is_sorted(0, SIZE - 1) == true) {
+			printf("Sorted correctly %s\n", outfile);
+		} else {
+			printf("Sorting error %s\n", outfile);
 			exit(1);
 		}
-	}
 
-	gettimeofday(&t, NULL);
-	end_time = 1.0e-6 * t.tv_usec + t.tv_sec;
-	printf("Reading data completed \t Execution time =  %lf seconds\n", end_time - start_time);
+		gettimeofday(&t, NULL);
+		end_time = 1.0e-6 * t.tv_usec + t.tv_sec;
+		printf("Testing completed \t Execution time =  %lf seconds\n", end_time - start_time);
 
-	gettimeofday(&t, NULL);
-	start_time = 1.0e-6 * t.tv_usec + t.tv_sec;
-	for (int i = 0; i < NUM_THREADS; i++) {
-		myid[i] = i;
-		pthread_create(&tid[i], NULL, &mergesort_caller, &myid[i]);
-	}
+		gettimeofday(&t, NULL);
+		start_time = 1.0e-6 * t.tv_usec + t.tv_sec;
 
-	for (int i = 0; i < NUM_THREADS; i++) {
-		pthread_join(tid[i], NULL);
-	}
-	gettimeofday(&t, NULL);
-	end_time = 1.0e-6 * t.tv_usec + t.tv_sec;
-	printf("Split Merge Sort completed \t Execution time =  %lf seconds\n", end_time - start_time);
+		if (cond == 1) {
+			int count = 0;
+			int buf_num = BUFSIZ / 8;
+			bool flag = false;
 
-	gettimeofday(&t, NULL);
-	start_time = 1.0e-6 * t.tv_usec + t.tv_sec;
-	k_way_single();
-	gettimeofday(&t, NULL);
-	end_time = 1.0e-6 * t.tv_usec + t.tv_sec;
-	printf("K-Way Merge completed \t Execution time =  %lf seconds\n", end_time - start_time);
+			while (flag == false) {
+				if (count + buf_num >= SIZE) {
+					flag = true;
+					buf_num = (SIZE - count);
+				}
 
-	gettimeofday(&t, NULL);
-	start_time = 1.0e-6 * t.tv_usec + t.tv_sec;
+				if (fwrite(&data[count], sizeof(long int), buf_num, out_file) == -1) {
+					perror("fwrite");
+					exit(1);
+				}
 
-	if (is_sorted(0, SIZE - 1) == true) {
-		printf("Sorted correctly %s\n", outfile);
-	} else {
-		printf("Sorting error %s\n", outfile);
-	}
-
-	gettimeofday(&t, NULL);
-	end_time = 1.0e-6 * t.tv_usec + t.tv_sec;
-	printf("Testing completed \t Execution time =  %lf seconds\n", end_time - start_time);
-
-	gettimeofday(&t, NULL);
-	start_time = 1.0e-6 * t.tv_usec + t.tv_sec;
-
-	if (cond == 1) {
-		int count = 0;
-		int buf_num = BUFSIZ / 8;
-		while (count < SIZE) {
-			fwrite(&data[count], sizeof(long int), buf_num, out_file);
-			count += buf_num;
+				count += buf_num;
+			}
 		}
+
+//		if (cond == 2) {
+//			if (fwrite(data, RSIZE, 1, out_file) == -1) {
+//				perror("fwrite");
+//				exit(1);
+//			}
+//		}
+
+		gettimeofday(&t, NULL);
+		end_time = 1.0e-6 * t.tv_usec + t.tv_sec;
+		printf("Writing completed to file %s\t Execution time =  %lf seconds\n", outfile, end_time - start_time);
+
+		fclose(out_file);
 	}
 
-	if (cond == 2) {
-		if (fwrite(data, FSIZE, 1, out_file) == -1) {
-			perror("fwrite");
-			exit(1);
+	int CURR_BLK = NUM_BLK >> 1;
+	int LVL = 0;
+	while (CURR_BLK != 0) {
+		gettimeofday(&t, NULL);
+		start_time = 1.0e-6 * t.tv_usec + t.tv_sec;
+		for (int i = 0; i < CURR_BLK; i++) {
+			char f1[100];
+			char f2[100];
+			char op[100];
+			sprintf(f1, "temp_lvl%d_num%d", LVL, 2 * i);
+			sprintf(f2, "temp_lvl%d_num%d", LVL, 2 * i + 1);
+			sprintf(op, "temp_lvl%d_num%d", LVL + 1, i);
+			FILE *first_file = fopen(f1, "r");
+			FILE *second_file = fopen(f2, "r");
+			FILE *out_file = fopen(op, "w+");
+
+			int count1 = 1;
+			int count2 = 1;
+			long int num1, num2;
+			bool flag1 = true, flag2 = true;
+			int NUM_ELE = (FSIZE/8) / (NUM_BLK / (LVL + 1));
+			printf("first_file = %s\t second_file = %s\t out_file = %s\t NUM_ELE = %d\n", f1, f2, op, NUM_ELE);
+
+			if (fread(&num1, sizeof(long int), 1, first_file) == -1) {
+				perror("FMERGE fread");
+				exit(1);
+			}
+			if (fread(&num2, sizeof(long int), 1, second_file) == -1) {
+				perror("FMERGE fread");
+				exit(1);
+			}
+
+			while (count1 <= NUM_ELE && count2 <= NUM_ELE) {
+				if (num1 <= num2) {
+					fwrite(&num1, sizeof(long int), 1, out_file);
+					count1++;
+					if (fread(&num1, sizeof(long int), 1, first_file) == -1) {
+						perror("IN FMERGE fread");
+						exit(1);
+					}
+				} else {
+					fwrite(&num2, sizeof(long int), 1, out_file);
+					count2++;
+					if (fread(&num2, sizeof(long int), 1, second_file) == -1) {
+						perror("IN FMERGE fread");
+						exit(1);
+					}
+				}
+			}
+
+			while (count1 <= NUM_ELE) {
+				fwrite(&num1, sizeof(long int), 1, out_file);
+				count1++;
+				if (fread(&num1, sizeof(long int), 1, first_file) == -1) {
+					perror("FMERGE fread");
+					exit(1);
+				}
+			}
+
+			while (count2 <= NUM_ELE) {
+				fwrite(&num2, sizeof(long int), 1, out_file);
+				count2++;
+				if (fread(&num2, sizeof(long int), 1, second_file) == -1) {
+					perror("FMERGE fread");
+					exit(1);
+				}
+			}
+
+			printf("Data transferred count1 = %d \t count2 = %d\n", count1, count2);
 		}
-	}
 
-	gettimeofday(&t, NULL);
-	end_time = 1.0e-6 * t.tv_usec + t.tv_sec;
-	printf("Writing completed to file %s\t Execution time =  %lf seconds\n", outfile, end_time - start_time);
+		gettimeofday(&t, NULL);
+		end_time = 1.0e-6 * t.tv_usec + t.tv_sec;
+
+		printf("Merge LVL = %d Completed\t Execution time =  %lf seconds \n", LVL, end_time - start_time);
+
+		LVL++;
+		CURR_BLK = CURR_BLK >> 1;
+	}
 
 	free(data);
 	free(temp);
-	printf("Completed");
+	gettimeofday(&t, NULL);
+	end_time = 1.0e-6 * t.tv_usec + t.tv_sec;
+	printf("Completed\t Execution time =  %lf seconds \n", end_time - orig_time);
 	return 0;
 }

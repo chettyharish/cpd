@@ -5,7 +5,7 @@ all:
 first: mysort 
 	time ./mysort /home/cop5570a/test0 1
 second: mysort
-	time ./mysort /home/cop5570a/test0 2
+	time ./mysort /home/cop5570a/test0 20 2
 	
 mysort: mysort.c
 	gcc -o mysort mysort.c -Ofast -std=c99 -lm -pedantic -pthread -fopenmp
