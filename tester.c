@@ -67,5 +67,5 @@ int main() {
 		total5 += n5;
 		total6 += n6;
 	}
-	printf("%lld\t%lld\t%lld\t%lld\t%lld\t\t%lld\t\n", total1,total6, total2, total3, total4, total5);
+	printf("orig:%lld\ttemp:%lld\tl0:%lld\tl1:%lld\tl2:%lld\t\tl3:%lld\t\n", total1,total6, total2, total3, total4, total5);
 }

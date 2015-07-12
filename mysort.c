@@ -228,9 +228,9 @@ void *mergesort_caller(void *arg) {
 	int myid = *(int *) arg;
 	int num_ele = ceil((SIZE * 1.0f) / NUM_THREADS);
 	int start = myid * num_ele;
-	int end = (myid + 1) * num_ele - 1;
-//	int end = (((myid + 1) * num_ele - 1) < (SIZE - 1)) ? ((myid + 1) * num_ele - 1) : (SIZE - 1);
-	printf("Merge start = %10d  end = %10d\n", start, end);
+//	int end = (myid + 1) * num_ele - 1;
+	int end = (((myid + 1) * num_ele - 1) < (SIZE - 1)) ? ((myid + 1) * num_ele - 1) : (SIZE - 1);
+//	printf("Merge start = %10d  end = %10d\n", start, end);
 	mergesort(start, end);
 
 }
@@ -397,24 +397,19 @@ int main(int argc, char **argv) {
 		}
 		gettimeofday(&t, NULL);
 		end_time = 1.0e-6 * t.tv_usec + t.tv_sec;
-
-		for (int i = 0; i < SIZE; i++) {
-			fwrite(&data[i], sizeof(long int), 1, temp_file);
+		printf("Testing started \n");
+		for (int i = 0; i < NUM_THREADS; i++) {
+			int myid = i;
+			int num_ele = ceil((SIZE * 1.0f) / NUM_THREADS);
+			int start = myid * num_ele;
+			int end = (((myid + 1) * num_ele - 1) < (SIZE - 1)) ? ((myid + 1) * num_ele - 1) : (SIZE - 1);
+			if (is_sorted(start, end) == true) {
+				printf("TID = %d \t Sorted correctly\n", i);
+			} else {
+				printf("TID = %d \t Sorting error\n", i);
+				exit(1);
+			}
 		}
-
-//		printf("Testing started \n");
-//		for (int i = 0; i < NUM_THREADS; i++) {
-//			int myid = i;
-//			int num_ele = ceil((SIZE * 1.0f) / NUM_THREADS);
-//			int start = myid * num_ele;
-//			int end = (((myid + 1) * num_ele - 1) < (SIZE - 1)) ? ((myid + 1) * num_ele - 1) : (SIZE - 1);
-//			if (is_sorted(start, end) == true) {
-//				printf("TID = %d \t Sorted correctly\n", i);
-//			} else {
-//				printf("TID = %d \t Sorting error\n", i);
-//				exit(1);
-//			}
-//		}
 		printf("Split Merge Sort completed \t Execution time =  %lf seconds\n", end_time - start_time);
 
 		gettimeofday(&t, NULL);
@@ -427,7 +422,7 @@ int main(int argc, char **argv) {
 		gettimeofday(&t, NULL);
 		start_time = 1.0e-6 * t.tv_usec + t.tv_sec;
 
-//		printf("Testing started \n");
+		printf("Testing started \n");
 //		for (int i = 0; i < NUM_THREADS; i++) {
 //			int myid = i;
 //			int num_ele = ceil((SIZE * 1.0f) / NUM_THREADS);
@@ -456,41 +451,42 @@ int main(int argc, char **argv) {
 		start_time = 1.0e-6 * t.tv_usec + t.tv_sec;
 
 		if (cond == 1) {
-//			int count = 0;
-//			int buf_num = BUFSIZ / 8;
-//			bool flag = false;
-//
-//			while (flag == false) {
-//				if (count + buf_num >= SIZE) {
-//					flag = true;
-//					buf_num = (SIZE - count);
-//				}
-//
-//				if (fwrite(&data[count], sizeof(long int), buf_num, out_file) == -1) {
-//					perror("fwrite");
-//					exit(1);
-//				}
-//
-//				count += buf_num;
-//			}
-			for (int i = 0; i < SIZE; i++) {
-				fwrite(&data[i], sizeof(long int), 1, out_file);
+			int count = 0;
+			int buf_num = BUFSIZ / 8;
+			bool flag = false;
+
+			while (flag == false) {
+				if (count + buf_num >= SIZE) {
+					flag = true;
+					buf_num = (SIZE - count);
+				}
+
+				if (fwrite(&data[count], sizeof(long int), buf_num, out_file) == -1) {
+					perror("fwrite");
+					exit(1);
+				}
+
+				count += buf_num;
 			}
+//			for (int i = 0; i < SIZE; i++) {
+//				fwrite(&data[i], sizeof(long int), 1, out_file);
+//			}
 
 		}
 
-//		if (cond == 2) {
-//			if (fwrite(data, RSIZE, 1, out_file) == -1) {
-//				perror("fwrite");
-//				exit(1);
-//			}
-//		}
+
+		for (int i = 0; i < SIZE; i++) {
+			fwrite(&data[i], sizeof(long int), 1, temp_file);
+		}
 
 		gettimeofday(&t, NULL);
 		end_time = 1.0e-6 * t.tv_usec + t.tv_sec;
 		printf("Writing completed to file %s\t Execution time =  %lf seconds\n", outfile, end_time - start_time);
 
 	}
+
+
+
 
 	int CURR_BLK = NUM_BLK >> 1;
 	int LVL = 0;
