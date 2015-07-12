@@ -22,9 +22,11 @@ Active Games
 
 Game Information:
 Player1
+Player1_color
 Player2
+Player1_color
 Observers
-Slots Marked my Player1
-Slots Marked my Player2
+Slots Marked black
+Slots Marked white
 Unmarked Slots
 
