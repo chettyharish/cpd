@@ -228,8 +228,11 @@ void *mergesort_caller(void *arg) {
 	int myid = *(int *) arg;
 	int num_ele = ceil((SIZE * 1.0f) / NUM_THREADS);
 	int start = myid * num_ele;
-	int end = (((myid + 1) * num_ele - 1) < (SIZE - 1)) ? ((myid + 1) * num_ele - 1) : (SIZE - 1);
+	int end = (myid + 1) * num_ele - 1;
+//	int end = (((myid + 1) * num_ele - 1) < (SIZE - 1)) ? ((myid + 1) * num_ele - 1) : (SIZE - 1);
+	printf("Merge start = %10d  end = %10d\n", start, end);
 	mergesort(start, end);
+
 }
 
 int find_min(long int *vals) {
@@ -332,15 +335,21 @@ int main(int argc, char **argv) {
 	SIZE = (FSIZE / 8) / NUM_BLK;
 	RSIZE = FSIZE / NUM_BLK;
 
-	printf("BUFSIZ = %d\t NUM_THREADS = %d\t FSIZE = %ld\t SIZE = %d\t NUM_BLK = %d \t FITTING %f\n", BUFSIZ, NUM_THREADS, FSIZE, SIZE, NUM_BLK, (SIZE* 1.0f) / (NUM_THREADS * 1.0f));
+	printf("RSIZE = %d \tBUFSIZ = %d\t NUM_THREADS = %d\t FSIZE = %ld\t SIZE = %d\t NUM_BLK = %d \t FITTING %f\n", RSIZE, BUFSIZ, NUM_THREADS, FSIZE, SIZE, NUM_BLK,
+			(SIZE * 1.0f) / (NUM_THREADS * 1.0f));
 
 	data = malloc(sizeof(long int) * SIZE);
 	temp = malloc(sizeof(long int) * SIZE);
 
+	for (int i = 0; i < SIZE; i++) {
+		data[i] = -100;
+		temp[i] = -100;
+	}
 	if (data == NULL && temp == NULL) {
 		perror("Malloc :");
 		exit(1);
 	}
+	FILE *temp_file = fopen("temp", "w+");
 
 	for (int blk = 0; blk < NUM_BLK; blk++) {
 		gettimeofday(&t, NULL);
@@ -365,17 +374,12 @@ int main(int argc, char **argv) {
 
 				count += buf_num;
 			}
+
+//			for (int i = 0; i < SIZE; i++) {
+//				int ret = fread(&data[i], sizeof(long int), 1, in_file);
+//			}
 		}
 		fclose(in_file);
-
-//		if (cond == 2) {
-//			int val = 0;
-//			if ((val = fread(data, RSIZE, 1, in_file)) == -1) {
-//				perror("fread");
-//				exit(1);
-//			}
-//			printf("Read Bytes %d\n", val);
-//		}
 
 		gettimeofday(&t, NULL);
 		end_time = 1.0e-6 * t.tv_usec + t.tv_sec;
@@ -394,19 +398,23 @@ int main(int argc, char **argv) {
 		gettimeofday(&t, NULL);
 		end_time = 1.0e-6 * t.tv_usec + t.tv_sec;
 
-		printf("Testing started \n");
-		for (int i = 0; i < NUM_THREADS; i++) {
-			int myid = i;
-			int num_ele = ceil((SIZE * 1.0f) / NUM_THREADS);
-			int start = myid * num_ele;
-			int end = (((myid + 1) * num_ele - 1) < (SIZE - 1)) ? ((myid + 1) * num_ele - 1) : (SIZE - 1);
-			if (is_sorted(start, end) == true) {
-				printf("TID = %d \t Sorted correctly\n", i);
-			} else {
-				printf("TID = %d \t Sorting error\n", i);
-				exit(1);
-			}
+		for (int i = 0; i < SIZE; i++) {
+			fwrite(&data[i], sizeof(long int), 1, temp_file);
 		}
+
+//		printf("Testing started \n");
+//		for (int i = 0; i < NUM_THREADS; i++) {
+//			int myid = i;
+//			int num_ele = ceil((SIZE * 1.0f) / NUM_THREADS);
+//			int start = myid * num_ele;
+//			int end = (((myid + 1) * num_ele - 1) < (SIZE - 1)) ? ((myid + 1) * num_ele - 1) : (SIZE - 1);
+//			if (is_sorted(start, end) == true) {
+//				printf("TID = %d \t Sorted correctly\n", i);
+//			} else {
+//				printf("TID = %d \t Sorting error\n", i);
+//				exit(1);
+//			}
+//		}
 		printf("Split Merge Sort completed \t Execution time =  %lf seconds\n", end_time - start_time);
 
 		gettimeofday(&t, NULL);
@@ -419,19 +427,19 @@ int main(int argc, char **argv) {
 		gettimeofday(&t, NULL);
 		start_time = 1.0e-6 * t.tv_usec + t.tv_sec;
 
-		printf("Testing started \n");
-		for (int i = 0; i < NUM_THREADS; i++) {
-			int myid = i;
-			int num_ele = ceil((SIZE * 1.0f) / NUM_THREADS);
-			int start = myid * num_ele;
-			int end = (((myid + 1) * num_ele - 1) < (SIZE - 1)) ? ((myid + 1) * num_ele - 1) : (SIZE - 1);
-			if (is_sorted(start, end) == true) {
-				printf("TID = %d \t Sorted correctly\n", i);
-			} else {
-				printf("TID = %d \t Sorting error\n", i);
-				exit(1);
-			}
-		}
+//		printf("Testing started \n");
+//		for (int i = 0; i < NUM_THREADS; i++) {
+//			int myid = i;
+//			int num_ele = ceil((SIZE * 1.0f) / NUM_THREADS);
+//			int start = myid * num_ele;
+//			int end = (((myid + 1) * num_ele - 1) < (SIZE - 1)) ? ((myid + 1) * num_ele - 1) : (SIZE - 1);
+//			if (is_sorted(start, end) == true) {
+//				printf("TID = %d \t Sorted correctly\n", i);
+//			} else {
+//				printf("TID = %d \t Sorting error\n", i);
+//				exit(1);
+//			}
+//		}
 
 		if (is_sorted(0, SIZE - 1) == true) {
 			printf("Sorted correctly %s\n", outfile);
@@ -448,23 +456,27 @@ int main(int argc, char **argv) {
 		start_time = 1.0e-6 * t.tv_usec + t.tv_sec;
 
 		if (cond == 1) {
-			int count = 0;
-			int buf_num = BUFSIZ / 8;
-			bool flag = false;
-
-			while (flag == false) {
-				if (count + buf_num >= SIZE) {
-					flag = true;
-					buf_num = (SIZE - count);
-				}
-
-				if (fwrite(&data[count], sizeof(long int), buf_num, out_file) == -1) {
-					perror("fwrite");
-					exit(1);
-				}
-
-				count += buf_num;
+//			int count = 0;
+//			int buf_num = BUFSIZ / 8;
+//			bool flag = false;
+//
+//			while (flag == false) {
+//				if (count + buf_num >= SIZE) {
+//					flag = true;
+//					buf_num = (SIZE - count);
+//				}
+//
+//				if (fwrite(&data[count], sizeof(long int), buf_num, out_file) == -1) {
+//					perror("fwrite");
+//					exit(1);
+//				}
+//
+//				count += buf_num;
+//			}
+			for (int i = 0; i < SIZE; i++) {
+				fwrite(&data[i], sizeof(long int), 1, out_file);
 			}
+
 		}
 
 //		if (cond == 2) {
@@ -480,158 +492,94 @@ int main(int argc, char **argv) {
 
 	}
 
-//	int CURR_BLK = NUM_BLK >> 1;
-//	int LVL = 0;
-//	while (CURR_BLK != 0) {
-//		gettimeofday(&t, NULL);
-//		start_time = 1.0e-6 * t.tv_usec + t.tv_sec;
-//		for (int i = 0; i < CURR_BLK; i++) {
-//			char f1[100];
-//			char f2[100];
-//			char op[100];
-//			sprintf(f1, "temp_lvl%d_num%d", LVL, 2 * i);
-//			sprintf(f2, "temp_lvl%d_num%d", LVL, 2 * i + 1);
-//			sprintf(op, "temp_lvl%d_num%d", LVL + 1, i);
-//			FILE *first_file = fopen(f1, "r");
-//			FILE *second_file = fopen(f2, "r");
-//			FILE *out_file = fopen(op, "w+");
-//
-//			int count1 = 1;
-//			int count2 = 1;
-//			long int num1, num2;
-//			bool flag1 = true, flag2 = true;
-//			int NUM_ELE = (FSIZE/8) / (NUM_BLK / (LVL + 1));
-//			printf("first_file = %s\t second_file = %s\t out_file = %s\t NUM_ELE = %d\n", f1, f2, op, NUM_ELE);
-//
-//			if (fread(&num1, sizeof(long int), 1, first_file) == -1) {
-//				perror("FMERGE fread");
-//				exit(1);
-//			}
-//			if (fread(&num2, sizeof(long int), 1, second_file) == -1) {
-//				perror("FMERGE fread");
-//				exit(1);
-//			}
-//
-//			while (count1 <= NUM_ELE && count2 <= NUM_ELE) {
-//				if (num1 <= num2) {
-//					fwrite(&num1, sizeof(long int), 1, out_file);
-//					count1++;
-//					if (fread(&num1, sizeof(long int), 1, first_file) == -1) {
-//						perror("IN FMERGE fread");
-//						exit(1);
-//					}
-//				} else {
-//					fwrite(&num2, sizeof(long int), 1, out_file);
-//					count2++;
-//					if (fread(&num2, sizeof(long int), 1, second_file) == -1) {
-//						perror("IN FMERGE fread");
-//						exit(1);
-//					}
-//				}
-//			}
-//
-//			while (count1 <= NUM_ELE) {
-//				fwrite(&num1, sizeof(long int), 1, out_file);
-//				count1++;
-//				if (fread(&num1, sizeof(long int), 1, first_file) == -1) {
-//					perror("FMERGE fread");
-//					exit(1);
-//				}
-//			}
-//
-//			while (count2 <= NUM_ELE) {
-//				fwrite(&num2, sizeof(long int), 1, out_file);
-//				count2++;
-//				if (fread(&num2, sizeof(long int), 1, second_file) == -1) {
-//					perror("FMERGE fread");
-//					exit(1);
-//				}
-//			}
-//
-//			printf("Data transferred count1 = %d \t count2 = %d\n", count1, count2);
-//		}
+	int CURR_BLK = NUM_BLK >> 1;
+	int LVL = 0;
+	while (CURR_BLK != 0) {
+		gettimeofday(&t, NULL);
+		start_time = 1.0e-6 * t.tv_usec + t.tv_sec;
+		char f1[100];
+		char f2[100];
+		char op[100];
+		sprintf(f1, "temp_lvl%d", LVL);
+		sprintf(f2, "temp_lvl%d", LVL);
+		sprintf(op, "temp_lvl%d", LVL + 1);
+		FILE *first_file = fopen(f1, "r");
+		FILE *second_file = fopen(f2, "r");
+		FILE *out_file = fopen(op, "w+");
+		int NUM_ELE = (FSIZE / 8) / (NUM_BLK / (LVL + 1));
 
-//	int CURR_BLK = NUM_BLK >> 1;
-//	int LVL = 0;
-//	while (CURR_BLK != 0) {
-//		gettimeofday(&t, NULL);
-//		start_time = 1.0e-6 * t.tv_usec + t.tv_sec;
-//		for (int i = 0; i < CURR_BLK; i++) {
-//			char f1[100];
-//			char f2[100];
-//			char op[100];
-//			sprintf(f1, "temp_lvl%d_num%d", LVL, 2 * i);
-//			sprintf(f2, "temp_lvl%d_num%d", LVL, 2 * i + 1);
-//			sprintf(op, "temp_lvl%d_num%d", LVL + 1, i);
-//			FILE *first_file = fopen(f1, "r");
-//			FILE *second_file = fopen(f2, "r");
-//			FILE *out_file = fopen(op, "w+");
-//
-//			int count1 = 1;
-//			int count2 = 1;
-//			long int num1, num2;
-//			bool flag1 = true, flag2 = true;
-//			int NUM_ELE = (FSIZE / 8) / (NUM_BLK / (LVL + 1));
-//			printf("first_file = %s\t second_file = %s\t out_file = %s\t NUM_ELE = %d\n", f1, f2, op, NUM_ELE);
-//
-//			if (fread(&num1, sizeof(long int), 1, first_file) == -1) {
-//				perror("FMERGE fread");
-//				exit(1);
-//			}
-//			if (fread(&num2, sizeof(long int), 1, second_file) == -1) {
-//				perror("FMERGE fread");
-//				exit(1);
-//			}
-//
-//			while (count1 <= NUM_ELE && count2 <= NUM_ELE) {
-//				if (num1 <= num2) {
-//					fwrite(&num1, sizeof(long int), 1, out_file);
-//					count1++;
-//					if (fread(&num1, sizeof(long int), 1, first_file) == -1) {
-//						perror("IN FMERGE fread");
-//						exit(1);
-//					}
-//				} else {
-//					fwrite(&num2, sizeof(long int), 1, out_file);
-//					count2++;
-//					if (fread(&num2, sizeof(long int), 1, second_file) == -1) {
-//						perror("IN FMERGE fread");
-//						exit(1);
-//					}
-//				}
-//			}
-//
-//			while (count1 <= NUM_ELE) {
-//				fwrite(&num1, sizeof(long int), 1, out_file);
-//				count1++;
-//				if (fread(&num1, sizeof(long int), 1, first_file) == -1) {
-//					perror("FMERGE fread");
-//					exit(1);
-//				}
-//			}
-//
-//			while (count2 <= NUM_ELE) {
-//				fwrite(&num2, sizeof(long int), 1, out_file);
-//				count2++;
-//				if (fread(&num2, sizeof(long int), 1, second_file) == -1) {
-//					perror("FMERGE fread");
-//					exit(1);
-//				}
-//			}
-//
-//			printf("Data transferred count1 = %d \t count2 = %d\n", count1, count2);
-//		}
-//
-//
-//
-//		gettimeofday(&t, NULL);
-//		end_time = 1.0e-6 * t.tv_usec + t.tv_sec;
-//
-//		printf("Merge LVL = %d Completed\t Execution time =  %lf seconds \n", LVL, end_time - start_time);
-//
-//		LVL++;
-//		CURR_BLK = CURR_BLK >> 1;
-//	}
+		for (int i = 0; i < CURR_BLK; i++) {
+			int count1 = 1;
+			int count2 = 1;
+			long int num1, num2;
+			count1 = 1;
+			count2 = 1;
+			fseek(first_file, (i) * NUM_ELE * 8, SEEK_SET);
+			fseek(second_file, (i + 1) * NUM_ELE * 8, SEEK_SET);
+			fseek(out_file, (i) * NUM_ELE * 8 * 2, SEEK_SET);
+			printf("first_file = %s\t second_file = %s\t out_file = %s\t NUM_ELE = %d\n", f1, f2, op, NUM_ELE);
+
+			if (fread(&num1, sizeof(long int), 1, first_file) == -1) {
+				perror("FMERGE fread");
+				exit(1);
+			}
+			if (fread(&num2, sizeof(long int), 1, second_file) == -1) {
+				perror("FMERGE fread");
+				exit(1);
+			}
+
+			while (count1 <= NUM_ELE && count2 <= NUM_ELE) {
+				if (num1 <= num2) {
+					fwrite(&num1, sizeof(long int), 1, out_file);
+					count1++;
+					if (fread(&num1, sizeof(long int), 1, first_file) == -1) {
+						perror("IN FMERGE fread");
+						exit(1);
+					}
+				} else {
+					fwrite(&num2, sizeof(long int), 1, out_file);
+					count2++;
+					if (fread(&num2, sizeof(long int), 1, second_file) == -1) {
+						perror("IN FMERGE fread");
+						exit(1);
+					}
+				}
+			}
+
+			while (count1 <= NUM_ELE) {
+				fwrite(&num1, sizeof(long int), 1, out_file);
+				count1++;
+				if (fread(&num1, sizeof(long int), 1, first_file) == -1) {
+					perror("FMERGE fread");
+					exit(1);
+				}
+			}
+
+			while (count2 <= NUM_ELE) {
+				fwrite(&num2, sizeof(long int), 1, out_file);
+				count2++;
+				if (fread(&num2, sizeof(long int), 1, second_file) == -1) {
+					perror("FMERGE fread");
+					exit(1);
+				}
+			}
+
+			printf("Data transferred count1 = %d \t count2 = %d\n", count1, count2);
+		}
+
+		fclose(first_file);
+		fclose(second_file);
+		fclose(out_file);
+
+		gettimeofday(&t, NULL);
+		end_time = 1.0e-6 * t.tv_usec + t.tv_sec;
+
+		printf("Merge LVL = %d Completed\t Execution time =  %lf seconds \n", LVL, end_time - start_time);
+
+		LVL++;
+		CURR_BLK = CURR_BLK >> 1;
+	}
+
 
 	free(data);
 	free(temp);
