@@ -354,6 +354,7 @@ int main(int argc, char **argv) {
 	FILE *temp2 = fopen("temp2", "w+");
 	FILE *temp3 = fopen("temp3", "w+");
 
+
 	for (int blk = 0; blk < NUM_BLK; blk++) {
 		gettimeofday(&t, NULL);
 		start_time = 1.0e-6 * t.tv_usec + t.tv_sec;
