@@ -21,5 +21,5 @@ mysort: mysort.c
 	gcc -o mysort mysort.c -Ofast -std=c99 -lm -pedantic -pthread -fopenmp
 
 clean:
-	rm -f bin_to_ascii splitter tester mysortold mysort temp*
+	rm -f bin_to_ascii splitter tester mysortold mysort mysortbasic temp*
 

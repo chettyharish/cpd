@@ -301,8 +301,6 @@ long int read_chunk(FILE *r_file, int pos, int CSIZE, int buf_num, long int END)
 
 	long int start = ftell(r_file) / 8;
 	long int curr = ftell(r_file) / 8;
-	if (start == END)
-		return -1;
 	int count = 0;
 	bool flag = false;
 	while (true) {
@@ -311,7 +309,6 @@ long int read_chunk(FILE *r_file, int pos, int CSIZE, int buf_num, long int END)
 			return ((ftell(r_file) / 8) - start);
 		}
 		if (curr + buf_num >= END) {
-			printf("Inside\n");
 			flag = true;
 			buf_num = (END - curr);
 		}
@@ -549,9 +546,53 @@ int main(int argc, char **argv) {
 			long int end1 = read_chunk(first_file, start1, CSIZE, buf_num, END1);
 			long int end2 = read_chunk(second_file, start2, CSIZE, buf_num, END2);
 
-			while (true) {
-				if (data[start1] <= data[start2]) {
-//					printf("w_count = %ld\tstart1 = %ld\tstart2 = %ld , end1 = %ld\t , end2 = %ld \t\n", w_count, r_count1, r_count2, end1, end2);
+			if (CURR_BLK != 1) {
+				while (true) {
+					if (data[start1] <= data[start2]) {
+						temp[w_count++] = data[start1];
+						start1++;
+						r_count1++;
+						total_count1++;
+						if (r_count1 == end1) {
+							if (end1 < CSIZE) {
+								/*All chunks consumed by 1*/
+								break;
+							} else {
+								/*Read next chunk*/
+								start1 = 0;
+								r_count1 = 0;
+								end1 = read_chunk(first_file, start1, CSIZE, buf_num, END1);
+							}
+						}
+					} else {
+						temp[w_count++] = data[start2];
+						start2++;
+						r_count2++;
+						total_count2++;
+						if (r_count2 == end2) {
+							if (end2 < CSIZE) {
+								/*All chunks consumed by 2*/
+								break;
+							} else {
+								/*Read next chunk*/
+
+								start2 = CSIZE;
+								r_count2 = 0;
+
+								end2 = read_chunk(second_file, start2, CSIZE, buf_num, END2);
+
+							}
+						}
+					}
+
+					if (w_count == CSIZE * 2) {
+						/*temp has two sorted chunk so write it back*/
+						write_chunk(op_file, w_count, CSIZE, buf_num, END3);
+						w_count = 0;
+					}
+				}
+
+				while (total_count1 < NUM_ELE) {
 					temp[w_count++] = data[start1];
 					start1++;
 					r_count1++;
@@ -559,25 +600,24 @@ int main(int argc, char **argv) {
 					if (r_count1 == end1) {
 						if (end1 < CSIZE) {
 							/*All chunks consumed by 1*/
-//							printf("Exiting via 1st\n");
 							break;
 						} else {
 							/*Read next chunk*/
-//							printf("First read_chunk\n");
-//							printf("w_count = %ld\tstart1 = %ld\tstart2 = %ld , end1 = %ld\t end2 = %ld \t rcount1 = %ld \t rcount2 = %ld \t\n", w_count, start1, start2, end1, end2, r_count1,
-//									r_count2);
-
 							start1 = 0;
 							r_count1 = 0;
 
 							end1 = read_chunk(first_file, start1, CSIZE, buf_num, END1);
-
-//							printf("w_count = %ld\tstart1 = %ld\tstart2 = %ld , end1 = %ld\t end2 = %ld \t rcount1 = %ld \t rcount2 = %ld \t\n", w_count, start1, start2, end1, end2, r_count1,
-//									r_count2);
-
 						}
 					}
-				} else {
+
+					if (w_count == CSIZE * 2) {
+						/*temp has two sorted chunk so write it back*/
+						write_chunk(op_file, w_count, CSIZE, buf_num, END3);
+						w_count = 0;
+					}
+				}
+
+				while (total_count2 < NUM_ELE) {
 					temp[w_count++] = data[start2];
 					start2++;
 					r_count2++;
@@ -585,95 +625,113 @@ int main(int argc, char **argv) {
 					if (r_count2 == end2) {
 						if (end2 < CSIZE) {
 							/*All chunks consumed by 2*/
-//							printf("Exiting via 2nd\n");
 							break;
 						} else {
 							/*Read next chunk*/
-//							printf("Second read_chunk\n");
-//							printf("w_count = %ld\tstart1 = %ld\tstart2 = %ld , end1 = %ld\t end2 = %ld \t rcount1 = %ld \t rcount2 = %ld \t\n", w_count, start1, start2, end1, end2, r_count1,
-//									r_count2);
-
 							start2 = CSIZE;
 							r_count2 = 0;
-
 							end2 = read_chunk(second_file, start2, CSIZE, buf_num, END2);
 
-//							printf("w_count = %ld\tstart1 = %ld\tstart2 = %ld , end1 = %ld\t end2 = %ld \t rcount1 = %ld \t rcount2 = %ld \t\n", w_count, start1, start2, end1, end2, r_count1,
-//									r_count2);
+						}
+					}
+					if (w_count == CSIZE * 2) {
+						/*temp has two sorted chunk so write it back*/
+						write_chunk(op_file, w_count, CSIZE, buf_num, END3);
+						w_count = 0;
+					}
+				}
+
+				if (w_count > 0) {
+					write_chunk(op_file, w_count, CSIZE, buf_num, END3);
+
+				}
+			} else {
+				long int all_count = 0;
+				while (true) {
+					if (data[start1] <= data[start2]) {
+						if (all_count % 1000 == 0)
+							fprintf(op_file, "%10d\t%20ld\n", (int) all_count, data[start1]);
+						start1++;
+						r_count1++;
+						all_count++;
+						total_count1++;
+						if (r_count1 == end1) {
+							if (end1 < CSIZE) {
+								/*All chunks consumed by 1*/
+								break;
+							} else {
+								/*Read next chunk*/
+								start1 = 0;
+								r_count1 = 0;
+
+								end1 = read_chunk(first_file, start1, CSIZE, buf_num, END1);
+
+							}
+						}
+					} else {
+						if (all_count % 1000 == 0)
+							fprintf(op_file, "%10d\t%20ld\n", (int) all_count, data[start2]);
+						start2++;
+						r_count2++;
+						all_count++;
+						total_count2++;
+						if (r_count2 == end2) {
+							if (end2 < CSIZE) {
+								/*All chunks consumed by 2*/
+								break;
+							} else {
+								/*Read next chunk*/
+								start2 = CSIZE;
+								r_count2 = 0;
+
+								end2 = read_chunk(second_file, start2, CSIZE, buf_num, END2);
+
+							}
+						}
+					}
+				}
+
+				while (total_count1 < NUM_ELE) {
+					if (all_count % 1000 == 0)
+						fprintf(op_file, "%10d\t%20ld\n", (int) all_count, data[start1]);
+					start1++;
+					r_count1++;
+					all_count++;
+					total_count1++;
+					if (r_count1 == end1) {
+						if (end1 < CSIZE) {
+							/*All chunks consumed by 1*/
+							break;
+						} else {
+							/*Read next chunk*/start1 = 0;
+							r_count1 = 0;
+
+							end1 = read_chunk(first_file, start1, CSIZE, buf_num, END1);
 
 						}
 					}
 				}
 
-				if (w_count == CSIZE * 2) {
-					/*temp has two sorted chunk so write it back*/
-					write_chunk(op_file, w_count, CSIZE, buf_num, END3);
-					w_count = 0;
-				}
-			}
+				while (total_count2 < NUM_ELE) {
+					if (all_count % 1000 == 0)
+						fprintf(op_file, "%10d\t%20ld\n", (int) all_count, data[start2]);
+					start2++;
+					r_count2++;
+					all_count++;
+					total_count2++;
+					if (r_count2 == end2) {
+						if (end2 < CSIZE) {
+							/*All chunks consumed by 2*/
+							break;
+						} else {
+							/*Read next chunk*/
+							start2 = CSIZE;
+							r_count2 = 0;
+							end2 = read_chunk(second_file, start2, CSIZE, buf_num, END2);
 
-			while (total_count1 < NUM_ELE) {
-				temp[w_count++] = data[start1];
-				start1++;
-				r_count1++;
-				total_count1++;
-				if (r_count1 == end1) {
-//					printf("OUT First read_chunk\n");
-					if (end1 < CSIZE) {
-						/*All chunks consumed by 1*/
-						break;
-					} else {
-						/*Read next chunk*/
-//						printf("w_count = %ld\tstart1 = %ld\tstart2 = %ld , end1 = %ld\t end2 = %ld \t rcount1 = %ld \t rcount2 = %ld \t\n", w_count, start1, start2, end1, end2, r_count1, r_count2);
-
-						start1 = 0;
-						r_count1 = 0;
-
-						end1 = read_chunk(first_file, start1, CSIZE, buf_num, END1);
-
-//						printf("w_count = %ld\tstart1 = %ld\tstart2 = %ld , end1 = %ld\t end2 = %ld \t rcount1 = %ld \t rcount2 = %ld \t\n", w_count, start1, start2, end1, end2, r_count1, r_count2);
-
+						}
 					}
 				}
-
-				if (w_count == CSIZE * 2) {
-					/*temp has two sorted chunk so write it back*/
-					write_chunk(op_file, w_count, CSIZE, buf_num, END3);
-					w_count = 0;
-				}
-			}
-			while (total_count2 < NUM_ELE) {
-				temp[w_count++] = data[start2];
-				start2++;
-				r_count2++;
-				total_count2++;
-				if (r_count2 == end2) {
-//					printf("OUT Second read_chunk\n");
-					if (end2 < CSIZE) {
-						/*All chunks consumed by 2*/
-						break;
-					} else {
-						/*Read next chunk*/
-//						printf("w_count = %ld\tstart1 = %ld\tstart2 = %ld , end1 = %ld\t end2 = %ld \t rcount1 = %ld \t rcount2 = %ld \t\n", w_count, start1, start2, end1, end2, r_count1, r_count2);
-
-						start2 = CSIZE;
-						r_count2 = 0;
-						end2 = read_chunk(second_file, start2, CSIZE, buf_num, END2);
-
-//						printf("w_count = %ld\tstart1 = %ld\tstart2 = %ld , end1 = %ld\t end2 = %ld \t rcount1 = %ld \t rcount2 = %ld \t\n", w_count, start1, start2, end1, end2, r_count1, r_count2);
-
-					}
-				}
-				if (w_count == CSIZE * 2) {
-					/*temp has two sorted chunk so write it back*/
-					write_chunk(op_file, w_count, CSIZE, buf_num, END3);
-					w_count = 0;
-				}
-			}
-
-			if (w_count > 0) {
-				write_chunk(op_file, w_count, CSIZE, buf_num, END3);
-
 			}
 			printf("EN : first_file = %15ld\t second_file = %15ld\t out_file = %15ld\t NUM_ELE = %ld\n", ftell(first_file), ftell(second_file), ftell(op_file), NUM_ELE);
 
@@ -689,21 +747,21 @@ int main(int argc, char **argv) {
 		printf("Merge LVL = %d Completed\t Execution time =  %lf seconds \n\n\n", LVL + 1, end_time - start_time);
 
 		LVL++;
-//		if (LVL != 0 && LVL != 1) {
-//			/*removing the old file out*/
-//			sprintf(remove, "rm temp_lvl%d", LVL - 2);
-//			if (system(remove) == -1) {
-//				printf("Removing file failed");
-//			}
-//
-//		}
+		if (LVL != 0 && LVL != 1) {
+			/*removing the old file out*/
+			sprintf(remove, "rm temp_lvl%d", LVL - 2);
+			if (system(remove) == -1) {
+				printf("Removing file failed");
+			}
+
+		}
 		CURR_BLK = CURR_BLK >> 1;
 	}
 
 //	/*Remove all temporary files*/
-//	if (system("rm temp_lvl*") == -1) {
-//		printf("Removing file failed");
-//	}
+	if (system("rm temp_lvl*") == -1) {
+		printf("Removing file failed");
+	}
 
 	gettimeofday(&t, NULL);
 	end_time = 1.0e-6 * t.tv_usec + t.tv_sec;
