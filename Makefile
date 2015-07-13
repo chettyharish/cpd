@@ -1,5 +1,6 @@
 all: 
 	gcc -o splitter splitter.c -Ofast -std=c99 -lm -pedantic -pthread -fopenmp
+	gcc -o mysortold splitterold.c -Ofast -std=c99 -lm -pedantic -pthread -fopenmp
 	gcc -o mysort mysort.c -Ofast -std=c99 -lm -pedantic -pthread -fopenmp
 	gcc -o tester tester.c -Ofast -std=c99 -lm -pedantic -pthread -fopenmp
 
@@ -12,5 +13,5 @@ mysort: mysort.c
 	gcc -o mysort mysort.c -Ofast -std=c99 -lm -pedantic -pthread -fopenmp
 
 clean:
-	rm -f mysort splitter temp_lvl*
+	rm -f temp_lvl* temp*
 

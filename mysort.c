@@ -166,7 +166,10 @@ static __inline__ void sort2(long int * data, int lo) {
 
 void merge(int lo, int mid, int hi) {
 	int i, j, k;
-	memcpy(&temp[lo], &data[lo], (hi - lo + 1) * sizeof(long int));
+//	memcpy(&temp[lo], &data[lo], (hi - lo + 1) * sizeof(long int));
+	for (int i = lo; i <= hi; i++) {
+		temp[i] = data[i];
+	}
 	i = lo, j = mid + 1;
 
 	for (k = lo; k <= hi; k++) {
@@ -186,42 +189,42 @@ void mergesort(int lo, int hi) {
 		return;
 	int num = hi - lo + 1;
 
-	if (num <= 8) {
-		switch (num) {
-		case 0:
-		case 1:
-			return;
-		case 2:
-			sort2(data, lo);
-			return;
-		case 3:
-			sort3(data, lo);
-			return;
-		case 4:
-			sort4(data, lo);
-			return;
-		case 5:
-			sort5(data, lo);
-			return;
-		case 6:
-			sort6(data, lo);
-			return;
-		case 7:
-			sort7(data, lo);
-			return;
-//		case 8:
-//			sort8(data, lo);
+//	if (num <= 8) {
+//		switch (num) {
+//		case 0:
+//		case 1:
 //			return;
-		}
-	}
+//		case 2:
+//			sort2(data, lo);
+//			return;
+//		case 3:
+//			sort3(data, lo);
+//			return;
+//		case 4:
+//			sort4(data, lo);
+//			return;
+//		case 5:
+//			sort5(data, lo);
+//			return;
+//		case 6:
+//			sort6(data, lo);
+//			return;
+//		case 7:
+//			sort7(data, lo);
+//			return;
+////		case 8:
+////			sort8(data, lo);
+////			return;
+//		}
+//	}
 
 	int mid = lo + (hi - lo) / 2;
 	mergesort(lo, mid);
 	mergesort(mid + 1, hi);
-	if (!(data[mid] < data[mid + 1])) {
+//	if (!(data[mid] < data[mid + 1])) {
 //		Merge only if data is sorted
-		merge(lo, mid, hi);
-	}
+	merge(lo, mid, hi);
+//	}
 }
 
 void *mergesort_caller(void *arg) {
@@ -230,7 +233,7 @@ void *mergesort_caller(void *arg) {
 	int start = myid * num_ele;
 //	int end = (myid + 1) * num_ele - 1;
 	int end = (((myid + 1) * num_ele - 1) < (SIZE - 1)) ? ((myid + 1) * num_ele - 1) : (SIZE - 1);
-//	printf("Merge start = %10d  end = %10d\n", start, end);
+	printf("Merge start = %10d  end = %10d\n", start, end);
 	mergesort(start, end);
 
 }
@@ -349,7 +352,10 @@ int main(int argc, char **argv) {
 		perror("Malloc :");
 		exit(1);
 	}
-	FILE *temp_file = fopen("temp", "w+");
+
+	FILE *temp1 = fopen("temp1", "w+");
+	FILE *temp2 = fopen("temp2", "w+");
+	FILE *temp3 = fopen("temp3", "w+");
 
 	for (int blk = 0; blk < NUM_BLK; blk++) {
 		gettimeofday(&t, NULL);
@@ -381,6 +387,11 @@ int main(int argc, char **argv) {
 		}
 		fclose(in_file);
 
+		for (int i = 0; i < SIZE; i++) {
+			fwrite(&data[i], sizeof(long int), 1, temp1);
+		}
+		fflush(temp1);
+
 		gettimeofday(&t, NULL);
 		end_time = 1.0e-6 * t.tv_usec + t.tv_sec;
 		printf("Reading data completed \t Execution time =  %lf seconds\n", end_time - start_time);
@@ -398,12 +409,10 @@ int main(int argc, char **argv) {
 		gettimeofday(&t, NULL);
 		end_time = 1.0e-6 * t.tv_usec + t.tv_sec;
 
-
-
 		for (int i = 0; i < SIZE; i++) {
-			fwrite(&data[i], sizeof(long int), 1, temp_file);
+			fwrite(&data[i], sizeof(long int), 1, temp2);
 		}
-		fflush(temp_file);
+		fflush(temp2);
 
 		printf("Testing started \n");
 		for (int i = 0; i < NUM_THREADS; i++) {
@@ -427,10 +436,15 @@ int main(int argc, char **argv) {
 		end_time = 1.0e-6 * t.tv_usec + t.tv_sec;
 		printf("K-Way Merge completed \t Execution time =  %lf seconds\n", end_time - start_time);
 
+		for (int i = 0; i < SIZE; i++) {
+			fwrite(&data[i], sizeof(long int), 1, temp3);
+		}
+		fflush(temp3);
+
 		gettimeofday(&t, NULL);
 		start_time = 1.0e-6 * t.tv_usec + t.tv_sec;
 
-		printf("Testing started \n");
+//		printf("Testing started \n");
 //		for (int i = 0; i < NUM_THREADS; i++) {
 //			int myid = i;
 //			int num_ele = ceil((SIZE * 1.0f) / NUM_THREADS);
@@ -526,7 +540,7 @@ int main(int argc, char **argv) {
 				exit(1);
 			}
 
-			while (count1 < NUM_ELE && count2 < NUM_ELE) {
+			while (count1 <= NUM_ELE && count2 <= NUM_ELE) {
 				if (num1 <= num2) {
 					fwrite(&num1, sizeof(long int), 1, out_file);
 					count1++;
@@ -544,7 +558,7 @@ int main(int argc, char **argv) {
 				}
 			}
 
-			while (count1 < NUM_ELE) {
+			while (count1 <= NUM_ELE) {
 				fwrite(&num1, sizeof(long int), 1, out_file);
 				count1++;
 				if (fread(&num1, sizeof(long int), 1, first_file) == -1) {
@@ -553,7 +567,7 @@ int main(int argc, char **argv) {
 				}
 			}
 
-			while (count2 < NUM_ELE) {
+			while (count2 <= NUM_ELE) {
 				fwrite(&num2, sizeof(long int), 1, out_file);
 				count2++;
 				if (fread(&num2, sizeof(long int), 1, second_file) == -1) {
