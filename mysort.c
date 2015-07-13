@@ -297,6 +297,61 @@ void k_way_single() {
 
 }
 
+long int read_chunk(FILE *r_file, int pos, int CSIZE, int buf_num, long int END) {
+
+	long int start = ftell(r_file) / 8;
+	long int curr = ftell(r_file) / 8;
+	if (start == END)
+		return -1;
+	int count = 0;
+	bool flag = false;
+	while (true) {
+		curr = ftell(r_file) / 8;
+		if (count >= CSIZE || flag == true) {
+			return ((ftell(r_file) / 8) - start);
+		}
+		if (curr + buf_num >= END) {
+			printf("Inside\n");
+			flag = true;
+			buf_num = (END - curr);
+		}
+
+		if (fread(&data[pos + count], sizeof(long int), buf_num, r_file) == -1) {
+			perror("fread");
+			exit(1);
+		}
+
+		count += buf_num;
+	}
+
+	printf("read_chunk  OUT BAD  \n");
+
+	return -1;
+}
+
+void write_chunk(FILE *out_file, int w_count, int CSIZE, int buf_num, long int END) {
+	long int start = ftell(out_file) / 8;
+	long int curr = ftell(out_file) / 8;
+
+	int count = 0;
+	bool flag = false;
+	while (true) {
+		curr = ftell(out_file) / 8;
+		if (count >= CSIZE * 2 || flag == true)
+			return;
+		if (curr + buf_num >= END) {
+			flag = true;
+			buf_num = (END - curr);
+		}
+		if (fwrite(&temp[count], sizeof(long int), buf_num, out_file) == -1) {
+			perror("fwrite");
+			exit(1);
+		}
+		count += buf_num;
+	}
+	fflush(out_file);
+}
+
 int main(int argc, char **argv) {
 
 	double start_time, end_time, orig_time;
@@ -325,7 +380,8 @@ int main(int argc, char **argv) {
 	}
 
 	NUM_BLK = atoi(argv[2]);
-	int cond = atoi(argv[3]);
+	int count = 0;
+	bool flag = false;
 
 	fseek(in_file, 0, SEEK_END);
 	FSIZE = ftell(in_file);
@@ -339,40 +395,38 @@ int main(int argc, char **argv) {
 
 	data = malloc(sizeof(long int) * SIZE);
 	temp = malloc(sizeof(long int) * SIZE);
-
 	for (int i = 0; i < SIZE; i++) {
 		data[i] = -100;
 		temp[i] = -100;
 	}
+
 	if (data == NULL && temp == NULL) {
 		perror("Malloc :");
 		exit(1);
 	}
 
 	for (int blk = 0; blk < NUM_BLK; blk++) {
+		printf("Here\n");
 		printf("\nStarting with BLK = %d\n", blk);
 		gettimeofday(&t, NULL);
 		start_time = 1.0e-6 * t.tv_usec + t.tv_sec;
 
 		FILE *in_file = fopen(argv[1], "r");
 		fseek(in_file, blk * RSIZE, SEEK_SET);
-		if (cond == 1) {
-			int count = 0;
-			int buf_num = BUFSIZ / 8;
-			bool flag = false;
-			while (flag == false) {
 
-				if (count + buf_num >= SIZE) {
-					flag = true;
-					buf_num = (SIZE - count);
-				}
-				if (fread(&data[count], sizeof(long int), buf_num, in_file) == -1) {
-					perror("fread");
-					exit(1);
-				}
-
-				count += buf_num;
+		count = 0;
+		flag = false;
+		int buf_num = BUFSIZ / 8;
+		while (flag == false) {
+			if (count + buf_num >= SIZE) {
+				flag = true;
+				buf_num = (SIZE - count);
 			}
+			if (fread(&data[count], sizeof(long int), buf_num, in_file) == -1) {
+				perror("fread");
+				exit(1);
+			}
+			count += buf_num;
 		}
 		fclose(in_file);
 
@@ -419,27 +473,22 @@ int main(int argc, char **argv) {
 		gettimeofday(&t, NULL);
 		start_time = 1.0e-6 * t.tv_usec + t.tv_sec;
 
-		if (cond == 1) {
-			int count = 0;
-			int buf_num = BUFSIZ / 8;
-			bool flag = false;
-
-			while (flag == false) {
-				if (count + buf_num >= SIZE) {
-					flag = true;
-					buf_num = (SIZE - count);
-				}
-
-				if (fwrite(&data[count], sizeof(long int), buf_num, out_file) == -1) {
-					perror("fwrite");
-					exit(1);
-				}
-
-				count += buf_num;
+		buf_num = BUFSIZ / 8;
+		count = 0;
+		flag = false;
+		while (flag == false) {
+			if (count + buf_num >= SIZE) {
+				flag = true;
+				buf_num = (SIZE - count);
 			}
-			fflush(out_file);
 
+			if (fwrite(&data[count], sizeof(long int), buf_num, out_file) == -1) {
+				perror("fwrite");
+				exit(1);
+			}
+			count += buf_num;
 		}
+		fflush(out_file);
 
 		gettimeofday(&t, NULL);
 		end_time = 1.0e-6 * t.tv_usec + t.tv_sec;
@@ -449,9 +498,14 @@ int main(int argc, char **argv) {
 
 	gettimeofday(&t, NULL);
 	end_time = 1.0e-6 * t.tv_usec + t.tv_sec;
-	free(data);
-	free(temp);
 	printf("PHASE 1 Completed\t Execution time =  %lf seconds \n\n\n", end_time - orig_time);
+
+	for (int i = 0; i < SIZE; i++) {
+		data[i] = -100;
+		temp[i] = -100;
+	}
+
+	fclose(out_file);
 
 	int CURR_BLK = NUM_BLK >> 1;
 	int LVL = 0;
@@ -471,149 +525,163 @@ int main(int argc, char **argv) {
 		}
 		FILE *first_file = fopen(f1, "r");
 		FILE *second_file = fopen(f2, "r");
-		FILE *out_file = fopen(op, "wb+");
+		FILE *op_file = fopen(op, "wb+");
 		long int NUM_ELE = ((long int) FSIZE / 8) / ((long int) NUM_BLK / (1 << LVL));
 
 		for (int i = 0; i < CURR_BLK; i++) {
-			int count1 = 1;
-			int count2 = 1;
-			long int num1, num2;
 			long int loc1 = (2 * i) * (long int) NUM_ELE * 8;
 			long int loc2 = (2 * i + 1) * (long int) NUM_ELE * 8;
 			long int loc3 = (2 * i) * (long int) NUM_ELE * 8;
 			fseek(first_file, loc1, SEEK_SET);
 			fseek(second_file, loc2, SEEK_SET);
-			fseek(out_file, loc3, SEEK_SET);
-			printf("ST : first_file = %ld\t second_file = %ld\t out_file = %ld\t NUM_ELE = %ld\n", ftell(first_file), ftell(second_file), ftell(out_file), NUM_ELE);
+			fseek(op_file, loc3, SEEK_SET);
+			printf("ST : first_file = %15ld\t second_file = %15ld\t out_file = %15ld\t NUM_ELE = %ld\n", ftell(first_file), ftell(second_file), ftell(out_file), NUM_ELE);
 
-			if (CURR_BLK != 1) {
-				int ret = -1;
-				if ((ret = fread(&num1, sizeof(long int), 1, first_file)) != 1) {
-					printf("fread  : ret = %d\tcount1 = %d\tcount2 = %d\n", ret, count1, count2);
-				}
-				if ((ret = fread(&num2, sizeof(long int), 1, second_file)) != 1) {
-					printf("fread  : ret = %d\tcount1 = %d\tcount2 = %d\n", ret, count1, count2);
-				}
+			int buf_num = BUFSIZ / 8;
+			int CSIZE = 10 * buf_num;
+			long int END1 = loc1 / 8 + NUM_ELE;
+			long int END2 = loc2 / 8 + NUM_ELE;
+			long int END3 = END2;
 
-				while (true) {
-					if (num1 <= num2) {
-						if ((ret = fwrite(&num1, sizeof(long int), 1, out_file)) != 1) {
-							printf("fwrite1 : ret = %d\tcount1 = %d\tcount2 = %d\n", ret, count1, count2);
-						}
-						count1++;
-						if (count1 > NUM_ELE)
+			long int r_count1 = 0, r_count2 = 0, w_count = 0, total_count1 = 0, total_count2 = 0;
+			long int start1 = 0;
+			long int start2 = CSIZE;
+			long int end1 = read_chunk(first_file, start1, CSIZE, buf_num, END1);
+			long int end2 = read_chunk(second_file, start2, CSIZE, buf_num, END2);
+
+			while (true) {
+				if (data[start1] <= data[start2]) {
+//					printf("w_count = %ld\tstart1 = %ld\tstart2 = %ld , end1 = %ld\t , end2 = %ld \t\n", w_count, r_count1, r_count2, end1, end2);
+					temp[w_count++] = data[start1];
+					start1++;
+					r_count1++;
+					total_count1++;
+					if (r_count1 == end1) {
+						if (end1 < CSIZE) {
+							/*All chunks consumed by 1*/
+//							printf("Exiting via 1st\n");
 							break;
-						if ((ret = fread(&num1, sizeof(long int), 1, first_file)) != 1) {
-							printf("fread1  : ret = %d\tcount1 = %d\tcount2 = %d\n", ret, count1, count2);
+						} else {
+							/*Read next chunk*/
+//							printf("First read_chunk\n");
+//							printf("w_count = %ld\tstart1 = %ld\tstart2 = %ld , end1 = %ld\t end2 = %ld \t rcount1 = %ld \t rcount2 = %ld \t\n", w_count, start1, start2, end1, end2, r_count1,
+//									r_count2);
+
+							start1 = 0;
+							r_count1 = 0;
+
+							end1 = read_chunk(first_file, start1, CSIZE, buf_num, END1);
+
+//							printf("w_count = %ld\tstart1 = %ld\tstart2 = %ld , end1 = %ld\t end2 = %ld \t rcount1 = %ld \t rcount2 = %ld \t\n", w_count, start1, start2, end1, end2, r_count1,
+//									r_count2);
+
 						}
+					}
+				} else {
+					temp[w_count++] = data[start2];
+					start2++;
+					r_count2++;
+					total_count2++;
+					if (r_count2 == end2) {
+						if (end2 < CSIZE) {
+							/*All chunks consumed by 2*/
+//							printf("Exiting via 2nd\n");
+							break;
+						} else {
+							/*Read next chunk*/
+//							printf("Second read_chunk\n");
+//							printf("w_count = %ld\tstart1 = %ld\tstart2 = %ld , end1 = %ld\t end2 = %ld \t rcount1 = %ld \t rcount2 = %ld \t\n", w_count, start1, start2, end1, end2, r_count1,
+//									r_count2);
+
+							start2 = CSIZE;
+							r_count2 = 0;
+
+							end2 = read_chunk(second_file, start2, CSIZE, buf_num, END2);
+
+//							printf("w_count = %ld\tstart1 = %ld\tstart2 = %ld , end1 = %ld\t end2 = %ld \t rcount1 = %ld \t rcount2 = %ld \t\n", w_count, start1, start2, end1, end2, r_count1,
+//									r_count2);
+
+						}
+					}
+				}
+
+				if (w_count == CSIZE * 2) {
+					/*temp has two sorted chunk so write it back*/
+					write_chunk(op_file, w_count, CSIZE, buf_num, END3);
+					w_count = 0;
+				}
+			}
+
+			while (total_count1 < NUM_ELE) {
+				temp[w_count++] = data[start1];
+				start1++;
+				r_count1++;
+				total_count1++;
+				if (r_count1 == end1) {
+//					printf("OUT First read_chunk\n");
+					if (end1 < CSIZE) {
+						/*All chunks consumed by 1*/
+						break;
 					} else {
-						if ((ret = fwrite(&num2, sizeof(long int), 1, out_file)) != 1) {
-							printf("fwrite2  : ret = %d\tcount1 = %d\tcount2 = %d\n", ret, count1, count2);
-						}
-						count2++;
+						/*Read next chunk*/
+//						printf("w_count = %ld\tstart1 = %ld\tstart2 = %ld , end1 = %ld\t end2 = %ld \t rcount1 = %ld \t rcount2 = %ld \t\n", w_count, start1, start2, end1, end2, r_count1, r_count2);
 
-						if (count2 > NUM_ELE)
-							break;
-						if ((ret = fread(&num2, sizeof(long int), 1, second_file)) != 1) {
-							printf("fread2  : ret = %d\tcount1 = %d\tcount2 = %d\n", ret, count1, count2);
-						}
+						start1 = 0;
+						r_count1 = 0;
+
+						end1 = read_chunk(first_file, start1, CSIZE, buf_num, END1);
+
+//						printf("w_count = %ld\tstart1 = %ld\tstart2 = %ld , end1 = %ld\t end2 = %ld \t rcount1 = %ld \t rcount2 = %ld \t\n", w_count, start1, start2, end1, end2, r_count1, r_count2);
+
 					}
 				}
 
-				while (count1 <= NUM_ELE) {
-					if ((ret = fwrite(&num1, sizeof(long int), 1, out_file)) != 1) {
-						printf("while fwrite1  : ret = %d\tcount1 = %d\tcount2 = %d\n", ret, count1, count2);
-					}
-					count1++;
-					if (count1 > NUM_ELE)
+				if (w_count == CSIZE * 2) {
+					/*temp has two sorted chunk so write it back*/
+					write_chunk(op_file, w_count, CSIZE, buf_num, END3);
+					w_count = 0;
+				}
+			}
+			while (total_count2 < NUM_ELE) {
+				temp[w_count++] = data[start2];
+				start2++;
+				r_count2++;
+				total_count2++;
+				if (r_count2 == end2) {
+//					printf("OUT Second read_chunk\n");
+					if (end2 < CSIZE) {
+						/*All chunks consumed by 2*/
 						break;
-					if ((ret = fread(&num1, sizeof(long int), 1, first_file)) != 1) {
-						printf("while fread1  : ret = %d\tcount1 = %d\tcount2 = %d\n", ret, count1, count2);
-					}
-				}
-
-				while (count2 <= NUM_ELE) {
-					if ((ret = fwrite(&num2, sizeof(long int), 1, out_file)) != 1) {
-						printf("while fwrite2  : ret = %d\tcount1 = %d\tcount2 = %d\n", ret, count1, count2);
-					}
-					count2++;
-					if (count2 > NUM_ELE)
-						break;
-					if ((ret = fread(&num2, sizeof(long int), 1, second_file)) != 1) {
-						printf("while fread2  : ret = %d\tcount1 = %d\tcount2 = %d\n", ret, count1, count2);
-					}
-				}
-				printf("EN : first_file = %ld\t second_file = %ld\t out_file = %ld\t NUM_ELE = %ld\n", ftell(first_file), ftell(second_file), ftell(out_file), NUM_ELE);
-			} else {
-				/*Final block, so dont write back everything to file Just get whatever is needed!*/
-				int ret = -1;
-				int main_count = 0;
-				if ((ret = fread(&num1, sizeof(long int), 1, first_file)) != 1) {
-					printf("fread  : ret = %d\tcount1 = %d\tcount2 = %d\n", ret, count1, count2);
-				}
-				if ((ret = fread(&num2, sizeof(long int), 1, second_file)) != 1) {
-					printf("fread  : ret = %d\tcount1 = %d\tcount2 = %d\n", ret, count1, count2);
-				}
-
-				while (true) {
-					if (num1 <= num2) {
-						if ((main_count) % 1000 == 0) {
-							fprintf(out_file, "%10d\t%20ld\n", main_count, num1);
-						}
-						main_count++;
-						count1++;
-						if (count1 > NUM_ELE)
-							break;
-						if ((ret = fread(&num1, sizeof(long int), 1, first_file)) != 1) {
-							printf("fread1  : ret = %d\tcount1 = %d\tcount2 = %d\n", ret, count1, count2);
-						}
 					} else {
-						if ((main_count) % 1000 == 0) {
-							fprintf(out_file, "%10d\t%20ld\n", main_count, num2);
-						}
-						main_count++;
-						count2++;
-						if (count2 > NUM_ELE)
-							break;
-						if ((ret = fread(&num2, sizeof(long int), 1, second_file)) != 1) {
-							printf("fread2  : ret = %d\tcount1 = %d\tcount2 = %d\n", ret, count1, count2);
-						}
-					}
-				}
+						/*Read next chunk*/
+//						printf("w_count = %ld\tstart1 = %ld\tstart2 = %ld , end1 = %ld\t end2 = %ld \t rcount1 = %ld \t rcount2 = %ld \t\n", w_count, start1, start2, end1, end2, r_count1, r_count2);
 
-				while (count1 <= NUM_ELE) {
-					if ((main_count) % 1000 == 0) {
-						fprintf(out_file, "%10d\t%20ld\n", main_count, num1);
-					}
-					main_count++;
-					count1++;
-					if (count1 > NUM_ELE)
-						break;
-					if ((ret = fread(&num1, sizeof(long int), 1, first_file)) != 1) {
-						printf("while fread1  : ret = %d\tcount1 = %d\tcount2 = %d\n", ret, count1, count2);
-					}
-				}
+						start2 = CSIZE;
+						r_count2 = 0;
+						end2 = read_chunk(second_file, start2, CSIZE, buf_num, END2);
 
-				while (count2 <= NUM_ELE) {
-					if ((main_count) % 1000 == 0) {
-						fprintf(out_file, "%10d\t%20ld\n", main_count, num2);
-					}
-					main_count++;
-					count2++;
-					if (count2 > NUM_ELE)
-						break;
-					if ((ret = fread(&num2, sizeof(long int), 1, second_file)) != 1) {
-						printf("while fread2  : ret = %d\tcount1 = %d\tcount2 = %d\n", ret, count1, count2);
+//						printf("w_count = %ld\tstart1 = %ld\tstart2 = %ld , end1 = %ld\t end2 = %ld \t rcount1 = %ld \t rcount2 = %ld \t\n", w_count, start1, start2, end1, end2, r_count1, r_count2);
+
 					}
 				}
-				printf("EN : first_file = %ld\t second_file = %ld\t out_file = %ld\t NUM_ELE = %ld\n", ftell(first_file), ftell(second_file), ftell(out_file), NUM_ELE);
+				if (w_count == CSIZE * 2) {
+					/*temp has two sorted chunk so write it back*/
+					write_chunk(op_file, w_count, CSIZE, buf_num, END3);
+					w_count = 0;
+				}
+			}
+
+			if (w_count > 0) {
+				write_chunk(op_file, w_count, CSIZE, buf_num, END3);
 
 			}
+			printf("EN : first_file = %15ld\t second_file = %15ld\t out_file = %15ld\t NUM_ELE = %ld\n", ftell(first_file), ftell(second_file), ftell(op_file), NUM_ELE);
+
 		}
 
 		fclose(first_file);
 		fclose(second_file);
-		fclose(out_file);
+		fclose(op_file);
 
 		gettimeofday(&t, NULL);
 		end_time = 1.0e-6 * t.tv_usec + t.tv_sec;
@@ -621,24 +689,30 @@ int main(int argc, char **argv) {
 		printf("Merge LVL = %d Completed\t Execution time =  %lf seconds \n\n\n", LVL + 1, end_time - start_time);
 
 		LVL++;
-		if (LVL != 0 && LVL != 1) {
-			/*removing the old file out*/
-			sprintf(remove, "rm temp_lvl%d", LVL - 2);
-			if (system(remove) == -1) {
-				printf("Removing file failed");
-			}
-
-		}
+//		if (LVL != 0 && LVL != 1) {
+//			/*removing the old file out*/
+//			sprintf(remove, "rm temp_lvl%d", LVL - 2);
+//			if (system(remove) == -1) {
+//				printf("Removing file failed");
+//			}
+//
+//		}
 		CURR_BLK = CURR_BLK >> 1;
 	}
 
-	/*Remove all temporary files*/
-	if (system("rm temp_lvl*") == -1) {
-		printf("Removing file failed");
-	}
+//	/*Remove all temporary files*/
+//	if (system("rm temp_lvl*") == -1) {
+//		printf("Removing file failed");
+//	}
 
 	gettimeofday(&t, NULL);
 	end_time = 1.0e-6 * t.tv_usec + t.tv_sec;
 	printf("PHASE 2 Completed\t Execution time =  %lf seconds \n", end_time - orig_time);
+
+	free(data);
+	free(temp);
+	gettimeofday(&t, NULL);
+	end_time = 1.0e-6 * t.tv_usec + t.tv_sec;
+	printf("Completed\t Execution time =  %lf seconds \n", end_time - orig_time);
 	return 0;
 }
