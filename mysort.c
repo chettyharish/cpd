@@ -358,26 +358,26 @@ int main(int argc, char **argv) {
 		FILE *in_file = fopen(argv[1], "r");
 		fseek(in_file, blk * RSIZE, SEEK_SET);
 		if (cond == 1) {
-			int count = 0;
-			int buf_num = BUFSIZ / 8;
-			bool flag = false;
-			while (flag == false) {
-
-				if (count + buf_num >= SIZE) {
-					flag = true;
-					buf_num = (SIZE - count);
-				}
-				if (fread(&data[count], sizeof(long int), buf_num, in_file) == -1) {
-					perror("fread");
-					exit(1);
-				}
-
-				count += buf_num;
-			}
-
-//			for (int i = 0; i < SIZE; i++) {
-//				int ret = fread(&data[i], sizeof(long int), 1, in_file);
+//			int count = 0;
+//			int buf_num = BUFSIZ / 8;
+//			bool flag = false;
+//			while (flag == false) {
+//
+//				if (count + buf_num >= SIZE) {
+//					flag = true;
+//					buf_num = (SIZE - count);
+//				}
+//				if (fread(&data[count], sizeof(long int), buf_num, in_file) == -1) {
+//					perror("fread");
+//					exit(1);
+//				}
+//
+//				count += buf_num;
 //			}
+
+			for (int i = 0; i < SIZE; i++) {
+				int ret = fread(&data[i], sizeof(long int), 1, in_file);
+			}
 		}
 		fclose(in_file);
 
@@ -397,6 +397,14 @@ int main(int argc, char **argv) {
 		}
 		gettimeofday(&t, NULL);
 		end_time = 1.0e-6 * t.tv_usec + t.tv_sec;
+
+
+
+		for (int i = 0; i < SIZE; i++) {
+			fwrite(&data[i], sizeof(long int), 1, temp_file);
+		}
+		fflush(temp_file);
+
 		printf("Testing started \n");
 		for (int i = 0; i < NUM_THREADS; i++) {
 			int myid = i;
@@ -472,11 +480,8 @@ int main(int argc, char **argv) {
 //				fwrite(&data[i], sizeof(long int), 1, out_file);
 //			}
 
-		}
+			fflush(out_file);
 
-
-		for (int i = 0; i < SIZE; i++) {
-			fwrite(&data[i], sizeof(long int), 1, temp_file);
 		}
 
 		gettimeofday(&t, NULL);
@@ -484,9 +489,6 @@ int main(int argc, char **argv) {
 		printf("Writing completed to file %s\t Execution time =  %lf seconds\n", outfile, end_time - start_time);
 
 	}
-
-
-
 
 	int CURR_BLK = NUM_BLK >> 1;
 	int LVL = 0;
@@ -524,7 +526,7 @@ int main(int argc, char **argv) {
 				exit(1);
 			}
 
-			while (count1 <= NUM_ELE && count2 <= NUM_ELE) {
+			while (count1 < NUM_ELE && count2 < NUM_ELE) {
 				if (num1 <= num2) {
 					fwrite(&num1, sizeof(long int), 1, out_file);
 					count1++;
@@ -542,7 +544,7 @@ int main(int argc, char **argv) {
 				}
 			}
 
-			while (count1 <= NUM_ELE) {
+			while (count1 < NUM_ELE) {
 				fwrite(&num1, sizeof(long int), 1, out_file);
 				count1++;
 				if (fread(&num1, sizeof(long int), 1, first_file) == -1) {
@@ -551,7 +553,7 @@ int main(int argc, char **argv) {
 				}
 			}
 
-			while (count2 <= NUM_ELE) {
+			while (count2 < NUM_ELE) {
 				fwrite(&num2, sizeof(long int), 1, out_file);
 				count2++;
 				if (fread(&num2, sizeof(long int), 1, second_file) == -1) {
@@ -565,6 +567,7 @@ int main(int argc, char **argv) {
 
 		fclose(first_file);
 		fclose(second_file);
+		fflush(out_file);
 		fclose(out_file);
 
 		gettimeofday(&t, NULL);
@@ -575,7 +578,6 @@ int main(int argc, char **argv) {
 		LVL++;
 		CURR_BLK = CURR_BLK >> 1;
 	}
-
 
 	free(data);
 	free(temp);

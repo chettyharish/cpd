@@ -18,7 +18,7 @@
 int main() {
 	/*For testing the final correctness*/
 	char outfile[100];
-	FILE *t1 = fopen("op", "r");
+	FILE *t1 = fopen("test0", "r");
 	FILE *t2 = fopen("temp_lvl0", "r");
 	FILE *t3 = fopen("temp_lvl1", "r");
 	FILE *t4 = fopen("temp_lvl2", "r");
