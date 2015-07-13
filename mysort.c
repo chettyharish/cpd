@@ -356,6 +356,8 @@ int main(int argc, char **argv) {
 	FILE *temp1 = fopen("temp1", "w+");
 	FILE *temp2 = fopen("temp2", "w+");
 	FILE *temp3 = fopen("temp3", "w+");
+	FILE *a = fopen("a_par", "w+");
+	FILE *b = fopen("b_par", "w+");
 
 	for (int blk = 0; blk < NUM_BLK; blk++) {
 		gettimeofday(&t, NULL);
@@ -498,6 +500,11 @@ int main(int argc, char **argv) {
 
 		}
 
+		for (int i = 0; i < SIZE; i++) {
+			fprintf(a, "%ld\n", data[i]);
+		}
+		fflush(a);
+
 		gettimeofday(&t, NULL);
 		end_time = 1.0e-6 * t.tv_usec + t.tv_sec;
 		printf("Writing completed to file %s\t Execution time =  %lf seconds\n", outfile, end_time - start_time);
@@ -526,9 +533,9 @@ int main(int argc, char **argv) {
 			long int num1, num2;
 			count1 = 1;
 			count2 = 1;
-			fseek(first_file, (i) * NUM_ELE * 8, SEEK_SET);
-			fseek(second_file, (i + 1) * NUM_ELE * 8, SEEK_SET);
-			fseek(out_file, (i) * NUM_ELE * 8 * 2, SEEK_SET);
+			fseek(first_file, (2*i) * NUM_ELE * 8, SEEK_SET);
+			fseek(second_file, (2*i + 1) * NUM_ELE * 8, SEEK_SET);
+			fseek(out_file, (2*i) * NUM_ELE * 8 * 2, SEEK_SET);
 			printf("first_file = %s\t second_file = %s\t out_file = %s\t NUM_ELE = %d\n", f1, f2, op, NUM_ELE);
 
 			if (fread(&num1, sizeof(long int), 1, first_file) == -1) {
@@ -540,9 +547,11 @@ int main(int argc, char **argv) {
 				exit(1);
 			}
 
-			while (count1 <= NUM_ELE && count2 <= NUM_ELE) {
+			while (count1 < NUM_ELE && count2 < NUM_ELE) {
 				if (num1 <= num2) {
 					fwrite(&num1, sizeof(long int), 1, out_file);
+					if (LVL == 2)
+						fprintf(b, "%ld\n", num1);
 					count1++;
 					if (fread(&num1, sizeof(long int), 1, first_file) == -1) {
 						perror("IN FMERGE fread");
@@ -550,6 +559,8 @@ int main(int argc, char **argv) {
 					}
 				} else {
 					fwrite(&num2, sizeof(long int), 1, out_file);
+					if (LVL == 2)
+						fprintf(b, "%ld\n", num2);
 					count2++;
 					if (fread(&num2, sizeof(long int), 1, second_file) == -1) {
 						perror("IN FMERGE fread");
@@ -558,8 +569,10 @@ int main(int argc, char **argv) {
 				}
 			}
 
-			while (count1 <= NUM_ELE) {
+			while (count1 < NUM_ELE) {
 				fwrite(&num1, sizeof(long int), 1, out_file);
+				if (LVL == 2)
+					fprintf(b, "%ld\n", num1);
 				count1++;
 				if (fread(&num1, sizeof(long int), 1, first_file) == -1) {
 					perror("FMERGE fread");
@@ -567,8 +580,10 @@ int main(int argc, char **argv) {
 				}
 			}
 
-			while (count2 <= NUM_ELE) {
+			while (count2 < NUM_ELE) {
 				fwrite(&num2, sizeof(long int), 1, out_file);
+				if (LVL == 2)
+					fprintf(b, "%ld\n", num2);
 				count2++;
 				if (fread(&num2, sizeof(long int), 1, second_file) == -1) {
 					perror("FMERGE fread");

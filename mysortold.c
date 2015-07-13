@@ -63,9 +63,12 @@ void mergesort(int lo, int hi) {
 
 int main(int argc, char **argv) {
 	int count = 0;
-	long int waste;
 	FILE *file = fopen(argv[1], "r");
 	FILE *temp3 = fopen("temp3", "w+");
+
+	FILE *q = fopen("q_read", "w+");
+	FILE *a = fopen("a_read", "w+");
+
 	fseek(file, 0, SEEK_END);
 	SIZE = ftell(file) / 8;
 	printf("size = %d\t count = %d\n", SIZE, count);
@@ -77,8 +80,12 @@ int main(int argc, char **argv) {
 	while (fread(&data[count++], sizeof(long int), 1, file))
 		;
 
+	for (int i = 0; i < SIZE; i++) {
+		fprintf(q, "%ld\n", data[i]);
+	}
+	fflush(q);
 
-	mergesort(0 , SIZE - 1);
+	mergesort(0, SIZE - 1);
 
 	printf("size = %d\t count = %d\n", SIZE, count);
 
@@ -103,4 +110,9 @@ int main(int argc, char **argv) {
 		fwrite(&data[i], sizeof(long int), 1, temp3);
 	}
 	fflush(temp3);
+
+	for (int i = 0; i < SIZE; i++) {
+		fprintf(a, "%ld\n", data[i]);
+	}
+	fflush(a);
 }
