@@ -12,7 +12,7 @@
 #include <math.h>
 #include <pthread.h>
 
-int main(int argc, char **argv){
+int main(int argc, char **argv) {
 	FILE *file1 = fopen(argv[1], "r");
 	FILE *file2 = fopen("temp1.data", "w+");
 	long int num1;
@@ -26,8 +26,9 @@ int main(int argc, char **argv){
 		;
 
 	for (int i = 0; i < SIZE; i++) {
-		fprintf(file2, "%ld\n", data[i]);
+		if (i % 1000 == 0)
+			fprintf(file2, "%10d\t%20ld\n", i, data[i]);
 	}
 	fflush(file2);
-	system("sort -n temp1.data > temp_sort");
+//	system("sort -n temp1.data > temp_sort");
 }
