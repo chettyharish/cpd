@@ -189,34 +189,34 @@ void mergesort(int lo, int hi) {
 		return;
 	int num = hi - lo + 1;
 
-//	if (num <= 8) {
-//		switch (num) {
-//		case 0:
-//		case 1:
+	if (num <= 8) {
+		switch (num) {
+		case 0:
+		case 1:
+			return;
+		case 2:
+			sort2(data, lo);
+			return;
+		case 3:
+			sort3(data, lo);
+			return;
+		case 4:
+			sort4(data, lo);
+			return;
+		case 5:
+			sort5(data, lo);
+			return;
+		case 6:
+			sort6(data, lo);
+			return;
+		case 7:
+			sort7(data, lo);
+			return;
+//		case 8:
+//			sort8(data, lo);
 //			return;
-//		case 2:
-//			sort2(data, lo);
-//			return;
-//		case 3:
-//			sort3(data, lo);
-//			return;
-//		case 4:
-//			sort4(data, lo);
-//			return;
-//		case 5:
-//			sort5(data, lo);
-//			return;
-//		case 6:
-//			sort6(data, lo);
-//			return;
-//		case 7:
-//			sort7(data, lo);
-//			return;
-////		case 8:
-////			sort8(data, lo);
-////			return;
-//		}
-//	}
+		}
+	}
 
 	int mid = lo + (hi - lo) / 2;
 	mergesort(lo, mid);
@@ -231,11 +231,8 @@ void *mergesort_caller(void *arg) {
 	int myid = *(int *) arg;
 	int num_ele = ceil((SIZE * 1.0f) / NUM_THREADS);
 	int start = myid * num_ele;
-//	int end = (myid + 1) * num_ele - 1;
 	int end = (((myid + 1) * num_ele - 1) < (SIZE - 1)) ? ((myid + 1) * num_ele - 1) : (SIZE - 1);
-	printf("Merge start = %10d  end = %10d\n", start, end);
 	mergesort(start, end);
-
 }
 
 int find_min(long int *vals) {
@@ -356,8 +353,6 @@ int main(int argc, char **argv) {
 	FILE *temp1 = fopen("temp1", "w+");
 	FILE *temp2 = fopen("temp2", "w+");
 	FILE *temp3 = fopen("temp3", "w+");
-	FILE *a = fopen("a_par", "w+");
-	FILE *b = fopen("b_par", "w+");
 
 	for (int blk = 0; blk < NUM_BLK; blk++) {
 		gettimeofday(&t, NULL);
@@ -366,26 +361,26 @@ int main(int argc, char **argv) {
 		FILE *in_file = fopen(argv[1], "r");
 		fseek(in_file, blk * RSIZE, SEEK_SET);
 		if (cond == 1) {
-//			int count = 0;
-//			int buf_num = BUFSIZ / 8;
-//			bool flag = false;
-//			while (flag == false) {
-//
-//				if (count + buf_num >= SIZE) {
-//					flag = true;
-//					buf_num = (SIZE - count);
-//				}
-//				if (fread(&data[count], sizeof(long int), buf_num, in_file) == -1) {
-//					perror("fread");
-//					exit(1);
-//				}
-//
-//				count += buf_num;
-//			}
+			int count = 0;
+			int buf_num = BUFSIZ / 8;
+			bool flag = false;
+			while (flag == false) {
 
-			for (int i = 0; i < SIZE; i++) {
-				int ret = fread(&data[i], sizeof(long int), 1, in_file);
+				if (count + buf_num >= SIZE) {
+					flag = true;
+					buf_num = (SIZE - count);
+				}
+				if (fread(&data[count], sizeof(long int), buf_num, in_file) == -1) {
+					perror("fread");
+					exit(1);
+				}
+
+				count += buf_num;
 			}
+
+//			for (int i = 0; i < SIZE; i++) {
+//				int ret = fread(&data[i], sizeof(long int), 1, in_file);
+//			}
 		}
 		fclose(in_file);
 
@@ -416,19 +411,19 @@ int main(int argc, char **argv) {
 		}
 		fflush(temp2);
 
-		printf("Testing started \n");
-		for (int i = 0; i < NUM_THREADS; i++) {
-			int myid = i;
-			int num_ele = ceil((SIZE * 1.0f) / NUM_THREADS);
-			int start = myid * num_ele;
-			int end = (((myid + 1) * num_ele - 1) < (SIZE - 1)) ? ((myid + 1) * num_ele - 1) : (SIZE - 1);
-			if (is_sorted(start, end) == true) {
-				printf("TID = %d \t Sorted correctly\n", i);
-			} else {
-				printf("TID = %d \t Sorting error\n", i);
-				exit(1);
-			}
-		}
+//		printf("Testing started \n");
+//		for (int i = 0; i < NUM_THREADS; i++) {
+//			int myid = i;
+//			int num_ele = ceil((SIZE * 1.0f) / NUM_THREADS);
+//			int start = myid * num_ele;
+//			int end = (((myid + 1) * num_ele - 1) < (SIZE - 1)) ? ((myid + 1) * num_ele - 1) : (SIZE - 1);
+//			if (is_sorted(start, end) == true) {
+//				printf("TID = %d \t Sorted correctly\n", i);
+//			} else {
+//				printf("TID = %d \t Sorting error\n", i);
+//				exit(1);
+//			}
+//		}
 		printf("Split Merge Sort completed \t Execution time =  %lf seconds\n", end_time - start_time);
 
 		gettimeofday(&t, NULL);
@@ -461,9 +456,9 @@ int main(int argc, char **argv) {
 //		}
 
 		if (is_sorted(0, SIZE - 1) == true) {
-			printf("Sorted correctly %s\n", outfile);
+			printf("Sorted correctly \n");
 		} else {
-			printf("Sorting error %s\n", outfile);
+			printf("Sorting error \n");
 			exit(1);
 		}
 
@@ -500,11 +495,6 @@ int main(int argc, char **argv) {
 
 		}
 
-		for (int i = 0; i < SIZE; i++) {
-			fprintf(a, "%ld\n", data[i]);
-		}
-		fflush(a);
-
 		gettimeofday(&t, NULL);
 		end_time = 1.0e-6 * t.tv_usec + t.tv_sec;
 		printf("Writing completed to file %s\t Execution time =  %lf seconds\n", outfile, end_time - start_time);
@@ -524,79 +514,79 @@ int main(int argc, char **argv) {
 		sprintf(op, "temp_lvl%d", LVL + 1);
 		FILE *first_file = fopen(f1, "r");
 		FILE *second_file = fopen(f2, "r");
-		FILE *out_file = fopen(op, "w+");
+		FILE *out_file = fopen(op, "wb+");
 		int NUM_ELE = (FSIZE / 8) / (NUM_BLK / (LVL + 1));
 
 		for (int i = 0; i < CURR_BLK; i++) {
 			int count1 = 1;
 			int count2 = 1;
 			long int num1, num2;
-			count1 = 1;
-			count2 = 1;
-			fseek(first_file, (2*i) * NUM_ELE * 8, SEEK_SET);
-			fseek(second_file, (2*i + 1) * NUM_ELE * 8, SEEK_SET);
-			fseek(out_file, (2*i) * NUM_ELE * 8 * 2, SEEK_SET);
-			printf("first_file = %s\t second_file = %s\t out_file = %s\t NUM_ELE = %d\n", f1, f2, op, NUM_ELE);
+			fseek(first_file, (2 * i) * NUM_ELE * 8, SEEK_SET);
+			fseek(second_file, (2 * i + 1) * NUM_ELE * 8, SEEK_SET);
+			fseek(out_file, (2 * i) * NUM_ELE * 8, SEEK_SET);
+			printf("ST : first_file = %ld\t second_file = %ld\t out_file = %ld\t NUM_ELE = %d\n", ftell(first_file), ftell(second_file), ftell(out_file), NUM_ELE);
 
-			if (fread(&num1, sizeof(long int), 1, first_file) == -1) {
-				perror("FMERGE fread");
-				exit(1);
+			int ret = -1;
+			if ((ret = fread(&num1, sizeof(long int), 1, first_file)) != 1) {
+				printf("fread  : ret = %d\tcount1 = %d\tcount2 = %d\n", ret, count1, count2);
 			}
-			if (fread(&num2, sizeof(long int), 1, second_file) == -1) {
-				perror("FMERGE fread");
-				exit(1);
+			if ((ret = fread(&num2, sizeof(long int), 1, second_file)) != 1) {
+				printf("fread  : ret = %d\tcount1 = %d\tcount2 = %d\n", ret, count1, count2);
 			}
 
-			while (count1 < NUM_ELE && count2 < NUM_ELE) {
+			while (true) {
 				if (num1 <= num2) {
-					fwrite(&num1, sizeof(long int), 1, out_file);
-					if (LVL == 2)
-						fprintf(b, "%ld\n", num1);
+					if ((ret = fwrite(&num1, sizeof(long int), 1, out_file)) != 1) {
+						printf("fwrite1 : ret = %d\tcount1 = %d\tcount2 = %d\n", ret, count1, count2);
+					}
 					count1++;
-					if (fread(&num1, sizeof(long int), 1, first_file) == -1) {
-						perror("IN FMERGE fread");
-						exit(1);
+					if (count1 > NUM_ELE)
+						break;
+					if ((ret = fread(&num1, sizeof(long int), 1, first_file)) != 1) {
+						printf("fread1  : ret = %d\tcount1 = %d\tcount2 = %d\n", ret, count1, count2);
 					}
 				} else {
-					fwrite(&num2, sizeof(long int), 1, out_file);
-					if (LVL == 2)
-						fprintf(b, "%ld\n", num2);
+					if ((ret = fwrite(&num2, sizeof(long int), 1, out_file)) != 1) {
+						printf("fwrite2  : ret = %d\tcount1 = %d\tcount2 = %d\n", ret, count1, count2);
+					}
 					count2++;
-					if (fread(&num2, sizeof(long int), 1, second_file) == -1) {
-						perror("IN FMERGE fread");
-						exit(1);
+
+					if (count2 > NUM_ELE)
+						break;
+					if ((ret = fread(&num2, sizeof(long int), 1, second_file)) != 1) {
+						printf("fread2  : ret = %d\tcount1 = %d\tcount2 = %d\n", ret, count1, count2);
 					}
 				}
 			}
 
-			while (count1 < NUM_ELE) {
-				fwrite(&num1, sizeof(long int), 1, out_file);
-				if (LVL == 2)
-					fprintf(b, "%ld\n", num1);
+			while (count1 <= NUM_ELE) {
+				if ((ret = fwrite(&num1, sizeof(long int), 1, out_file)) != 1) {
+					printf("while fwrite1  : ret = %d\tcount1 = %d\tcount2 = %d\n", ret, count1, count2);
+				}
 				count1++;
-				if (fread(&num1, sizeof(long int), 1, first_file) == -1) {
-					perror("FMERGE fread");
-					exit(1);
+				if (count1 > NUM_ELE)
+					break;
+				if ((ret = fread(&num1, sizeof(long int), 1, first_file)) != 1) {
+					printf("while fread1  : ret = %d\tcount1 = %d\tcount2 = %d\n", ret, count1, count2);
 				}
 			}
 
-			while (count2 < NUM_ELE) {
-				fwrite(&num2, sizeof(long int), 1, out_file);
-				if (LVL == 2)
-					fprintf(b, "%ld\n", num2);
+			while (count2 <= NUM_ELE) {
+				if ((ret = fwrite(&num2, sizeof(long int), 1, out_file)) != 1) {
+					printf("while fwrite2  : ret = %d\tcount1 = %d\tcount2 = %d\n", ret, count1, count2);
+				}
 				count2++;
-				if (fread(&num2, sizeof(long int), 1, second_file) == -1) {
-					perror("FMERGE fread");
-					exit(1);
+				if (count2 > NUM_ELE)
+					break;
+				if ((ret = fread(&num2, sizeof(long int), 1, second_file)) != 1) {
+					printf("while fread2  : ret = %d\tcount1 = %d\tcount2 = %d\n", ret, count1, count2);
 				}
 			}
-
-			printf("Data transferred count1 = %d \t count2 = %d\n", count1, count2);
+			printf("EN : first_file = %ld\t second_file = %ld\t out_file = %ld\t NUM_ELE = %d\n", ftell(first_file), ftell(second_file), ftell(out_file), NUM_ELE);
 		}
 
 		fclose(first_file);
 		fclose(second_file);
-		fflush(out_file);
 		fclose(out_file);
 
 		gettimeofday(&t, NULL);

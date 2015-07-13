@@ -14,7 +14,7 @@
 
 int main(int argc, char **argv){
 	FILE *file1 = fopen(argv[1], "r");
-	FILE *file2 = fopen(argv[2], "w+");
+	FILE *file2 = fopen("temp1.data", "w+");
 	long int num1;
 	int count = 0;
 	fseek(file1, 0, SEEK_END);
@@ -29,4 +29,5 @@ int main(int argc, char **argv){
 		fprintf(file2, "%ld\n", data[i]);
 	}
 	fflush(file2);
+	system("sort -n temp1.data > temp_sort");
 }
