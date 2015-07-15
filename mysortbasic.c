@@ -18,7 +18,7 @@
 //#define MIN(x, y) (y ^ ((x ^ y) & -(x < y)))
 //#define MAX(x, y) (x ^ ((x ^ y) & -(x < y)))
 //#define SWAP(x,y , lo) { int tmp = MIN(data[lo+x], data[lo+y]); data[lo+y] = MAX(data[lo+x], data[lo+y]); data[lo+x] = tmp; }
-#define SWAP(x,y,lo) if (data[lo+y] < data[lo+x]) { int tmp = data[lo+x]; data[lo+x] = data[lo+y]; data[lo+y] = tmp; }
+#define SWAP(x,y,lo) if (data[lo+y] < data[lo+x]) { long int tmp = data[lo+x]; data[lo+x] = data[lo+y]; data[lo+y] = tmp; }
 
 #define NUM_THREADS  16
 long int *data;
@@ -37,7 +37,7 @@ bool is_sorted(int start, int end) {
 	int err_ct = 0;
 	for (int i = start; i <= end - 1; i++) {
 		if (data[i] > data[i + 1]) {
-//			printf("ERROR : %ld\t%ld\t%d\t%d\n", data[i], data[i + 1], i, i + 1);
+			printf("ERROR : %ld\t%ld\t%d\t%d\n", data[i], data[i + 1], i, i + 1);
 			err_ct++;
 		}
 	}
@@ -239,18 +239,6 @@ void *mergesort_caller(void *arg) {
 	mergesort(start, end);
 }
 
-int find_min(long int *vals) {
-	int min = vals[0];
-	int pos = 0;
-	for (int i = 0; i < NUM_THREADS; i++) {
-		if (vals[i] < min) {
-			min = vals[i];
-			pos = i;
-		}
-	}
-	return pos;
-}
-
 void *k_way_merger_single(void *arg) {
 	int myid = *(int *) arg;
 	int num_ele = ceil((SIZE * 1.0f) / CURR_THREADS);
@@ -346,11 +334,6 @@ int main(int argc, char **argv) {
 
 	data = malloc(sizeof(long int) * SIZE);
 	temp = malloc(sizeof(long int) * SIZE);
-
-	for (int i = 0; i < SIZE; i++) {
-		data[i] = -100;
-		temp[i] = -100;
-	}
 	if (data == NULL && temp == NULL) {
 		perror("Malloc :");
 		exit(1);
@@ -398,7 +381,6 @@ int main(int argc, char **argv) {
 		}
 		gettimeofday(&t, NULL);
 		end_time = 1.0e-6 * t.tv_usec + t.tv_sec;
-
 		printf("Split Merge Sort completed \t Execution time =  %lf seconds\n", end_time - start_time);
 
 		gettimeofday(&t, NULL);
@@ -624,12 +606,10 @@ int main(int argc, char **argv) {
 		LVL++;
 		if (LVL != 0) {
 			/*removing the old file out*/
-//			if (system(remove) == -1) {
-//				printf("Removing file failed");
-//			}
 			sprintf(remove_fn, "rm temp_lvl%d", LVL - 1);
-			if (remove(remove_fn) == -1) {
-				perror("Deleting file");
+			printf("Removing file command %s\n" , remove_fn);
+			if (system(remove_fn) == -1) {
+				printf("Removing file failed");
 			}
 
 		}
