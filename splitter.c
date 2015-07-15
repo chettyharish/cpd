@@ -11,25 +11,17 @@
 #include <unistd.h>
 #include <math.h>
 
-int main(int argc , char **argv){
-	int num = atoi(argv[1]);
-	long int *data = malloc(sizeof(long int) * num);
-	long int *data2 = malloc(sizeof(long int) * num);
-	FILE *file = fopen("/home/cop5570a/test0", "r");
+int main(int argc, char **argv) {
+	long int num = atol(argv[1]);
+	long int num1[100000];
+	FILE *file = fopen("../cop5570a/test0", "r");
 	FILE *file2 = fopen("op", "w+");
-	for(int i = 0 ; i < num ; i++){
-		if(fread(&data[i], sizeof(long int), 1, file) == -1)
+	for (long int i = 0; i < num / 100000; i++) {
+		if (i % 100 == 0)
+			printf("Working on i = %ld\n", i*100000);
+		if (fread(&num1[0], sizeof(long int), 100000, file) == -1)
 			perror("fread");
-		if(fwrite(&data[i], sizeof(long int), 1, file2) == -1)
+		if (fwrite(&num1[0], sizeof(long int), 100000, file2) == -1)
 			perror("fwrite");
 	}
-
-//	fseek(file2 , 0,SEEK_SET);
-//	for(int i = 0 ; i < num ; i++){
-//		if(fread(&data2[i], sizeof(long int), 1, file2) == -1)
-//			perror("fread");
-//		if(data[i] != data2[i])
-//			perror("Mismatch");
-//	}
-
 }

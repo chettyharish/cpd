@@ -301,7 +301,7 @@ long int read_chunk(FILE *r_file, int pos, int CSIZE, int buf_num, long int END)
 
 	long int start = ftell(r_file) / 8;
 	long int curr = ftell(r_file) / 8;
-	int count = 0;
+	long int count = 0;
 	bool flag = false;
 	while (true) {
 		curr = ftell(r_file) / 8;
@@ -320,17 +320,13 @@ long int read_chunk(FILE *r_file, int pos, int CSIZE, int buf_num, long int END)
 
 		count += buf_num;
 	}
-
-	printf("read_chunk  OUT BAD  \n");
-
-	return -1;
 }
 
 void write_chunk(FILE *out_file, int w_count, int CSIZE, int buf_num, long int END) {
 	long int start = ftell(out_file) / 8;
 	long int curr = ftell(out_file) / 8;
 
-	int count = 0;
+	long int count = 0;
 	bool flag = false;
 	while (true) {
 		curr = ftell(out_file) / 8;
@@ -403,7 +399,6 @@ int main(int argc, char **argv) {
 	}
 
 	for (int blk = 0; blk < NUM_BLK; blk++) {
-		printf("Here\n");
 		printf("\nStarting with BLK = %d\n", blk);
 		gettimeofday(&t, NULL);
 		start_time = 1.0e-6 * t.tv_usec + t.tv_sec;
@@ -547,6 +542,7 @@ int main(int argc, char **argv) {
 			long int end2 = read_chunk(second_file, start2, CSIZE, buf_num, END2);
 
 			if (CURR_BLK != 1) {
+				printf("Working for CURR_BLK = %d" , CURR_BLK);
 				while (true) {
 					if (data[start1] <= data[start2]) {
 						temp[w_count++] = data[start1];
@@ -747,9 +743,9 @@ int main(int argc, char **argv) {
 		printf("Merge LVL = %d Completed\t Execution time =  %lf seconds \n\n\n", LVL + 1, end_time - start_time);
 
 		LVL++;
-		if (LVL != 0 && LVL != 1) {
+		if (LVL != 0) {
 			/*removing the old file out*/
-			sprintf(remove, "rm temp_lvl%d", LVL - 2);
+			sprintf(remove, "rm temp_lvl%d", LVL - 1);
 			if (system(remove) == -1) {
 				printf("Removing file failed");
 			}
@@ -759,7 +755,7 @@ int main(int argc, char **argv) {
 	}
 
 //	/*Remove all temporary files*/
-	if (system("rm temp_lvl*") == -1) {
+	if (system("rm -f temp_lvl*") == -1) {
 		printf("Removing file failed");
 	}
 

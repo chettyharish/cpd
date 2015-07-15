@@ -31,6 +31,8 @@ long int RSIZE;
 int myid[NUM_THREADS];
 pthread_t tid[NUM_THREADS];
 
+int counters[33];
+
 bool is_sorted(int start, int end) {
 	int err_ct = 0;
 	for (int i = start; i <= end - 1; i++) {
@@ -47,7 +49,6 @@ bool is_sorted(int start, int end) {
 }
 
 static __inline__ void sort8(long int * data, int lo) {
-
 	SWAP(0, 1, lo);
 	SWAP(2, 3, lo);
 	SWAP(4, 5, lo);
@@ -188,6 +189,10 @@ void mergesort(int lo, int hi) {
 		return;
 	int num = hi - lo + 1;
 
+	if (num < 33) {
+		counters[num]++;
+	}
+
 	if (num <= 8) {
 		switch (num) {
 		case 0:
@@ -303,6 +308,9 @@ int main(int argc, char **argv) {
 	struct timeval t;
 	char outfile[100];
 
+	for (int i = 0; i < 33; i++)
+		counters[i] = 0;
+
 	gettimeofday(&t, NULL);
 	orig_time = 1.0e-6 * t.tv_usec + t.tv_sec;
 
@@ -325,7 +333,6 @@ int main(int argc, char **argv) {
 	}
 
 	NUM_BLK = atoi(argv[2]);
-	int cond = atoi(argv[3]);
 
 	fseek(in_file, 0, SEEK_END);
 	FSIZE = ftell(in_file);
@@ -356,24 +363,23 @@ int main(int argc, char **argv) {
 
 		FILE *in_file = fopen(argv[1], "r");
 		fseek(in_file, blk * RSIZE, SEEK_SET);
-		if (cond == 1) {
-			int count = 0;
-			int buf_num = BUFSIZ / 8;
-			bool flag = false;
-			while (flag == false) {
+		int count = 0;
+		int buf_num = BUFSIZ / 8;
+		bool flag = false;
+		while (flag == false) {
 
-				if (count + buf_num >= SIZE) {
-					flag = true;
-					buf_num = (SIZE - count);
-				}
-				if (fread(&data[count], sizeof(long int), buf_num, in_file) == -1) {
-					perror("fread");
-					exit(1);
-				}
-
-				count += buf_num;
+			if (count + buf_num >= SIZE) {
+				flag = true;
+				buf_num = (SIZE - count);
 			}
+			if (fread(&data[count], sizeof(long int), buf_num, in_file) == -1) {
+				perror("fread");
+				exit(1);
+			}
+
+			count += buf_num;
 		}
+
 		fclose(in_file);
 
 		gettimeofday(&t, NULL);
@@ -418,34 +424,29 @@ int main(int argc, char **argv) {
 
 		gettimeofday(&t, NULL);
 		start_time = 1.0e-6 * t.tv_usec + t.tv_sec;
+		count = 0;
+		buf_num = BUFSIZ / 8;
+		flag = false;
 
-		if (cond == 1) {
-			int count = 0;
-			int buf_num = BUFSIZ / 8;
-			bool flag = false;
-
-			while (flag == false) {
-				if (count + buf_num >= SIZE) {
-					flag = true;
-					buf_num = (SIZE - count);
-				}
-
-				if (fwrite(&data[count], sizeof(long int), buf_num, out_file) == -1) {
-					perror("fwrite");
-					exit(1);
-				}
-
-				count += buf_num;
+		while (flag == false) {
+			if (count + buf_num >= SIZE) {
+				flag = true;
+				buf_num = (SIZE - count);
 			}
-			fflush(out_file);
 
+			if (fwrite(&data[count], sizeof(long int), buf_num, out_file) == -1) {
+				perror("fwrite");
+				exit(1);
+			}
+
+			count += buf_num;
 		}
 
 		gettimeofday(&t, NULL);
 		end_time = 1.0e-6 * t.tv_usec + t.tv_sec;
 		printf("Writing completed to file %s\t Execution time =  %lf seconds\n", outfile, end_time - start_time);
-
 	}
+	fclose(out_file);
 
 	gettimeofday(&t, NULL);
 	end_time = 1.0e-6 * t.tv_usec + t.tv_sec;
@@ -461,7 +462,7 @@ int main(int argc, char **argv) {
 		char f1[100];
 		char f2[100];
 		char op[100];
-		char remove[100];
+		char remove_fn[100];
 		sprintf(f1, "temp_lvl%d", LVL);
 		sprintf(f2, "temp_lvl%d", LVL);
 		if (CURR_BLK != 1) {
@@ -471,7 +472,7 @@ int main(int argc, char **argv) {
 		}
 		FILE *first_file = fopen(f1, "r");
 		FILE *second_file = fopen(f2, "r");
-		FILE *out_file = fopen(op, "wb+");
+		FILE *op_file = fopen(op, "wb+");
 		long int NUM_ELE = ((long int) FSIZE / 8) / ((long int) NUM_BLK / (1 << LVL));
 
 		for (int i = 0; i < CURR_BLK; i++) {
@@ -483,8 +484,8 @@ int main(int argc, char **argv) {
 			long int loc3 = (2 * i) * (long int) NUM_ELE * 8;
 			fseek(first_file, loc1, SEEK_SET);
 			fseek(second_file, loc2, SEEK_SET);
-			fseek(out_file, loc3, SEEK_SET);
-			printf("ST : first_file = %ld\t second_file = %ld\t out_file = %ld\t NUM_ELE = %ld\n", ftell(first_file), ftell(second_file), ftell(out_file), NUM_ELE);
+			fseek(op_file, loc3, SEEK_SET);
+			printf("ST : first_file = %ld\t second_file = %ld\t out_file = %ld\t NUM_ELE = %ld\n", ftell(first_file), ftell(second_file), ftell(op_file), NUM_ELE);
 
 			if (CURR_BLK != 1) {
 				int ret = -1;
@@ -497,7 +498,7 @@ int main(int argc, char **argv) {
 
 				while (true) {
 					if (num1 <= num2) {
-						if ((ret = fwrite(&num1, sizeof(long int), 1, out_file)) != 1) {
+						if ((ret = fwrite(&num1, sizeof(long int), 1, op_file)) != 1) {
 							printf("fwrite1 : ret = %d\tcount1 = %d\tcount2 = %d\n", ret, count1, count2);
 						}
 						count1++;
@@ -507,7 +508,7 @@ int main(int argc, char **argv) {
 							printf("fread1  : ret = %d\tcount1 = %d\tcount2 = %d\n", ret, count1, count2);
 						}
 					} else {
-						if ((ret = fwrite(&num2, sizeof(long int), 1, out_file)) != 1) {
+						if ((ret = fwrite(&num2, sizeof(long int), 1, op_file)) != 1) {
 							printf("fwrite2  : ret = %d\tcount1 = %d\tcount2 = %d\n", ret, count1, count2);
 						}
 						count2++;
@@ -521,7 +522,7 @@ int main(int argc, char **argv) {
 				}
 
 				while (count1 <= NUM_ELE) {
-					if ((ret = fwrite(&num1, sizeof(long int), 1, out_file)) != 1) {
+					if ((ret = fwrite(&num1, sizeof(long int), 1, op_file)) != 1) {
 						printf("while fwrite1  : ret = %d\tcount1 = %d\tcount2 = %d\n", ret, count1, count2);
 					}
 					count1++;
@@ -533,7 +534,7 @@ int main(int argc, char **argv) {
 				}
 
 				while (count2 <= NUM_ELE) {
-					if ((ret = fwrite(&num2, sizeof(long int), 1, out_file)) != 1) {
+					if ((ret = fwrite(&num2, sizeof(long int), 1, op_file)) != 1) {
 						printf("while fwrite2  : ret = %d\tcount1 = %d\tcount2 = %d\n", ret, count1, count2);
 					}
 					count2++;
@@ -543,7 +544,7 @@ int main(int argc, char **argv) {
 						printf("while fread2  : ret = %d\tcount1 = %d\tcount2 = %d\n", ret, count1, count2);
 					}
 				}
-				printf("EN : first_file = %ld\t second_file = %ld\t out_file = %ld\t NUM_ELE = %ld\n", ftell(first_file), ftell(second_file), ftell(out_file), NUM_ELE);
+				printf("EN : first_file = %ld\t second_file = %ld\t out_file = %ld\t NUM_ELE = %ld\n", ftell(first_file), ftell(second_file), ftell(op_file), NUM_ELE);
 			} else {
 				/*Final block, so dont write back everything to file Just get whatever is needed!*/
 				int ret = -1;
@@ -558,7 +559,7 @@ int main(int argc, char **argv) {
 				while (true) {
 					if (num1 <= num2) {
 						if ((main_count) % 1000 == 0) {
-							fprintf(out_file, "%10d\t%20ld\n", main_count, num1);
+							fprintf(op_file, "%10d\t%20ld\n", main_count, num1);
 						}
 						main_count++;
 						count1++;
@@ -569,7 +570,7 @@ int main(int argc, char **argv) {
 						}
 					} else {
 						if ((main_count) % 1000 == 0) {
-							fprintf(out_file, "%10d\t%20ld\n", main_count, num2);
+							fprintf(op_file, "%10d\t%20ld\n", main_count, num2);
 						}
 						main_count++;
 						count2++;
@@ -583,7 +584,7 @@ int main(int argc, char **argv) {
 
 				while (count1 <= NUM_ELE) {
 					if ((main_count) % 1000 == 0) {
-						fprintf(out_file, "%10d\t%20ld\n", main_count, num1);
+						fprintf(op_file, "%10d\t%20ld\n", main_count, num1);
 					}
 					main_count++;
 					count1++;
@@ -596,7 +597,7 @@ int main(int argc, char **argv) {
 
 				while (count2 <= NUM_ELE) {
 					if ((main_count) % 1000 == 0) {
-						fprintf(out_file, "%10d\t%20ld\n", main_count, num2);
+						fprintf(op_file, "%10d\t%20ld\n", main_count, num2);
 					}
 					main_count++;
 					count2++;
@@ -606,14 +607,14 @@ int main(int argc, char **argv) {
 						printf("while fread2  : ret = %d\tcount1 = %d\tcount2 = %d\n", ret, count1, count2);
 					}
 				}
-				printf("EN : first_file = %ld\t second_file = %ld\t out_file = %ld\t NUM_ELE = %ld\n", ftell(first_file), ftell(second_file), ftell(out_file), NUM_ELE);
+				printf("EN : first_file = %ld\t second_file = %ld\t out_file = %ld\t NUM_ELE = %ld\n", ftell(first_file), ftell(second_file), ftell(op_file), NUM_ELE);
 
 			}
 		}
 
 		fclose(first_file);
 		fclose(second_file);
-		fclose(out_file);
+		fclose(op_file);
 
 		gettimeofday(&t, NULL);
 		end_time = 1.0e-6 * t.tv_usec + t.tv_sec;
@@ -621,11 +622,14 @@ int main(int argc, char **argv) {
 		printf("Merge LVL = %d Completed\t Execution time =  %lf seconds \n\n\n", LVL + 1, end_time - start_time);
 
 		LVL++;
-		if (LVL != 0 && LVL != 1) {
+		if (LVL != 0) {
 			/*removing the old file out*/
-			sprintf(remove, "rm temp_lvl%d", LVL - 2);
-			if (system(remove) == -1) {
-				printf("Removing file failed");
+//			if (system(remove) == -1) {
+//				printf("Removing file failed");
+//			}
+			sprintf(remove_fn, "rm temp_lvl%d", LVL - 1);
+			if (remove(remove_fn) == -1) {
+				perror("Deleting file");
 			}
 
 		}
@@ -633,12 +637,15 @@ int main(int argc, char **argv) {
 	}
 
 	/*Remove all temporary files*/
-	if (system("rm temp_lvl*") == -1) {
+	if (system("rm -f temp_lvl*") == -1) {
 		printf("Removing file failed");
 	}
 
 	gettimeofday(&t, NULL);
 	end_time = 1.0e-6 * t.tv_usec + t.tv_sec;
 	printf("PHASE 2 Completed\t Execution time =  %lf seconds \n", end_time - orig_time);
+
+	for (int i = 0; i < 33; i++)
+		printf("counter %d = %d\n", i, counters[i]);
 	return 0;
 }
