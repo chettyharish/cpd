@@ -17,7 +17,7 @@
 
 //#define MIN(x, y) (y ^ ((x ^ y) & -(x < y)))
 //#define MAX(x, y) (x ^ ((x ^ y) & -(x < y)))
-//#define SWAP(x,y , lo) { int tmp = MIN(data[lo+x], data[lo+y]); data[lo+y] = MAX(data[lo+x], data[lo+y]); data[lo+x] = tmp; }
+//#define SWAP(x,y , lo) {long int tmp = MIN(data[lo+x], data[lo+y]); data[lo+y] = MAX(data[lo+x], data[lo+y]); data[lo+x] = tmp; }
 #define SWAP(x,y,lo) if (data[lo+y] < data[lo+x]) { long int tmp = data[lo+x]; data[lo+x] = data[lo+y]; data[lo+y] = tmp; }
 
 #define NUM_THREADS  16
@@ -33,11 +33,11 @@ pthread_t tid[NUM_THREADS];
 
 int counters[33];
 
-bool is_sorted(int start, int end) {
+bool is_sorted(long int start, long int end) {
 	int err_ct = 0;
-	for (int i = start; i <= end - 1; i++) {
+	for (long int i = start; i <= end - 1; i++) {
 		if (data[i] > data[i + 1]) {
-			printf("ERROR : %ld\t%ld\t%d\t%d\n", data[i], data[i + 1], i, i + 1);
+			printf("ERROR : %ld\t%ld\t%ld\t%ld\n", data[i], data[i + 1], i, i + 1);
 			err_ct++;
 		}
 	}
@@ -48,7 +48,7 @@ bool is_sorted(int start, int end) {
 	return true;
 }
 
-static __inline__ void sort8(long int * data, int lo) {
+static __inline__ void sort8(long int * data, long int lo) {
 	SWAP(0, 1, lo);
 	SWAP(2, 3, lo);
 	SWAP(4, 5, lo);
@@ -75,7 +75,7 @@ static __inline__ void sort8(long int * data, int lo) {
 
 	SWAP(3, 4, lo);
 }
-static __inline__ void sort7(long int * data, int lo) {
+static __inline__ void sort7(long int * data, long int lo) {
 	SWAP(1, 2, lo);
 	SWAP(3, 4, lo);
 	SWAP(5, 6, lo);
@@ -98,7 +98,7 @@ static __inline__ void sort7(long int * data, int lo) {
 	SWAP(2, 3, lo);
 }
 
-static __inline__ void sort6(long int * data, int lo) {
+static __inline__ void sort6(long int * data, long int lo) {
 	//Parallelizable
 	SWAP(1, 2, lo);
 	SWAP(4, 5, lo);
@@ -124,7 +124,7 @@ static __inline__ void sort6(long int * data, int lo) {
 	SWAP(2, 3, lo);
 }
 
-static __inline__ void sort5(long int * data, int lo) {
+static __inline__ void sort5(long int * data, long int lo) {
 
 	SWAP(0, 1, lo);
 	SWAP(3, 4, lo);
@@ -142,7 +142,7 @@ static __inline__ void sort5(long int * data, int lo) {
 	SWAP(1, 2, lo);
 }
 
-static __inline__ void sort4(long int * data, int lo) {
+static __inline__ void sort4(long int * data, long int lo) {
 	SWAP(0, 1, lo);
 	SWAP(2, 3, lo);
 
@@ -152,7 +152,7 @@ static __inline__ void sort4(long int * data, int lo) {
 	SWAP(1, 2, lo);
 }
 
-static __inline__ void sort3(long int * data, int lo) {
+static __inline__ void sort3(long int * data, long int lo) {
 	SWAP(1, 2, lo);
 
 	SWAP(0, 2, lo);
@@ -160,14 +160,14 @@ static __inline__ void sort3(long int * data, int lo) {
 	SWAP(0, 1, lo);
 }
 
-static __inline__ void sort2(long int * data, int lo) {
+static __inline__ void sort2(long int * data, long int lo) {
 	SWAP(0, 1, lo);
 }
 
-void merge(int lo, int mid, int hi) {
-	int i, j, k;
+void merge(long int lo, long int mid, long int hi) {
+	long int i, j, k;
 //	memcpy(&temp[lo], &data[lo], (hi - lo + 1) * sizeof(long int));
-	for (int i = lo; i <= hi; i++) {
+	for (long int i = lo; i <= hi; i++) {
 		temp[i] = data[i];
 	}
 	i = lo, j = mid + 1;
@@ -184,10 +184,10 @@ void merge(int lo, int mid, int hi) {
 	}
 }
 
-void mergesort(int lo, int hi) {
+void mergesort(long int lo,long int hi) {
 	if (hi <= lo)
 		return;
-	int num = hi - lo + 1;
+	long int num = hi - lo + 1;
 
 	if (num < 33) {
 		counters[num]++;
@@ -222,7 +222,7 @@ void mergesort(int lo, int hi) {
 		}
 	}
 
-	int mid = lo + (hi - lo) / 2;
+	long int mid = lo + (hi - lo) / 2;
 	mergesort(lo, mid);
 	mergesort(mid + 1, hi);
 //	if (!(data[mid] < data[mid + 1])) {
@@ -233,27 +233,27 @@ void mergesort(int lo, int hi) {
 
 void *mergesort_caller(void *arg) {
 	int myid = *(int *) arg;
-	int num_ele = ceil((SIZE * 1.0f) / NUM_THREADS);
-	int start = myid * num_ele;
-	int end = (((myid + 1) * num_ele - 1) < (SIZE - 1)) ? ((myid + 1) * num_ele - 1) : (SIZE - 1);
+	long int num_ele = ceil((SIZE * 1.0f) / NUM_THREADS);
+	long int start = myid * num_ele;
+	long int end = (((myid + 1) * num_ele - 1) < (SIZE - 1)) ? ((myid + 1) * num_ele - 1) : (SIZE - 1);
 	mergesort(start, end);
 }
 
 void *k_way_merger_single(void *arg) {
 	int myid = *(int *) arg;
-	int num_ele = ceil((SIZE * 1.0f) / CURR_THREADS);
-	int start1 = myid * num_ele;
-	int end1 = myid * num_ele + num_ele / 2 - 1;
-	int start2 = myid * num_ele + num_ele / 2;
-	int end2 = (myid + 1) * num_ele - 1;
+	long int num_ele = ceil((SIZE * 1.0f) / CURR_THREADS);
+	long int start1 = myid * num_ele;
+	long int end1 = myid * num_ele + num_ele / 2 - 1;
+	long int start2 = myid * num_ele + num_ele / 2;
+	long int end2 = (myid + 1) * num_ele - 1;
 	if (end2 >= SIZE) {
 		end2 = SIZE - 1;
 	}
 
-	int curr1 = start1, curr2 = start2;
+	long int curr1 = start1, curr2 = start2;
 
 //	printf("TID = %10d\t\tstart1 = %10d\tend1 = %10d\tstart2 = %10d\tend2 = %10d\tcurr1 = %10d\tcurr2 = %10d\n", myid, start1, end1, start2, end2, curr1, curr2);
-	int i = start1;
+	long int i = start1;
 	while (curr1 <= end1 && curr2 <= end2) {
 		if (data[curr1] <= data[curr2])
 			temp[i++] = data[curr1++];
@@ -269,7 +269,7 @@ void *k_way_merger_single(void *arg) {
 		temp[i++] = data[curr2++];
 	}
 
-	for (int i = start1; i <= end2; i++)
+	for (long int i = start1; i <= end2; i++)
 		data[i] = temp[i];
 }
 
@@ -346,8 +346,8 @@ int main(int argc, char **argv) {
 
 		FILE *in_file = fopen(argv[1], "r");
 		fseek(in_file, blk * RSIZE, SEEK_SET);
-		int count = 0;
-		int buf_num = BUFSIZ / 8;
+		long int count = 0;
+		long int buf_num = BUFSIZ / 8;
 		bool flag = false;
 		while (flag == false) {
 
@@ -458,8 +458,8 @@ int main(int argc, char **argv) {
 		long int NUM_ELE = ((long int) FSIZE / 8) / ((long int) NUM_BLK / (1 << LVL));
 
 		for (int i = 0; i < CURR_BLK; i++) {
-			int count1 = 1;
-			int count2 = 1;
+			long int count1 = 1;
+			long int count2 = 1;
 			long int num1, num2;
 			long int loc1 = (2 * i) * (long int) NUM_ELE * 8;
 			long int loc2 = (2 * i + 1) * (long int) NUM_ELE * 8;
@@ -472,121 +472,141 @@ int main(int argc, char **argv) {
 			if (CURR_BLK != 1) {
 				int ret = -1;
 				if ((ret = fread(&num1, sizeof(long int), 1, first_file)) != 1) {
-					printf("fread  : ret = %d\tcount1 = %d\tcount2 = %d\n", ret, count1, count2);
+					printf("fread  : ret = %d\tcount1 = %ld\tcount2 = %ld\n", ret, count1, count2);
+					exit(1);
 				}
 				if ((ret = fread(&num2, sizeof(long int), 1, second_file)) != 1) {
-					printf("fread  : ret = %d\tcount1 = %d\tcount2 = %d\n", ret, count1, count2);
+					printf("fread  : ret = %d\tcount1 = %ld\tcount2 = %ld\n", ret, count1, count2);
+					exit(1);
 				}
 
 				while (true) {
 					if (num1 <= num2) {
 						if ((ret = fwrite(&num1, sizeof(long int), 1, op_file)) != 1) {
-							printf("fwrite1 : ret = %d\tcount1 = %d\tcount2 = %d\n", ret, count1, count2);
+							printf("fwrite1 : ret = %d\tcount1 = %ld\tcount2 = %ld\n", ret, count1, count2);
+							exit(1);
 						}
 						count1++;
 						if (count1 > NUM_ELE)
 							break;
 						if ((ret = fread(&num1, sizeof(long int), 1, first_file)) != 1) {
-							printf("fread1  : ret = %d\tcount1 = %d\tcount2 = %d\n", ret, count1, count2);
+							printf("fread1  : ret = %d\tcount1 = %ld\tcount2 = %ld\n", ret, count1, count2);
+							exit(1);
 						}
 					} else {
 						if ((ret = fwrite(&num2, sizeof(long int), 1, op_file)) != 1) {
-							printf("fwrite2  : ret = %d\tcount1 = %d\tcount2 = %d\n", ret, count1, count2);
+							printf("fwrite2  : ret = %d\tcount1 = %ld\tcount2 = %ld\n", ret, count1, count2);
+							exit(1);
 						}
 						count2++;
 
 						if (count2 > NUM_ELE)
 							break;
 						if ((ret = fread(&num2, sizeof(long int), 1, second_file)) != 1) {
-							printf("fread2  : ret = %d\tcount1 = %d\tcount2 = %d\n", ret, count1, count2);
+							printf("fread2  : ret = %d\tcount1 = %ld\tcount2 = %ld\n", ret, count1, count2);
+							exit(1);
 						}
 					}
 				}
 
 				while (count1 <= NUM_ELE) {
 					if ((ret = fwrite(&num1, sizeof(long int), 1, op_file)) != 1) {
-						printf("while fwrite1  : ret = %d\tcount1 = %d\tcount2 = %d\n", ret, count1, count2);
+						printf("while fwrite1  : ret = %d\tcount1 = %ld\tcount2 = %ld\n", ret, count1, count2);
+						exit(1);
 					}
 					count1++;
 					if (count1 > NUM_ELE)
 						break;
 					if ((ret = fread(&num1, sizeof(long int), 1, first_file)) != 1) {
-						printf("while fread1  : ret = %d\tcount1 = %d\tcount2 = %d\n", ret, count1, count2);
+						printf("while fread1  : ret = %d\tcount1 = %ld\tcount2 = %ld\n", ret, count1, count2);
+						exit(1);
 					}
 				}
 
 				while (count2 <= NUM_ELE) {
 					if ((ret = fwrite(&num2, sizeof(long int), 1, op_file)) != 1) {
-						printf("while fwrite2  : ret = %d\tcount1 = %d\tcount2 = %d\n", ret, count1, count2);
+						printf("while fwrite2  : ret = %d\tcount1 = %ld\tcount2 = %ld\n", ret, count1, count2);
+						exit(1);
 					}
 					count2++;
 					if (count2 > NUM_ELE)
 						break;
 					if ((ret = fread(&num2, sizeof(long int), 1, second_file)) != 1) {
-						printf("while fread2  : ret = %d\tcount1 = %d\tcount2 = %d\n", ret, count1, count2);
+						printf("while fread2  : ret = %d\tcount1 = %ld\tcount2 = %ld\n", ret, count1, count2);
+						exit(1);
 					}
 				}
 				printf("EN : first_file = %ld\t second_file = %ld\t out_file = %ld\t NUM_ELE = %ld\n", ftell(first_file), ftell(second_file), ftell(op_file), NUM_ELE);
 			} else {
 				/*Final block, so dont write back everything to file Just get whatever is needed!*/
 				int ret = -1;
-				int main_count = 0;
+				long int main_count = 0;
 				if ((ret = fread(&num1, sizeof(long int), 1, first_file)) != 1) {
-					printf("fread  : ret = %d\tcount1 = %d\tcount2 = %d\n", ret, count1, count2);
+					printf("fread  : ret = %d\tcount1 = %ld\tcount2 = %ld\n", ret, count1, count2);
+					exit(1);
 				}
 				if ((ret = fread(&num2, sizeof(long int), 1, second_file)) != 1) {
-					printf("fread  : ret = %d\tcount1 = %d\tcount2 = %d\n", ret, count1, count2);
+					printf("fread  : ret = %d\tcount1 = %ld\tcount2 = %ld\n", ret, count1, count2);
+					exit(1);
 				}
 
 				while (true) {
 					if (num1 <= num2) {
 						if ((main_count) % 1000 == 0) {
-							fprintf(op_file, "%10d\t%20ld\n", main_count, num1);
+//							fprintf(op_file, "%10ld\t%20ld\n", main_count, num1);
+							fprintf(op_file, "%ld\n",  num1);
 						}
 						main_count++;
 						count1++;
 						if (count1 > NUM_ELE)
 							break;
 						if ((ret = fread(&num1, sizeof(long int), 1, first_file)) != 1) {
-							printf("fread1  : ret = %d\tcount1 = %d\tcount2 = %d\n", ret, count1, count2);
+							printf("fread1  : ret = %d\tcount1 = %ld\tcount2 = %ld\n", ret, count1, count2);
+							exit(1);
 						}
 					} else {
 						if ((main_count) % 1000 == 0) {
-							fprintf(op_file, "%10d\t%20ld\n", main_count, num2);
+//							fprintf(op_file, "%10ld\t%20ld\n", main_count, num2);
+							fprintf(op_file, "%ld\n",  num2);
 						}
 						main_count++;
 						count2++;
 						if (count2 > NUM_ELE)
 							break;
 						if ((ret = fread(&num2, sizeof(long int), 1, second_file)) != 1) {
-							printf("fread2  : ret = %d\tcount1 = %d\tcount2 = %d\n", ret, count1, count2);
+							printf("fread2  : ret = %d\tcount1 = %ld\tcount2 = %ld\n", ret, count1, count2);
+							exit(1);
 						}
 					}
 				}
 
 				while (count1 <= NUM_ELE) {
 					if ((main_count) % 1000 == 0) {
-						fprintf(op_file, "%10d\t%20ld\n", main_count, num1);
+//						fprintf(op_file, "%10ld\t%20ld\n", main_count, num1);
+						fprintf(op_file, "%ld\n",  num1);
 					}
 					main_count++;
 					count1++;
 					if (count1 > NUM_ELE)
 						break;
 					if ((ret = fread(&num1, sizeof(long int), 1, first_file)) != 1) {
-						printf("while fread1  : ret = %d\tcount1 = %d\tcount2 = %d\n", ret, count1, count2);
+						printf("while fread1  : ret = %d\tcount1 = %ld\tcount2 = %ld\n", ret, count1, count2);
+						exit(1);
 					}
 				}
 
 				while (count2 <= NUM_ELE) {
-					if ((main_count) % 1000 == 0) {
-						fprintf(op_file, "%10d\t%20ld\n", main_count, num2);
+					if ((main_count) % 10 == 0) {
+//						fprintf(op_file, "%10ld\t%20ld\n", main_count, num2);
+						fprintf(op_file, "%ld\n",  num2);
 					}
 					main_count++;
 					count2++;
 					if (count2 > NUM_ELE)
 						break;
 					if ((ret = fread(&num2, sizeof(long int), 1, second_file)) != 1) {
-						printf("while fread2  : ret = %d\tcount1 = %d\tcount2 = %d\n", ret, count1, count2);
+						printf("while fread2  : ret = %d\tcount1 = %ld\tcount2 = %ld\n", ret, count1, count2);
+						exit(1);
 					}
 				}
 				printf("EN : first_file = %ld\t second_file = %ld\t out_file = %ld\t NUM_ELE = %ld\n", ftell(first_file), ftell(second_file), ftell(op_file), NUM_ELE);

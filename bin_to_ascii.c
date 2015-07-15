@@ -16,19 +16,22 @@ int main(int argc, char **argv) {
 	FILE *file1 = fopen(argv[1], "r");
 	FILE *file2 = fopen("temp1.data", "w+");
 	long int num1;
-	int count = 0;
+	long int count = 0;
 	fseek(file1, 0, SEEK_END);
-	int SIZE = ftell(file1) / 8;
-	long int *data = malloc(sizeof(long int) * SIZE);
+	long int SIZE = ftell(file1) / 8;
 	fseek(file1, 0, SEEK_SET);
 
-	while (fread(&data[count++], sizeof(long int), 1, file1))
-		;
-
-	for (int i = 0; i < SIZE; i++) {
-		if (i % 1000 == 0)
-			fprintf(file2, "%10d\t%20ld\n", i, data[i]);
+	printf("Starting to read file\n");
+	for (long int i = 0; i < SIZE; i++) {
+		if(i%100000000 == 0)
+			printf("Writing element %10ld\n", i);
+		if (fread(&num1, sizeof(long int), 1, file1) == -1) {
+			printf("Error reading\n");
+			exit(1);
+		}
+		fprintf(file2, "%ld\n", num1);
 	}
 	fflush(file2);
-//	system("sort -n temp1.data > temp_sort");
+	printf("Starting to sort the data\n");
+	system("sort -n temp1.data > temp_sort");
 }

@@ -32,6 +32,7 @@ void tokenize(char *buffer_temp, char *exec_args[]) {
 }
 
 int main(int argc, char **argv) {
+	//4 | 7 | 8 | 9 | 14 | 15 | 29 | 30
 //	time dd if=../cop5570a/test0 bs=32M  iflag=skip_bytes,count_bytes skip=8000000000 count=8000000000 | ssh m4 'cat > temop'
 //	2915.009221
 //	ssh m4 'echo Done > lvl_done'
