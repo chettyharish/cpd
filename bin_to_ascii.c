@@ -23,7 +23,7 @@ int main(int argc, char **argv) {
 
 	printf("Starting to read file\n");
 	for (long int i = 0; i < SIZE; i++) {
-		if(i%100000000 == 0)
+		if (i % 100000000 == 0)
 			printf("Writing element %10ld\n", i);
 		if (fread(&num1, sizeof(long int), 1, file1) == -1) {
 			printf("Error reading\n");
@@ -33,5 +33,7 @@ int main(int argc, char **argv) {
 	}
 	fflush(file2);
 	printf("Starting to sort the data\n");
-	system("sort -n temp1.data > temp_sort");
+	if (system("sort -n temp1.data > temp_sort")) {
+		perror("Error sorting");
+	}
 }
