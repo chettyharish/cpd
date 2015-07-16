@@ -17,7 +17,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
-
+FILE *log_file;
 #define NAME_LEN 1000
 #define NUM_THREADS 16
 #define MAXCONN 7
@@ -55,12 +55,15 @@ void write_long(int sockfd_client, char *num) {
 
 	while (rlen < size) {
 		if ((ret = write(sockfd_client, (num + rlen), size - rlen)) == -1) {
-			perror("read_long");
+
+			fprintf(log_file, "write_long\n");
+			fflush(log_file);
 			exit(1);
 		}
 
 		if (ret <= 0) {
-			perror("socket closed before consumption");
+			fprintf(log_file, "socket closed before consumptionn");
+			fflush(log_file);
 			exit(1);
 		}
 		rlen += ret;
@@ -592,7 +595,7 @@ void k_way_single() {
 }
 
 int main(int argc, char **argv) {
-	FILE *log_file = fopen("log", "w+");
+	log_file = fopen("log", "w+");
 
 	set_time(2);
 	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -846,7 +849,6 @@ int main(int argc, char **argv) {
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	/*PHASE 3 STARTED*/
-	long int num = -1;
 	for (long int i = 0; i < ELE_PER_PC; i++) {
 		if (i % 10000000 == 0) {
 			fprintf(log_file, "Writing %ld \n", i);
@@ -862,9 +864,9 @@ int main(int argc, char **argv) {
 	fprintf(log_file, "Completed correctly!\n");
 	fflush(log_file);
 
-	/*Cleaning the files here*/
-	if (system("rm -f temp answer sort_client sort_client.c log") == -1)
-		perror("System");
+//	/*Cleaning the files here*/
+//	if (system("rm -f temp answer sort_client sort_client.c log") == -1)
+//		perror("System");
 
 	return 0;
 

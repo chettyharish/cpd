@@ -710,10 +710,10 @@ int main(int argc, char **argv) {
 			close(sockfd_server);
 			long int skip = i * 8000000000l;
 
-			sprintf(buffer_temp, "/bin/dd if=%s bs=32M  iflag=skip_bytes,count_bytes skip=%ld count=8000000000 | ssh %s 'cat > temp'", argv[1], skip, mac_list[i]);
-			printf("%s\n", buffer_temp);
-			if (system(buffer_temp) == -1)
-				perror("System");
+//			sprintf(buffer_temp, "/bin/dd if=%s bs=32M  iflag=skip_bytes,count_bytes skip=%ld count=8000000000 | ssh %s 'cat > temp'", argv[1], skip, mac_list[i]);
+//			printf("%s\n", buffer_temp);
+//			if (system(buffer_temp) == -1)
+//				perror("System");
 
 			sprintf(buffer_temp, "scp sort_client.c %s:", mac_list[i]);
 			printf("%s\n", buffer_temp);
