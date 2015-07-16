@@ -14,27 +14,28 @@
 #include <pthread.h>
 #include <unistd.h>
 #include <errno.h>
-//#include <sys/socket.h>
-//#include <netinet/in.h>
-//#include <arpa/inet.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
 
 #define NAME_LEN 1000
 #define NUM_THREADS 16
 #define MAXCONN 7
 #define SWAP(x,y,lo) if (data[lo+y] < data[lo+x]) { long int tmp = data[lo+x]; data[lo+x] = data[lo+y]; data[lo+y] = tmp; }
 
+double start_time, end_time, orig_time;
+struct timeval t;
 long int *data;
 long int *temp;
+const long int NUM_BLK = 2;
+const long int ELE_PER_PC = 1000000000;
 long int CURR_THREADS;
-long int NUM_BLK = 2;
 long int SIZE;
 long int FSIZE;
 long int RSIZE;
+
 int myid[NUM_THREADS];
 pthread_t tid[NUM_THREADS];
-
-double start_time, end_time, orig_time;
-struct timeval t;
 
 void set_time(int timer) {
 	gettimeofday(&t, NULL);
@@ -322,26 +323,26 @@ int main(int argc, char **argv) {
 	FILE *log_file = fopen("log", "w+");
 
 	set_time(2);
-//	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//	/*Creating and connecting sockets here*/
-//	int sockfd_client;
-//	struct sockaddr_in saddr_client;
-//
-//	if ((sockfd_client = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
-//		fprintf(log_file, "Socket failed!\n");
-//		exit(1);
-//	}
-//
-//	memset(&saddr_client, 0, sizeof(struct sockaddr_in));
-//	saddr_client.sin_family = AF_INET;
-//	saddr_client.sin_port = htons((short) atoi(argv[2]));
-//	saddr_client.sin_addr.s_addr = inet_addr(argv[1]);
-//
-//	if (connect(sockfd_client, (struct sockaddr *) &saddr_client, sizeof(saddr_client)) == -1) {
-//		fprintf(log_file, "Connect failed!\n");
-//		exit(1);
-//	}
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	/*Creating and connecting sockets here*/
+	int sockfd_client;
+	struct sockaddr_in saddr_client;
+
+	if ((sockfd_client = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
+		fprintf(log_file, "Socket failed!\n");
+		exit(1);
+	}
+
+	memset(&saddr_client, 0, sizeof(struct sockaddr_in));
+	saddr_client.sin_family = AF_INET;
+	saddr_client.sin_port = htons((short) atoi(argv[2]));
+	saddr_client.sin_addr.s_addr = inet_addr(argv[1]);
+
+	if (connect(sockfd_client, (struct sockaddr *) &saddr_client, sizeof(saddr_client)) == -1) {
+		fprintf(log_file, "Connect failed!\n");
+		exit(1);
+	}
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	/*PHASE 1 STARTED*/
 	char outfile[100];
 	FILE *in_file = fopen("temp", "r");
@@ -387,8 +388,6 @@ int main(int argc, char **argv) {
 			if (count + buf_num >= SIZE) {
 				flag = true;
 				buf_num = (SIZE - count);
-//				if (count % 10000 == 0)
-				printf("Reading from count = %ld to count = %ld new_buf_num = %ld\n", count, count + buf_num, buf_num);
 			}
 
 			if (fread(&data[count], sizeof(long int), buf_num, in_file) == -1) {
@@ -494,75 +493,74 @@ int main(int argc, char **argv) {
 			fseek(op_file, loc3, SEEK_SET);
 			printf("ST : first_file = %ld\t second_file = %ld\t out_file = %ld\t NUM_ELE = %ld\n", ftell(first_file), ftell(second_file), ftell(op_file), NUM_ELE);
 
-			if (CURR_BLK != 1) {
-				int ret = -1;
-				if ((ret = fread(&num1, sizeof(long int), 1, first_file)) != 1) {
-					printf("fread  : ret = %d\tcount1 = %ld\tcount2 = %ld\n", ret, count1, count2);
-					exit(1);
-				}
-				if ((ret = fread(&num2, sizeof(long int), 1, second_file)) != 1) {
-					printf("fread  : ret = %d\tcount1 = %ld\tcount2 = %ld\n", ret, count1, count2);
-					exit(1);
-				}
+			int ret = -1;
+			if ((ret = fread(&num1, sizeof(long int), 1, first_file)) != 1) {
+				printf("fread  : ret = %d\tcount1 = %ld\tcount2 = %ld\n", ret, count1, count2);
+				exit(1);
+			}
+			if ((ret = fread(&num2, sizeof(long int), 1, second_file)) != 1) {
+				printf("fread  : ret = %d\tcount1 = %ld\tcount2 = %ld\n", ret, count1, count2);
+				exit(1);
+			}
 
-				while (true) {
-					if (num1 <= num2) {
-						if ((ret = fwrite(&num1, sizeof(long int), 1, op_file)) != 1) {
-							printf("fwrite1 : ret = %d\tcount1 = %ld\tcount2 = %ld\n", ret, count1, count2);
-							exit(1);
-						}
-						count1++;
-						if (count1 > NUM_ELE)
-							break;
-						if ((ret = fread(&num1, sizeof(long int), 1, first_file)) != 1) {
-							printf("fread1  : ret = %d\tcount1 = %ld\tcount2 = %ld\n", ret, count1, count2);
-							exit(1);
-						}
-					} else {
-						if ((ret = fwrite(&num2, sizeof(long int), 1, op_file)) != 1) {
-							printf("fwrite2  : ret = %d\tcount1 = %ld\tcount2 = %ld\n", ret, count1, count2);
-							exit(1);
-						}
-						count2++;
-
-						if (count2 > NUM_ELE)
-							break;
-						if ((ret = fread(&num2, sizeof(long int), 1, second_file)) != 1) {
-							printf("fread2  : ret = %d\tcount1 = %ld\tcount2 = %ld\n", ret, count1, count2);
-							exit(1);
-						}
-					}
-				}
-
-				while (count1 <= NUM_ELE) {
+			while (true) {
+				if (num1 <= num2) {
 					if ((ret = fwrite(&num1, sizeof(long int), 1, op_file)) != 1) {
-						printf("while fwrite1  : ret = %d\tcount1 = %ld\tcount2 = %ld\n", ret, count1, count2);
+						printf("fwrite1 : ret = %d\tcount1 = %ld\tcount2 = %ld\n", ret, count1, count2);
 						exit(1);
 					}
 					count1++;
 					if (count1 > NUM_ELE)
 						break;
 					if ((ret = fread(&num1, sizeof(long int), 1, first_file)) != 1) {
-						printf("while fread1  : ret = %d\tcount1 = %ld\tcount2 = %ld\n", ret, count1, count2);
+						printf("fread1  : ret = %d\tcount1 = %ld\tcount2 = %ld\n", ret, count1, count2);
 						exit(1);
 					}
-				}
-
-				while (count2 <= NUM_ELE) {
+				} else {
 					if ((ret = fwrite(&num2, sizeof(long int), 1, op_file)) != 1) {
-						printf("while fwrite2  : ret = %d\tcount1 = %ld\tcount2 = %ld\n", ret, count1, count2);
+						printf("fwrite2  : ret = %d\tcount1 = %ld\tcount2 = %ld\n", ret, count1, count2);
 						exit(1);
 					}
 					count2++;
+
 					if (count2 > NUM_ELE)
 						break;
 					if ((ret = fread(&num2, sizeof(long int), 1, second_file)) != 1) {
-						printf("while fread2  : ret = %d\tcount1 = %ld\tcount2 = %ld\n", ret, count1, count2);
+						printf("fread2  : ret = %d\tcount1 = %ld\tcount2 = %ld\n", ret, count1, count2);
 						exit(1);
 					}
 				}
-				printf("EN : first_file = %ld\t second_file = %ld\t out_file = %ld\t NUM_ELE = %ld\n", ftell(first_file), ftell(second_file), ftell(op_file), NUM_ELE);
 			}
+
+			while (count1 <= NUM_ELE) {
+				if ((ret = fwrite(&num1, sizeof(long int), 1, op_file)) != 1) {
+					printf("while fwrite1  : ret = %d\tcount1 = %ld\tcount2 = %ld\n", ret, count1, count2);
+					exit(1);
+				}
+				count1++;
+				if (count1 > NUM_ELE)
+					break;
+				if ((ret = fread(&num1, sizeof(long int), 1, first_file)) != 1) {
+					printf("while fread1  : ret = %d\tcount1 = %ld\tcount2 = %ld\n", ret, count1, count2);
+					exit(1);
+				}
+			}
+
+			while (count2 <= NUM_ELE) {
+				if ((ret = fwrite(&num2, sizeof(long int), 1, op_file)) != 1) {
+					printf("while fwrite2  : ret = %d\tcount1 = %ld\tcount2 = %ld\n", ret, count1, count2);
+					exit(1);
+				}
+				count2++;
+				if (count2 > NUM_ELE)
+					break;
+				if ((ret = fread(&num2, sizeof(long int), 1, second_file)) != 1) {
+					printf("while fread2  : ret = %d\tcount1 = %ld\tcount2 = %ld\n", ret, count1, count2);
+					exit(1);
+				}
+			}
+			printf("EN : first_file = %ld\t second_file = %ld\t out_file = %ld\t NUM_ELE = %ld\n", ftell(first_file), ftell(second_file), ftell(op_file), NUM_ELE);
+
 		}
 
 		fclose(first_file);
@@ -593,10 +591,21 @@ int main(int argc, char **argv) {
 
 	set_time(1);
 	printf("PHASE 2 Completed\t Execution time =  %lf seconds \n", end_time - orig_time);
-	fprintf(log_file, "Completed correctly!\n");
+	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	/*PHASE 3 STARTED*/
+	FILE *last_file = fopen("answer", "r");
+	long int num = -1;
+	for (long int i = 0; i < ELE_PER_PC; i++) {
+		if (fread(&num, sizeof(long int), 1, last_file) == -1) {
+			fprintf(log_file, "Final write failed!\n");
+			exit(1);
+		}
+		write_long(sockfd_client, (char *)&num);
+	}
 
 	/*Cleaning the files here*/
-	if (system("rm -f temp sort_client sort_client.c") == -1)
+	if (system("rm -f temp answer sort_client sort_client.c") == -1)
 		perror("System");
+	fprintf(log_file, "Completed correctly!\n");
 
 }

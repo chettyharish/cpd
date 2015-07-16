@@ -17,25 +17,28 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <limits.h>
 
 #define NAME_LEN 1000
 #define NUM_THREADS 16
 #define MAXCONN 7
 #define SWAP(x,y,lo) if (data[lo+y] < data[lo+x]) { long int tmp = data[lo+x]; data[lo+x] = data[lo+y]; data[lo+y] = tmp; }
 
+double start_time, end_time, orig_time;
+struct timeval t;
 long int *data;
 long int *temp;
+const long int ELE_PER_PC = 1000000000;
+const long int NUM_BLK = 2;
 long int CURR_THREADS;
-long int NUM_BLK;
 long int SIZE;
 long int FSIZE;
 long int RSIZE;
+
 int myid[NUM_THREADS];
 pthread_t tid[NUM_THREADS];
-
-
-double start_time, end_time, orig_time;
-struct timeval t;
+long int consumed[8];
+long int nums[8];
 
 void set_time(int timer) {
 	gettimeofday(&t, NULL);
@@ -64,6 +67,22 @@ void read_long(int sockfd_client, char *num) {
 		}
 		rlen += ret;
 	}
+}
+
+int compare_all() {
+	long int min = LONG_MAX;
+	int pos = -1;
+	for (int i = 0; i < 8; i++) {
+		if (consumed[pos] < ELE_PER_PC) {
+			if (nums[i] < min) {
+				min = nums[i];
+				pos = i;
+			}
+		}
+	}
+
+	consumed[pos]++;
+	return pos;
 }
 
 void tokenize(char *buffer_temp, char *exec_args[]) {
@@ -143,28 +162,28 @@ static __inline__ void sort7(long int * data, long int lo) {
 }
 
 static __inline__ void sort6(long int * data, long int lo) {
-	//Parallelizable
+//Parallelizable
 	SWAP(1, 2, lo);
 	SWAP(4, 5, lo);
 
-	//Parallelizable
+//Parallelizable
 	SWAP(0, 2, lo);
 	SWAP(3, 5, lo);
 
-	//Parallelizable
+//Parallelizable
 	SWAP(0, 1, lo);
 	SWAP(3, 4, lo);
 	SWAP(2, 5, lo);
 
-	//Parallelizable
+//Parallelizable
 	SWAP(0, 3, lo);
 	SWAP(1, 4, lo);
 
-	//Parallelizable
+//Parallelizable
 	SWAP(2, 4, lo);
 	SWAP(1, 3, lo);
 
-	//Parallelizable
+//Parallelizable
 	SWAP(2, 3, lo);
 }
 
@@ -330,13 +349,14 @@ void k_way_single() {
 }
 
 int main(int argc, char **argv) {
+	set_time(1);
 
 	if (argc < 4) {
 		printf("Usage ./sort_server large_file_name current_ip_address machinefile\n");
 		exit(1);
 	}
 
-	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	/*Get the 7 machines from machinefile*/
 	FILE *file = fopen(argv[3], "r");
 	char mac_list[MAXCONN][1000];
@@ -362,7 +382,7 @@ int main(int argc, char **argv) {
 
 	}
 
-	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	/*Creating sockets from here*/
 	int sockfd_server, sockfd_client;
 	struct sockaddr_in saddr_server, saddr_client;
@@ -408,11 +428,11 @@ int main(int argc, char **argv) {
 	for (int i = 0; i < MAXCONN; i++) {
 		if (fork() == 0) {
 			long int skip = i * 8000000000l;
-//
-//			sprintf(buffer_temp, "/bin/dd if=%s bs=32M  iflag=skip_bytes,count_bytes skip=%ld count=8000000000 | ssh %s 'cat > temp'", argv[1], skip, (i + 2) , mac_list[i]);
-//			printf("%s\n", buffer_temp);
-//			if (system(buffer_temp) == -1)
-//				perror("System");
+
+			sprintf(buffer_temp, "/bin/dd if=%s bs=32M  iflag=skip_bytes,count_bytes skip=%ld count=8000000000 | ssh %s 'cat > temp'", argv[1], skip, mac_list[i]);
+			printf("%s\n", buffer_temp);
+			if (system(buffer_temp) == -1)
+				perror("System");
 
 			sprintf(buffer_temp, "scp sort_client.c %s:", mac_list[i]);
 			printf("%s\n", buffer_temp);
@@ -438,7 +458,7 @@ int main(int argc, char **argv) {
 	while (wait(NULL) > 0)
 		;
 
-	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	/*Accepting the connection here*/
 
 	for (int i = 0; i < MAXCONN; i++) {
@@ -451,40 +471,305 @@ int main(int argc, char **argv) {
 		printf("client[%d] is remote machine = %s, port = %x, %x.\n", i, inet_ntoa(saddr_client.sin_addr), saddr_client.sin_port, ntohs(saddr_client.sin_port));
 	}
 
-	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	/*PHASE 1 STARTED*/
 	char outfile[100];
+	FILE *in_file = fopen(argv[1], "r");
+	if (!in_file) {
+		printf("Input file missing\n");
+		exit(1);
+	}
 
-	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	sprintf(outfile, "temp_lvl%d", 0);
+	FILE *out_file = fopen(outfile, "w+");
+	if (!out_file) {
+		printf("Unable to create output file\n");
+		exit(1);
+	}
+
+	fseek(in_file, 0, SEEK_END);
+	FSIZE = ftell(in_file);
+	fseek(in_file, 0, SEEK_SET);
+	fclose(in_file);
+	SIZE = (FSIZE / 8) / NUM_BLK;
+	RSIZE = FSIZE / NUM_BLK;
+
+	SIZE /= 8;
+	printf("RSIZE = %ld \tBUFSIZ = %d\t NUM_THREADS = %d\t FSIZE = %ld\t SIZE = %ld\t NUM_BLK = %ld \t FITTING %f\n", RSIZE, BUFSIZ, NUM_THREADS, FSIZE, SIZE, NUM_BLK,
+			(SIZE * 1.0f) / (NUM_THREADS * 1.0f));
+
+	data = malloc(sizeof(long int) * SIZE);
+	temp = malloc(sizeof(long int) * SIZE);
+	if (data == NULL || temp == NULL) {
+		perror("Malloc :");
+		exit(1);
+	}
+
+	for (int blk = 0; blk < NUM_BLK; blk++) {
+		printf("\nStarting with BLK = %d\n", blk);
+		set_time(0);
+
+		FILE *in_file = fopen(argv[1], "r");
+		fseek(in_file, (blk + 7) * RSIZE, SEEK_SET);
+		long int count = 0;
+		long int buf_num = BUFSIZ / 8;
+		bool flag = false;
+		printf("Here\n");
+		while (flag == false) {
+			if (count + buf_num >= SIZE) {
+				flag = true;
+				buf_num = (SIZE - count);
+			}
+
+			if (fread(&data[count], sizeof(long int), buf_num, in_file) == -1) {
+				perror("fread");
+				exit(1);
+			}
+
+			count += buf_num;
+		}
+		fclose(in_file);
+
+		set_time(1);
+		printf("Reading data completed \t Execution time =  %lf seconds\n", end_time - start_time);
+
+		set_time(0);
+		for (int i = 0; i < NUM_THREADS; i++) {
+			myid[i] = i;
+			pthread_create(&tid[i], NULL, &mergesort_caller, &myid[i]);
+		}
+
+		for (int i = 0; i < NUM_THREADS; i++) {
+			pthread_join(tid[i], NULL);
+		}
+		set_time(1);
+		printf("Split Merge Sort completed \t Execution time =  %lf seconds\n", end_time - start_time);
+
+		set_time(0);
+		k_way_single();
+		set_time(1);
+		printf("K-Way Merge completed \t Execution time =  %lf seconds\n", end_time - start_time);
+
+		set_time(0);
+
+		if (is_sorted(0, SIZE - 1) == true) {
+			printf("Sorted correctly \n");
+		} else {
+			printf("Sorting error \n");
+			exit(1);
+		}
+
+		set_time(1);
+		printf("Testing completed \t Execution time =  %lf seconds\n", end_time - start_time);
+
+		set_time(0);
+		count = 0;
+		buf_num = BUFSIZ / 8;
+		flag = false;
+
+		while (flag == false) {
+			if (count + buf_num >= SIZE) {
+				flag = true;
+				buf_num = (SIZE - count);
+			}
+
+			if (fwrite(&data[count], sizeof(long int), buf_num, out_file) == -1) {
+				perror("fwrite");
+				exit(1);
+			}
+
+			count += buf_num;
+		}
+
+		set_time(1);
+		printf("Writing completed to file %s\t Execution time =  %lf seconds\n", outfile, end_time - start_time);
+	}
+	fclose(out_file);
+
+	set_time(1);
+	printf("PHASE 1 Completed\t Execution time =  %lf seconds \n\n\n", end_time - orig_time);
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	/*PHASE 2 STARTED*/
+	int CURR_BLK = NUM_BLK >> 1;
+	int LVL = 0;
+	while (CURR_BLK != 0) {
+		set_time(0);
+		char f1[100];
+		char f2[100];
+		char op[100];
+		char remove_fn[100];
+		sprintf(f1, "temp_lvl%d", LVL);
+		sprintf(f2, "temp_lvl%d", LVL);
+		if (CURR_BLK != 1) {
+			sprintf(op, "temp_lvl%d", LVL + 1);
+		} else {
+			sprintf(op, "answer");
+		}
+		FILE *first_file = fopen(f1, "r");
+		FILE *second_file = fopen(f2, "r");
+		FILE *op_file = fopen(op, "wb+");
+		/*Adjusting for less elements by changing it to >> 6*/
+		long int NUM_ELE = ((long int) (FSIZE >> 6)) / ((long int) NUM_BLK / (1 << LVL));
 
-	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	/*Time to read and merge data :)*/
-	FILE *final = fopen("answer", "w+");
-	long int num = -5;
-//	for (int i = 0; i < 21; i++) {
-//		read_long(sfd_client[i%MAXCONN], (char *) &num);
-//		printf("number = %d  = %ld\n", i, num);
-//	}
+		for (int i = 0; i < CURR_BLK; i++) {
+			long int count1 = 1;
+			long int count2 = 1;
+			long int num1, num2;
+			long int loc1 = (2 * i) * (long int) NUM_ELE * 8;
+			long int loc2 = (2 * i + 1) * (long int) NUM_ELE * 8;
+			long int loc3 = (2 * i) * (long int) NUM_ELE * 8;
+			fseek(first_file, loc1, SEEK_SET);
+			fseek(second_file, loc2, SEEK_SET);
+			fseek(op_file, loc3, SEEK_SET);
+			printf("ST : first_file = %ld\t second_file = %ld\t out_file = %ld\t NUM_ELE = %ld\n", ftell(first_file), ftell(second_file), ftell(op_file), NUM_ELE);
 
-	int all_count = 0;
+			int ret = -1;
+			if ((ret = fread(&num1, sizeof(long int), 1, first_file)) != 1) {
+				printf("fread1 OUT   : ret = %d\tcount1 = %ld\tcount2 = %ld\n", ret, count1, count2);
+				exit(1);
+			}
+			if ((ret = fread(&num2, sizeof(long int), 1, second_file)) != 1) {
+				printf("fread2 OUT   : ret = %d\tcount1 = %ld\tcount2 = %ld\n", ret, count1, count2);
+				exit(1);
+			}
 
-	for (int i = 0; i < MAXCONN; i++) {
-		sprintf(buffer_temp, "ssh %s cat comp_and_ran", mac_list[i]);
-		printf("%s\n", buffer_temp);
+			while (true) {
+				if (num1 <= num2) {
+					if ((ret = fwrite(&num1, sizeof(long int), 1, op_file)) != 1) {
+						printf("fwrite1 : ret = %d\tcount1 = %ld\tcount2 = %ld\n", ret, count1, count2);
+						exit(1);
+					}
+					count1++;
+					if (count1 > NUM_ELE)
+						break;
+					if ((ret = fread(&num1, sizeof(long int), 1, first_file)) != 1) {
+						printf("fread1  : ret = %d\tcount1 = %ld\tcount2 = %ld\n", ret, count1, count2);
+						exit(1);
+					}
+				} else {
+					if ((ret = fwrite(&num2, sizeof(long int), 1, op_file)) != 1) {
+						printf("fwrite2  : ret = %d\tcount1 = %ld\tcount2 = %ld\n", ret, count1, count2);
+						exit(1);
+					}
+					count2++;
 
-		if (system(buffer_temp) == -1)
-			perror("System");
+					if (count2 > NUM_ELE)
+						break;
+					if ((ret = fread(&num2, sizeof(long int), 1, second_file)) != 1) {
+						printf("fread2  : ret = %d\tcount1 = %ld\tcount2 = %ld\n", ret, count1, count2);
+						exit(1);
+					}
+				}
+			}
+
+			while (count1 <= NUM_ELE) {
+				if ((ret = fwrite(&num1, sizeof(long int), 1, op_file)) != 1) {
+					printf("while fwrite1  : ret = %d\tcount1 = %ld\tcount2 = %ld\n", ret, count1, count2);
+					exit(1);
+				}
+				count1++;
+				if (count1 > NUM_ELE)
+					break;
+				if ((ret = fread(&num1, sizeof(long int), 1, first_file)) != 1) {
+					printf("while fread1  : ret = %d\tcount1 = %ld\tcount2 = %ld\n", ret, count1, count2);
+					exit(1);
+				}
+			}
+
+			while (count2 <= NUM_ELE) {
+				if ((ret = fwrite(&num2, sizeof(long int), 1, op_file)) != 1) {
+					printf("while fwrite2  : ret = %d\tcount1 = %ld\tcount2 = %ld\n", ret, count1, count2);
+					exit(1);
+				}
+				count2++;
+				if (count2 > NUM_ELE)
+					break;
+				if ((ret = fread(&num2, sizeof(long int), 1, second_file)) != 1) {
+					printf("while fread2  : ret = %d\tcount1 = %ld\tcount2 = %ld\n", ret, count1, count2);
+					exit(1);
+				}
+			}
+			printf("EN : first_file = %ld\t second_file = %ld\t out_file = %ld\t NUM_ELE = %ld\n", ftell(first_file), ftell(second_file), ftell(op_file), NUM_ELE);
+
+		}
+
+		fclose(first_file);
+		fclose(second_file);
+		fclose(op_file);
+
+		set_time(1);
+
+		printf("Merge LVL = %d Completed\t Execution time =  %lf seconds \n\n\n", LVL + 1, end_time - start_time);
+
+		LVL++;
+		if (LVL != 0) {
+			/*removing the old file out*/
+			sprintf(remove_fn, "rm temp_lvl%d", LVL - 1);
+			printf("Removing file command %s\n", remove_fn);
+			if (system(remove_fn) == -1) {
+				printf("Removing file failed");
+			}
+
+		}
+		CURR_BLK = CURR_BLK >> 1;
 	}
 
-	for (int i = 0; i < MAXCONN; i++) {
-		sprintf(buffer_temp, "ssh %s rm -f comp_and_ran", mac_list[i]);
-		printf("%s\n", buffer_temp);
-
-		if (system(buffer_temp) == -1)
-			perror("System");
+	/*Remove all temporary files*/
+	if (system("rm -f temp_lvl*") == -1) {
+		printf("Removing file failed");
 	}
 
+	set_time(1);
+	printf("PHASE 2 Completed\t Execution time =  %lf seconds \n", end_time - orig_time);
+
+//	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	/*PHASE 3 STARTED*/
+
+	set_time(0);
+	FILE *last_file = fopen("answer", "r");
+	FILE *final = fopen("final_answer", "w+");
+
+	for (long int i = 0; i < 8; i++)
+		consumed[i] = 1;
+	for (int i = 0; i < 7; i++) {
+		read_long(sfd_client[i], (char *) &nums[i]);
+	}
+
+	if (fread(&nums[7], sizeof(long int), 1, last_file) == -1) {
+		perror(" OUT fread");
+		exit(1);
+	}
+
+	int pos = -1;
+	for (long int all_count = 0; all_count < 8000000000; all_count++) {
+		pos = compare_all();
+		if (all_count % 10 == 0) {
+			fprintf(final, "%ld\n", nums[pos]);
+		}
+		switch (pos) {
+		case 0:
+		case 1:
+		case 2:
+		case 3:
+		case 4:
+		case 5:
+		case 6:
+			read_long(sfd_client[pos], (char *) &nums[pos]);
+			break;
+		case 7:
+			if (fread(&nums[7], sizeof(long int), 1, last_file) == -1) {
+				perror(" switch fread");
+				exit(1);
+			}
+			break;
+		}
+
+	}
+
+	set_time(1);
+
+	set_time(1);
+	printf("PHASE 3 Completed\t Execution time =  %lf seconds \n", end_time - orig_time);
 	return 0;
 
 }

@@ -469,7 +469,7 @@ int main(int argc, char **argv) {
 			fseek(op_file, loc3, SEEK_SET);
 			printf("ST : first_file = %ld\t second_file = %ld\t out_file = %ld\t NUM_ELE = %ld\n", ftell(first_file), ftell(second_file), ftell(op_file), NUM_ELE);
 
-			if (CURR_BLK != 1) {
+			if (CURR_BLK != 0) {
 				int ret = -1;
 				if ((ret = fread(&num1, sizeof(long int), 1, first_file)) != 1) {
 					printf("fread  : ret = %d\tcount1 = %ld\tcount2 = %ld\n", ret, count1, count2);
