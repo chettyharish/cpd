@@ -33,6 +33,20 @@ long int RSIZE;
 int myid[NUM_THREADS];
 pthread_t tid[NUM_THREADS];
 
+
+double start_time, end_time, orig_time;
+struct timeval t;
+
+void set_time(int timer) {
+	gettimeofday(&t, NULL);
+	if (timer == 0) {
+		start_time = 1.0e-6 * t.tv_usec + t.tv_sec;
+	} else if (timer == 1) {
+		end_time = 1.0e-6 * t.tv_usec + t.tv_sec;
+	} else if (timer == 2) {
+		orig_time = 1.0e-6 * t.tv_usec + t.tv_sec;
+	}
+}
 void read_long(int sockfd_client, char *num) {
 	unsigned int size = sizeof(long int);
 	int rlen = 0;
@@ -436,6 +450,13 @@ int main(int argc, char **argv) {
 		sfd_client[i] = sockfd_client;
 		printf("client[%d] is remote machine = %s, port = %x, %x.\n", i, inet_ntoa(saddr_client.sin_addr), saddr_client.sin_port, ntohs(saddr_client.sin_port));
 	}
+
+	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	/*PHASE 1 STARTED*/
+	char outfile[100];
+
+	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	/*PHASE 2 STARTED*/
 
 	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	/*Time to read and merge data :)*/
