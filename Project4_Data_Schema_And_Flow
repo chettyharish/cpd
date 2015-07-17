@@ -1,0 +1,122 @@
+DataBase Schema:
+
+User Information: (store in file)
+sockfd
+counter
+userid
+username
+password
+Info
+Rating
+Wins
+Loses
+Quiet
+Blocked Users (list of userids)
+Match Request (whome i send the request to)
+Matched
+
+Mail Information: (store in file)
+Fromid
+toid
+Title
+Text
+TimeStamp
+Read
+
+Server Information: (From My Intution)
+Online Users (list of userids)
+Active Games(ids)
+
+Game Information:
+gameid
+Player1id
+Player1_color
+Player2id
+Player1_color
+Observers(list of ids)
+Slots Marked black
+Slots Marked white
+Unmarked Slots
+
+Functionality outline:
+
+->Login:
+1) When a user telnets to the server he should be asked username and password to login.
+2) Guest user can login without password.
+3)Syntax: 
+username:
+password:
+Success: Show Welcome Sign and prompt: <username:stepno>
+Failure: Show text:
+"Login failed!!
+Thank you for using Online Tic-tac-toe Server.
+See you next time."
+and exit.
+
+->Unknown command:
+Syntax: Command not supported
+
+->Register:
+1) There is always a guest account without password. He can only run the register command and the quit command.
+2) No other user can use the register command.
+--> Failure msg: Please use a guest login to register new users.
+3) Syntax: register username password
+
+->Who:
+1) Who lists all users currently online.
+2) Syntax: who
+3) Output eg: 
+Total 4 user(s) online:
+zhang qiao jack2 one 
+
+->stats - Display user information
+1) Syntax: stats <username>
+2) Failure msg: User <username> does not exist.
+3) Success: 
+User: jack1
+Info: <none>
+Rating: 0.000
+Wins: 0, Loses: 0
+Quiet: No
+Blocked users: <none>
+
+jack1 is currently online.
+
+->game -- list all current games
+Syntax: game
+Failure: no failure case
+Success:
+Total 3 game(s): 
+Game 0(0): two .vs. one, 0 moves
+Game 1(1): zhang .vs. qiao, 1 moves
+Game 2(2): xie .vs. zhang, 0 moves
+
+-->observe
+Syntax: observe <game_num>
+Failure: Game does not exist
+Success: Displays the game
+eg.
+Black:          zhang       White:           qiao
+ Time:    593 seconds        Time:   300 sec(10) (not sure what is in this bracket)
+   1  2  3
+A  #  .  . 
+B  .  .  . 
+C  .  .  . 
+
+-->unobserve
+same as observe except in success display - Unobserving <gameno>
+
+-->match 
+sender : match <username> 
+
+
+Test: 
+Try sending mail to guest user.
+Check what happens when we reregister same user.
+When user relogins will he lose the game.
+What is the second number there for a match?
+
+observe/unobserve seems to have bugs in it.
+if i unobserve game 0 game 2 gets unobserved
+refresh is showing all games...(after mail arrived)
+
