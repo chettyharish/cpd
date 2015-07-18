@@ -1,0 +1,318 @@
+DataBase Schema:
+
+User Information: (store in file)
+sockfd
+counter
+userid
+username
+password
+Info
+Rating
+Wins
+Loses
+Quiet
+Blocked Users (list of userids)
+Match Request (whome i send the request to)
+Matched (im currently playing a match)
+
+Mail Information: (store in file)
+Fromid
+toid
+Title
+Text
+TimeStamp
+Read
+
+Server Information: (From My Intution)
+Online Users (list of userids)
+Active Games(ids)
+
+Game Information:
+gameid
+Player1id
+Player1sockid
+Player1_color
+Player2id
+Player2sockid
+Player1_color
+timer1
+timer2
+Observers(list of ids)
+Slots Marked black
+Slots Marked white
+Unmarked Slots
+Slots will probably have to be 2 d array to represent each users active slots.
+
+We need a seperate static array with values to determine if a user has won. (Check match functionality below)
+
+Functionality outline:
+
+->Login:
+1) When a user telnets to the server he should be asked username and password to login.
+2) Guest user can login without password.
+3)Syntax: 
+username:
+password:
+Success: Show Welcome Sign and prompt: <username:stepno>
+Failure: Show text:
+"Login failed!!
+Thank you for using Online Tic-tac-toe Server.
+See you next time."
+and exit.
+
+->Unknown command:
+Syntax: Command not supported
+
+->Register:
+1) There is always a guest account without password. He can only run the register command and the quit command.
+2) No other user can use the register command.
+--> Failure msg: Please use a guest login to register new users.
+3) Syntax: register username password
+
+->Who:
+1) Who lists all users currently online.
+2) Syntax: who
+3) Output eg: 
+Total 4 user(s) online:
+zhang qiao jack2 one 
+
+->stats - Display user information
+1) Syntax: stats <username>
+2) Failure msg: User <username> does not exist.
+3) Success: 
+User: jack1
+Info: <none>
+Rating: 0.000
+Wins: 0, Loses: 0
+Quiet: No
+Blocked users: <none>
+
+jack1 is currently online.
+
+->game -- list all current games
+Syntax: game
+Failure: no failure case
+Success:
+Total 3 game(s): 
+Game 0(0): two .vs. one, 0 moves
+Game 1(1): zhang .vs. qiao, 1 moves
+Game 2(2): xie .vs. zhang, 0 moves
+
+-->observe
+Syntax: observe <game_num>
+Failure: Game does not exist
+Success: Displays the game
+eg.
+Black:          zhang       White:           qiao
+ Time:    593 seconds        Time:   300 sec(10) (not sure what is in this bracket)
+   1  2  3
+A  #  .  . 
+B  .  .  . 
+C  .  .  . 
+
+-->unobserve
+same as observe except in success display - Unobserving <gameno>
+
+-->match
+Failure:
+You cannot have a match with yourself.
+User jack5 is not online.
+ 
+Success: (In sirs implementation black moves first) 
+sender : match <username> <b|w> [t] (only username is mandatory)
+receiver receives eg: jack1 invite you for a game <match jack1 b 600 300>. (the values mentioned here are the default values in demo app by sir)
+receiver sends the values mentioned in the above link to start the game.
+receiver sends 'match <sender username> to start the game.
+any other match request being send from the receiver results in a new match request being send from the receiver.
+
+once game starts the below is shown
+Black:          jack2       White:          jack1
+ Time:    600 seconds        Time:    600 seconds
+
+   1  2  3
+A  .  .  . 
+B  .  .  . 
+C  .  .  . 
+
+
+
+--> game moves
+Syntax: <A|B|C><1|2|3>
+Failure
+Its not your turn.
+<position is occupied.
+Success: The updated values for timer and game are displayed to both users and observers.
+Black:          jack2       White:          jack1
+ Time:    287 seconds        Time:    600 seconds
+
+   1  2  3
+A  #  .  . 
+B  .  .  . 
+C  .  0  . 
+
+If game is won in a particular move display who won to all players and observers, end game and update stats.
+(Good trick for determinig if someone won a game.)
+2	7	6
+9	5	1
+4	3	8
+
+Check if sum of any 3 of the users moves results in 15. if so he has won!
+
+(when timer runs out the user looses the game)
+
+-->resign
+Failure:
+You cannot resign without playing a game
+Success: <username resigned> 
+Player looses the game.
+
+-->refresh ( this just refreshes the game board to the user)
+Failure: you are not playing or observing any games.
+Success: just show the gameboard again with timer updated.
+   1  2  3
+A  #  .  . 
+B  .  .  . 
+C  .  .  . 
+
+-->shout:
+Syntax :shout <msg>
+Failure:
+None
+Success:
+Display msg to all users online. except if sender is in users block list or if user is in quiet mode.
+eg. !shout! *jack0*: hi all
+
+--> tell -- this is private message - user will receive even in quiet mode. User will not receive user is blocked
+Syntax:tell <name> <msg>
+Failure:
+You cannot talk to jack2. You are blocked
+User <username> is not online.
+
+-->kibitz <msg>
+This msg is used to communicate between observers. (Players do not get this message).
+If an observer is in quiet mode or he has blocked the sender he will not receive this message.
+Failure:
+You are not observing any game.
+Success:
+Eg. Kibitz* jack3:  hey ye
+
+--> ' <msg>
+in sirs implementation this works identical to kibitz but i think even players should be part of this msg. Im checking with sir.
+
+--> quiet
+user should not receive any broatcast msgs. (shout, kibitz, '). User will still receive 'tell' msgs and mail msgs.
+This feature should exist accross logins.
+No failure scenarios.
+
+-->nonquiet:
+undo the quiet mode.
+(Should have affect accross logins)
+
+-->block <id>
+block all communication from specific user (shout, kibitz ,', tell, mail)
+should have affect accross logins
+Failure:
+user is already blocked.
+user does not exist.
+Success:
+user <username> is blocked.
+
+-->unblock 
+unblock user. should have affect accross logins.
+Failure:
+User <username> was not blocked.
+Success:
+User <username> unblocked.
+
+-->listmail
+failure:
+You have no messages.
+Success:
+Your messages:
+  0   Unread  jack3     " just hey "                  Fri Jul 17 13:57:40 2015
+
+-->readmail <messageno>
+Failure:
+Message number invalid.
+Success: Displays mail eg.
+From: jack3
+Title:  just hey 
+Time: Fri Jul 17 13:57:40 2015
+
+just hay
+
+-->deletemail <msg_num>
+Failure:
+Message number invalid
+Success:
+Message deleted.
+
+-->mail 
+Syntax: mail <id> <title>
+Failure:
+User <username> has blocked you. Message cant be sent.
+<username> is not a user.
+Success:
+Allows user to enter multiline text for mail. end with . in a single line.
+
+-->info <msg> --  changes info of user to msg.
+failure: none.
+Success:
+Info changed.
+
+-->passwd <new>
+failure: none
+success:
+Password changed.
+
+--> exit or quit
+resign user from existing games, unobserve all games and exist the user from the system.
+
+--> help or ?
+Displays msg:
+
+Commands supported:
+  who                     # List all online users
+  stats [name]            # Display user information
+  game                    # list all current games
+  observe <game_num>      # Observe a game
+  unobserve               # Unobserve a game
+  match <name> <b|w> [t]  # Try to start a game
+  <A|B|C><1|2|3>          # Make a move in a game
+  resign                  # Resign a game
+  refresh                 # Refresh a game
+  shout <msg>             # shout <msg> to every one online
+  tell <name> <msg>       # tell user <name> message
+  kibitz <msg>            # Comment on a game when observing
+  ' <msg>                 # Comment on a game
+  quiet                   # Quiet mode, no broadcast messages
+  nonquiet                # Non-quiet mode
+  block <id>              # No more communication from <id>
+  unblock <id>            # Allow communication from <id>
+  listmail                # List the header of the mails
+  readmail <msg_num>      # Read the particular mail
+  deletemail <msg_num>    # Delete the particular mail
+  mail <id> <title>       # Send id a mail
+  info <msg>              # change your information to <msg>
+  passwd <new>            # change password
+  exit                    # quit the system
+  quit                    # quit the system
+  help                    # print this message
+  ?                       # print this message
+
+
+-->
+Test: 
+Try sending mail to guest user.
+Check what happens when we reregister same user.
+When user relogins will he lose the game.
+What is the second number there for a match?
+what happens if a user observes multiple games.
+
+Bugs:
+observe/unobserve seems to have bugs in it.
+if i unobserve game 0 game 2 gets unobserved
+refresh is showing all games...(after mail arrived)
+if i create username without password ... user registers but cannot login
+' is supposed to comment in a game but it works similar to kibitz and is only sent to observers
+we are able to block non existing users.
