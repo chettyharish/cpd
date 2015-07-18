@@ -167,310 +167,333 @@ static __inline__ void sort8(long int * data, long int lo) {
 	SWAP(3, 5, lo);
 	SWAP(3, 4, lo);
 }
+
 static __inline__ void sort9(long int * data, long int lo) {
 	SWAP(0, 1, lo);
-	SWAP(3, 4, lo);
-	SWAP(6, 7, lo);
-	SWAP(1, 2, lo);
+	SWAP(2, 3, lo);
 	SWAP(4, 5, lo);
 	SWAP(7, 8, lo);
-	SWAP(0, 1, lo);
-	SWAP(3, 4, lo);
-	SWAP(6, 7, lo);
-	SWAP(0, 3, lo);
-	SWAP(3, 6, lo);
-	SWAP(0, 3, lo);
-	SWAP(1, 4, lo);
-	SWAP(4, 7, lo);
-	SWAP(1, 4, lo);
-	SWAP(2, 5, lo);
-	SWAP(5, 8, lo);
-	SWAP(2, 5, lo);
+	SWAP(0, 2, lo);
 	SWAP(1, 3, lo);
-	SWAP(5, 7, lo);
-	SWAP(2, 6, lo);
+	SWAP(6, 8, lo);
+	SWAP(1, 2, lo);
+	SWAP(6, 7, lo);
+	SWAP(5, 8, lo);
+	SWAP(4, 7, lo);
+	SWAP(3, 8, lo);
 	SWAP(4, 6, lo);
-	SWAP(2, 4, lo);
-	SWAP(2, 3, lo);
+	SWAP(5, 7, lo);
 	SWAP(5, 6, lo);
+	SWAP(2, 7, lo);
+	SWAP(0, 5, lo);
+	SWAP(1, 6, lo);
+	SWAP(3, 7, lo);
+	SWAP(0, 4, lo);
+	SWAP(1, 5, lo);
+	SWAP(3, 6, lo);
+	SWAP(0, 4, lo);
+	SWAP(1, 5, lo);
+	SWAP(3, 6, lo)
+	SWAP(1, 4, lo);
+	SWAP(2, 5, lo);
+	SWAP(2, 4, lo);
+	SWAP(3, 5, lo);
+	SWAP(3, 4, lo);
 }
 
 static __inline__ void sort10(long int * data, long int lo) {
-
-	SWAP(4, 9, lo);
-	SWAP(3, 8, lo);
-	SWAP(2, 7, lo);
-	SWAP(1, 6, lo);
-	SWAP(0, 5, lo);
+	SWAP(0, 1, lo);
+	SWAP(3, 4, lo);
+	SWAP(5, 6, lo);
+	SWAP(8, 9, lo);
+	SWAP(2, 4, lo);
+	SWAP(7, 9, lo);
+	SWAP(2, 3, lo);
 	SWAP(1, 4, lo);
+	SWAP(7, 8, lo);
 	SWAP(6, 9, lo);
 	SWAP(0, 3, lo);
 	SWAP(5, 8, lo);
+	SWAP(4, 9, lo);
 	SWAP(0, 2, lo);
-	SWAP(3, 6, lo);
-	SWAP(7, 9, lo);
-	SWAP(0, 1, lo);
-	SWAP(2, 4, lo);
-	SWAP(5, 7, lo);
-	SWAP(8, 9, lo);
-	SWAP(1, 2, lo);
-	SWAP(4, 6, lo);
-	SWAP(7, 8, lo);
-	SWAP(3, 5, lo);
-	SWAP(2, 5, lo);
-	SWAP(6, 8, lo);
 	SWAP(1, 3, lo);
-	SWAP(4, 7, lo);
-	SWAP(2, 3, lo);
+	SWAP(5, 7, lo);
+	SWAP(6, 8, lo);
+	SWAP(1, 2, lo);
 	SWAP(6, 7, lo);
-	SWAP(3, 4, lo);
-	SWAP(5, 6, lo);
+	SWAP(0, 5, lo);
+	SWAP(3, 8, lo);
+	SWAP(1, 6, lo);
+	SWAP(2, 7, lo);
+	SWAP(4, 8, lo);
+	SWAP(1, 5, lo);
+	SWAP(3, 7, lo);
+	SWAP(4, 7, lo);
+	SWAP(2, 5, lo);
+	SWAP(3, 6, lo);
+	SWAP(4, 6, lo);
+	SWAP(3, 5, lo);
 	SWAP(4, 5, lo);
 }
 static __inline__ void sort11(long int * data, long int lo) {
-
 	SWAP(0, 1, lo);
-	SWAP(2, 3, lo);
-	SWAP(4, 5, lo);
-	SWAP(6, 7, lo);
-	SWAP(8, 9, lo);
-	SWAP(1, 3, lo);
-	SWAP(5, 7, lo);
-	SWAP(0, 2, lo);
-	SWAP(4, 6, lo);
-	SWAP(8, 10, lo);
-	SWAP(1, 2, lo);
-	SWAP(5, 6, lo);
-	SWAP(9, 10, lo);
-	SWAP(1, 5, lo);
-	SWAP(6, 10, lo);
-	SWAP(5, 9, lo);
-	SWAP(2, 6, lo);
-	SWAP(1, 5, lo);
-	SWAP(6, 10, lo);
-	SWAP(0, 4, lo);
-	SWAP(3, 7, lo);
-	SWAP(4, 8, lo);
-	SWAP(0, 4, lo);
-	SWAP(1, 4, lo);
-	SWAP(7, 10, lo);
-	SWAP(3, 8, lo);
-	SWAP(2, 3, lo);
-	SWAP(8, 9, lo);
-	SWAP(2, 4, lo);
-	SWAP(7, 9, lo);
-	SWAP(3, 5, lo);
-	SWAP(6, 8, lo);
 	SWAP(3, 4, lo);
+	SWAP(6, 7, lo);
+	SWAP(9, 10, lo);
+	SWAP(2, 4, lo);
+	SWAP(5, 7, lo);
+	SWAP(8, 10, lo);
+	SWAP(2, 3, lo);
+	SWAP(1, 4, lo);
 	SWAP(5, 6, lo);
+	SWAP(8, 9, lo);
+	SWAP(7, 10, lo);
+	SWAP(0, 3, lo);
+	SWAP(5, 8, lo);
+	SWAP(6, 9, lo);
+	SWAP(4, 10, lo);
+	SWAP(0, 2, lo);
+	SWAP(1, 3, lo);
+	SWAP(7, 9, lo);
+	SWAP(6, 8, lo);
+	SWAP(1, 2, lo);
 	SWAP(7, 8, lo);
+	SWAP(0, 6, lo);
+	SWAP(3, 9, lo);
+	SWAP(0, 5, lo);
+	SWAP(1, 7, lo);
+	SWAP(2, 8, lo);
+	SWAP(4, 9, lo);
+	SWAP(1, 6, lo);
+	SWAP(3, 8, lo);
+	SWAP(1, 5, lo);
+	SWAP(4, 8, lo);
+	SWAP(3, 6, lo);
+	SWAP(2, 5, lo);
+	SWAP(4, 7, lo);
+	SWAP(4, 6, lo);
+	SWAP(3, 5, lo);
+	SWAP(4, 5, lo);
 }
 
 static __inline__ void sort12(long int * data, long int lo) {
-
-	SWAP(0, 1, lo);
-	SWAP(2, 3, lo);
-	SWAP(4, 5, lo);
-	SWAP(6, 7, lo);
-	SWAP(8, 9, lo);
-	SWAP(10, 11, lo);
-	SWAP(1, 3, lo);
-	SWAP(5, 7, lo);
-	SWAP(9, 11, lo);
-	SWAP(0, 2, lo);
-	SWAP(4, 6, lo);
-	SWAP(8, 10, lo);
 	SWAP(1, 2, lo);
-	SWAP(5, 6, lo);
-	SWAP(9, 10, lo);
-	SWAP(1, 5, lo);
-	SWAP(6, 10, lo);
-	SWAP(5, 9, lo);
-	SWAP(2, 6, lo);
-	SWAP(1, 5, lo);
-	SWAP(6, 10, lo);
-	SWAP(0, 4, lo);
-	SWAP(7, 11, lo);
-	SWAP(3, 7, lo);
-	SWAP(4, 8, lo);
-	SWAP(0, 4, lo);
-	SWAP(7, 11, lo);
-	SWAP(1, 4, lo);
-	SWAP(7, 10, lo);
-	SWAP(3, 8, lo);
-	SWAP(2, 3, lo);
-	SWAP(8, 9, lo);
-	SWAP(2, 4, lo);
-	SWAP(7, 9, lo);
+	SWAP(4, 5, lo);
+	SWAP(7, 8, lo);
+	SWAP(10, 11, lo);
+	SWAP(0, 2, lo);
 	SWAP(3, 5, lo);
 	SWAP(6, 8, lo);
+	SWAP(9, 11, lo);
+	SWAP(0, 1, lo);
 	SWAP(3, 4, lo);
+	SWAP(2, 5, lo);
+	SWAP(6, 7, lo);
+	SWAP(9, 10, lo);
+	SWAP(8, 11, lo);
+	SWAP(0, 3, lo);
+	SWAP(1, 4, lo);
+	SWAP(6, 9, lo);
+	SWAP(7, 10, lo);
+	SWAP(5, 11, lo);
+	SWAP(2, 4, lo);
+	SWAP(1, 3, lo);
+	SWAP(8, 10, lo);
+	SWAP(7, 9, lo);
+	SWAP(0, 6, lo);
+	SWAP(2, 3, lo);
+	SWAP(8, 9, lo);
+	SWAP(1, 7, lo);
+	SWAP(4, 10, lo);
+	SWAP(2, 8, lo);
+	SWAP(1, 6, lo);
+	SWAP(3, 9, lo);
+	SWAP(5, 10, lo);
+	SWAP(2, 7, lo);
+	SWAP(4, 9, lo);
+	SWAP(2, 6, lo);
+	SWAP(5, 9, lo);
+	SWAP(4, 7, lo);
+	SWAP(3, 6, lo);
+	SWAP(5, 8, lo);
+	SWAP(5, 7, lo);
+	SWAP(4, 6, lo);
 	SWAP(5, 6, lo);
-	SWAP(7, 8, lo);
 }
 
 static __inline__ void sort13(long int * data, long int lo) {
-
-	SWAP(1, 7, lo);
-	SWAP(9, 11, lo);
-	SWAP(3, 4, lo);
-	SWAP(5, 8, lo);
-	SWAP(0, 12, lo);
-	SWAP(2, 6, lo);
-	SWAP(0, 1, lo);
-	SWAP(2, 3, lo);
-	SWAP(4, 6, lo);
-	SWAP(8, 11, lo);
-	SWAP(7, 12, lo);
-	SWAP(5, 9, lo);
-	SWAP(0, 2, lo);
-	SWAP(3, 7, lo);
-	SWAP(10, 11, lo);
-	SWAP(1, 4, lo);
-	SWAP(6, 12, lo);
-	SWAP(7, 8, lo);
-	SWAP(11, 12, lo);
-	SWAP(4, 9, lo);
-	SWAP(6, 10, lo);
-	SWAP(3, 4, lo);
-	SWAP(5, 6, lo);
-	SWAP(8, 9, lo);
-	SWAP(10, 11, lo);
-	SWAP(1, 7, lo);
-	SWAP(2, 6, lo);
-	SWAP(9, 11, lo);
-	SWAP(1, 3, lo);
-	SWAP(4, 7, lo);
-	SWAP(8, 10, lo);
-	SWAP(0, 5, lo);
-	SWAP(2, 5, lo);
-	SWAP(6, 8, lo);
-	SWAP(9, 10, lo);
 	SWAP(1, 2, lo);
-	SWAP(3, 5, lo);
-	SWAP(7, 8, lo);
-	SWAP(4, 6, lo);
-	SWAP(2, 3, lo);
 	SWAP(4, 5, lo);
-	SWAP(6, 7, lo);
-	SWAP(8, 9, lo);
+	SWAP(7, 8, lo);
+	SWAP(9, 10, lo);
+	SWAP(11, 12, lo);
+	SWAP(0, 2, lo);
+	SWAP(3, 5, lo);
+	SWAP(6, 8, lo);
+	SWAP(9, 11, lo);
+	SWAP(10, 12, lo);
+	SWAP(0, 1, lo);
 	SWAP(3, 4, lo);
+	SWAP(2, 5, lo);
+	SWAP(6, 7, lo);
+	SWAP(10, 11, lo);
+	SWAP(8, 12, lo);
+	SWAP(0, 3, lo);
+	SWAP(1, 4, lo);
+	SWAP(6, 10, lo);
+	SWAP(7, 11, lo);
+	SWAP(5, 12, lo);
+	SWAP(2, 4, lo);
+	SWAP(1, 3, lo);
+	SWAP(6, 9, lo);
+	SWAP(8, 11, lo);
+	SWAP(2, 3, lo);
+	SWAP(7, 9, lo);
+	SWAP(8, 10, lo);
+	SWAP(4, 11, lo);
+	SWAP(8, 9, lo);
+	SWAP(0, 7, lo);
+	SWAP(3, 10, lo);
+	SWAP(5, 11, lo);
+	SWAP(0, 6, lo);
+	SWAP(1, 8, lo);
+	SWAP(2, 9, lo);
+	SWAP(4, 10, lo);
+	SWAP(2, 8, lo);
+	SWAP(1, 6, lo);
+	SWAP(5, 10, lo);
+	SWAP(2, 7, lo);
+	SWAP(4, 8, lo);
+	SWAP(5, 9, lo);
+	SWAP(2, 6, lo);
+	SWAP(3, 7, lo);
+	SWAP(5, 8, lo);
+	SWAP(3, 6, lo);
+	SWAP(5, 7, lo);
+	SWAP(4, 6, lo);
 	SWAP(5, 6, lo);
 }
 
 static __inline__ void sort14(long int * data, long int lo) {
-
-	SWAP(0, 1, lo);
-	SWAP(2, 3, lo);
-	SWAP(4, 5, lo);
-	SWAP(6, 7, lo);
+	SWAP(1, 2, lo);
+	SWAP(3, 4, lo);
+	SWAP(5, 6, lo);
 	SWAP(8, 9, lo);
 	SWAP(10, 11, lo);
 	SWAP(12, 13, lo);
 	SWAP(0, 2, lo);
-	SWAP(4, 6, lo);
-	SWAP(8, 10, lo);
-	SWAP(1, 3, lo);
-	SWAP(5, 7, lo);
-	SWAP(9, 11, lo);
-	SWAP(0, 4, lo);
-	SWAP(8, 12, lo);
-	SWAP(1, 5, lo);
-	SWAP(9, 13, lo);
-	SWAP(2, 6, lo);
-	SWAP(3, 7, lo);
-	SWAP(0, 8, lo);
-	SWAP(1, 9, lo);
-	SWAP(2, 10, lo);
-	SWAP(3, 11, lo);
-	SWAP(4, 12, lo);
-	SWAP(5, 13, lo);
-	SWAP(5, 10, lo);
-	SWAP(6, 9, lo);
-	SWAP(3, 12, lo);
-	SWAP(7, 11, lo);
-	SWAP(1, 2, lo);
-	SWAP(4, 8, lo);
-	SWAP(1, 4, lo);
-	SWAP(7, 13, lo);
-	SWAP(2, 8, lo);
-	SWAP(2, 4, lo);
-	SWAP(5, 6, lo);
-	SWAP(9, 10, lo);
-	SWAP(11, 13, lo);
-	SWAP(3, 8, lo);
-	SWAP(7, 12, lo);
-	SWAP(6, 8, lo);
-	SWAP(10, 12, lo);
 	SWAP(3, 5, lo);
+	SWAP(4, 6, lo);
 	SWAP(7, 9, lo);
-	SWAP(3, 4, lo);
-	SWAP(5, 6, lo);
+	SWAP(10, 12, lo);
+	SWAP(11, 13, lo);
+	SWAP(0, 1, lo);
+	SWAP(4, 5, lo);
+	SWAP(2, 6, lo);
 	SWAP(7, 8, lo);
-	SWAP(9, 10, lo);
 	SWAP(11, 12, lo);
+	SWAP(9, 13, lo);
+	SWAP(0, 4, lo);
+	SWAP(1, 5, lo);
+	SWAP(7, 11, lo);
+	SWAP(8, 12, lo);
+	SWAP(6, 13, lo);
+	SWAP(0, 3, lo);
+	SWAP(2, 5, lo);
+	SWAP(7, 10, lo);
+	SWAP(9, 12, lo);
+	SWAP(1, 3, lo);
+	SWAP(2, 4, lo);
+	SWAP(8, 10, lo);
+	SWAP(9, 11, lo);
+	SWAP(0, 7, lo);
+	SWAP(5, 12, lo);
+	SWAP(2, 3, lo);
+	SWAP(9, 10, lo);
+	SWAP(1, 8, lo);
+	SWAP(4, 11, lo);
+	SWAP(6, 12, lo);
+	SWAP(2, 9, lo);
+	SWAP(1, 7, lo);
+	SWAP(3, 10, lo);
+	SWAP(6, 11, lo);
+	SWAP(2, 8, lo);
+	SWAP(4, 10, lo);
+	SWAP(2, 7, lo);
+	SWAP(5, 10, lo);
+	SWAP(4, 8, lo);
+	SWAP(6, 10, lo);
+	SWAP(3, 7, lo);
+	SWAP(5, 9, lo);
+	SWAP(4, 7, lo);
+	SWAP(6, 9, lo);
+	SWAP(5, 7, lo);
+	SWAP(6, 8, lo);
 	SWAP(6, 7, lo);
-	SWAP(8, 9, lo);
 }
 
 static __inline__ void sort15(long int * data, long int lo) {
-
-	SWAP(0, 1, lo);
-	SWAP(2, 3, lo);
-	SWAP(4, 5, lo);
-	SWAP(6, 7, lo);
-	SWAP(8, 9, lo);
-	SWAP(10, 11, lo);
-	SWAP(12, 13, lo);
-	SWAP(0, 2, lo);
-	SWAP(4, 6, lo);
-	SWAP(8, 10, lo);
-	SWAP(12, 14, lo);
-	SWAP(1, 3, lo);
-	SWAP(5, 7, lo);
-	SWAP(9, 11, lo);
-	SWAP(0, 4, lo);
-	SWAP(8, 12, lo);
-	SWAP(1, 5, lo);
-	SWAP(9, 13, lo);
-	SWAP(2, 6, lo);
-	SWAP(10, 14, lo);
-	SWAP(3, 7, lo);
-	SWAP(0, 8, lo);
-	SWAP(1, 9, lo);
-	SWAP(2, 10, lo);
-	SWAP(3, 11, lo);
-	SWAP(4, 12, lo);
-	SWAP(5, 13, lo);
-	SWAP(6, 14, lo);
-	SWAP(5, 10, lo);
-	SWAP(6, 9, lo);
-	SWAP(3, 12, lo);
-	SWAP(13, 14, lo);
-	SWAP(7, 11, lo);
 	SWAP(1, 2, lo);
-	SWAP(4, 8, lo);
-	SWAP(1, 4, lo);
-	SWAP(7, 13, lo);
-	SWAP(2, 8, lo);
-	SWAP(11, 14, lo);
-	SWAP(2, 4, lo);
-	SWAP(5, 6, lo);
-	SWAP(9, 10, lo);
-	SWAP(11, 13, lo);
-	SWAP(3, 8, lo);
-	SWAP(7, 12, lo);
-	SWAP(6, 8, lo);
-	SWAP(10, 12, lo);
-	SWAP(3, 5, lo);
-	SWAP(7, 9, lo);
 	SWAP(3, 4, lo);
 	SWAP(5, 6, lo);
 	SWAP(7, 8, lo);
 	SWAP(9, 10, lo);
 	SWAP(11, 12, lo);
-	SWAP(6, 7, lo);
+	SWAP(13, 14, lo);
+	SWAP(0, 2, lo);
+	SWAP(3, 5, lo);
+	SWAP(4, 6, lo);
+	SWAP(7, 9, lo);
+	SWAP(8, 10, lo);
+	SWAP(11, 13, lo);
+	SWAP(12, 14, lo);
+	SWAP(0, 1, lo);
+	SWAP(4, 5, lo);
+	SWAP(2, 6, lo);
 	SWAP(8, 9, lo);
+	SWAP(12, 13, lo);
+	SWAP(7, 11, lo);
+	SWAP(10, 14, lo);
+	SWAP(0, 4, lo);
+	SWAP(1, 5, lo);
+	SWAP(8, 12, lo);
+	SWAP(9, 13, lo);
+	SWAP(6, 14, lo);
+	SWAP(0, 3, lo);
+	SWAP(2, 5, lo);
+	SWAP(8, 11, lo);
+	SWAP(10, 13, lo);
+	SWAP(1, 3, lo);
+	SWAP(2, 4, lo);
+	SWAP(9, 11, lo);
+	SWAP(10, 12, lo);
+	SWAP(0, 8, lo);
+	SWAP(5, 13, lo);
+	SWAP(2, 3, lo);
+	SWAP(10, 11, lo);
+	SWAP(0, 7, lo);
+	SWAP(1, 9, lo);
+	SWAP(4, 12, lo);
+	SWAP(6, 13, lo);
+	SWAP(2, 10, lo);
+	SWAP(1, 7, lo);
+	SWAP(3, 11, lo);
+	SWAP(6, 12, lo);
+	SWAP(2, 9, lo);
+	SWAP(4, 11, lo);
+	SWAP(2, 8, lo);
+	SWAP(5, 11, lo);
+	SWAP(2, 7, lo);
+	SWAP(6, 11, lo);
+	SWAP(4, 8, lo);
+	SWAP(5, 9, lo);
+	SWAP(3, 7, lo);
+	SWAP(6, 10, lo);
+	SWAP(4, 7, lo);
+	SWAP(6, 9, lo);
+	SWAP(5, 7, lo);
+	SWAP(6, 8, lo);
+	SWAP(6, 7, lo);
 }
 
 void merge(long int lo, long int mid, long int hi) {
@@ -662,18 +685,11 @@ int main(int argc, char **argv) {
 		long int count = 0;
 		long int buf_num = BUFSIZ / 8;
 		bool flag = false;
-		while (flag == false) {
-			if (count + buf_num >= SIZE) {
-				flag = true;
-				buf_num = (SIZE - count);
-			}
-
-			if (fread(&data[count], sizeof(long int), buf_num, in_file) == -1) {
+		for (long int count = 0; count < SIZE; count++) {
+			if (fread(&data[count], sizeof(long int), 1, in_file) == -1) {
 				perror("fread");
 				exit(1);
 			}
-
-			count += buf_num;
 		}
 		fclose(in_file);
 
@@ -719,20 +735,12 @@ int main(int argc, char **argv) {
 		flag = false;
 
 		if (blk == 0) {
-			while (flag == false) {
-				if (count + buf_num >= SIZE) {
-					flag = true;
-					buf_num = (SIZE - count);
-				}
-
-				if (fwrite(&data[count], sizeof(long int), buf_num, out_file) == -1) {
+			for (long int count = 0; count < SIZE; count++) {
+				if (fwrite(&data[count], sizeof(long int), 1, out_file) == -1) {
 					perror("fwrite");
 					exit(1);
 				}
-
-				count += buf_num;
 			}
-
 			set_time(1);
 		} else if (blk == 1) {
 			/*Instead of writing the second block , we can directly merge the 1st block using temp*/
@@ -759,7 +767,7 @@ int main(int argc, char **argv) {
 	FILE *first_file = fopen(f1, "r");
 	NUM_ELE = ELE_PER_PC >> 1;
 
-	long int count1 = 1;
+	long int count1 = 0;
 	long int count2 = 0;
 	long int pos = 0;
 	long int num1;
@@ -782,7 +790,7 @@ int main(int argc, char **argv) {
 			}
 			pos++;
 			count1++;
-			if (count1 > NUM_ELE)
+			if (count1 >= NUM_ELE)
 				break;
 			if ((ret = fread(&num1, sizeof(long int), 1, first_file)) != 1) {
 				printf("fread1  : ret = %d\tcount1 = %ld\tcount2 = %ld\n", ret, count1, count2);
@@ -797,12 +805,12 @@ int main(int argc, char **argv) {
 			pos++;
 			count2++;
 
-			if (count2 > NUM_ELE)
+			if (count2 >= NUM_ELE)
 				break;
 		}
 	}
 
-	while (count1 <= NUM_ELE) {
+	while (count1 < NUM_ELE) {
 		if (pos < NUM_ELE) {
 			temp[pos] = num1;
 		} else {
@@ -810,7 +818,7 @@ int main(int argc, char **argv) {
 		}
 		pos++;
 		count1++;
-		if (count1 > NUM_ELE)
+		if (count1 >= NUM_ELE)
 			break;
 		if ((ret = fread(&num1, sizeof(long int), 1, first_file)) != 1) {
 			printf("while fread1  : ret = %d\tcount1 = %ld\tcount2 = %ld\n", ret, count1, count2);
@@ -818,7 +826,7 @@ int main(int argc, char **argv) {
 		}
 	}
 
-	while (count2 <= NUM_ELE) {
+	while (count2 < NUM_ELE) {
 		if (pos < NUM_ELE) {
 			temp[pos] = data[count2];
 		} else {
@@ -826,7 +834,7 @@ int main(int argc, char **argv) {
 		}
 		pos++;
 		count2++;
-		if (count2 > NUM_ELE)
+		if (count2 >= NUM_ELE)
 			break;
 	}
 

@@ -33,7 +33,7 @@ int main(int argc, char **argv) {
 	}
 	fflush(file2);
 	printf("Starting to sort the data\n");
-	if (system("sort -n temp1.data > temp_sort")) {
-		perror("Error sorting");
-	}
+//	if (system("sort -n temp1.data > temp_sort")) {
+//		perror("Error sorting");
+//	}
 }
