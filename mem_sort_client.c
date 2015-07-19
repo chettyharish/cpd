@@ -55,7 +55,6 @@ void write_long(int sockfd_client, char *num) {
 
 	while (rlen < size) {
 		if ((ret = write(sockfd_client, (num + rlen), size - rlen)) == -1) {
-
 			fprintf(log_file, "write_long\n");
 			fflush(log_file);
 			exit(1);
@@ -857,7 +856,7 @@ int main(int argc, char **argv) {
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	/*PHASE 3 STARTED*/
-	for (long int i = 0; i < ELE_PER_PC; i++) {
+	for (long int i = 0; i <= ELE_PER_PC; i++) {
 		if (i % 10000000 == 0) {
 			fprintf(log_file, "Writing %ld \n", i);
 			fflush(log_file);
@@ -868,6 +867,9 @@ int main(int argc, char **argv) {
 			write_long(sockfd_client, (char *) &data[i % NUM_ELE]);
 		}
 	}
+
+	for (int i = 0; i < 10; i++)
+		write_long(sockfd_client, (char *) &data[i % NUM_ELE]);
 
 	fprintf(log_file, "Completed correctly!\n");
 	fflush(log_file);

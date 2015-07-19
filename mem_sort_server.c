@@ -63,7 +63,7 @@ static __inline__ void read_long(int sockfd_client, char *num) {
 	unsigned int size = sizeof(long int);
 	int rlen = 0;
 	int ret;
-	set_time(3);
+//	set_time(3);
 	while (rlen < size) {
 		if ((ret = read(sockfd_client, (num + rlen), size - rlen)) == -1) {
 			perror("read_long");
@@ -77,17 +77,17 @@ static __inline__ void read_long(int sockfd_client, char *num) {
 		rlen += ret;
 		set_time(4);
 
-		if (read_timer_end - read_timer_start > 120 && started_merge == true) {
-			printf("READING HAS FAILED\n");
-			long int total = 0;
-			for (int i = 0; i < 8; i++) {
-				printf("pos = %10d    val =%10ld\n", i, consumed[i]);
-				total += (consumed[i]);
-			}
-			printf("Total elements consumed = %ld\n", total);
-			printf("Was reading pos = %d\n", bkup_pos);
-			exit(1);
-		}
+//		if (read_timer_end - read_timer_start > 120 && started_merge == true) {
+//			printf("READING HAS FAILED\n");
+//			long int total = 0;
+//			for (int i = 0; i < 8; i++) {
+//				printf("pos = %10d    val =%10ld\n", i, consumed[i]);
+//				total += (consumed[i]);
+//			}
+//			printf("Total elements consumed = %ld\n", total);
+//			printf("Was reading pos = %d\n", bkup_pos);
+//			exit(1);
+//		}
 	}
 }
 
@@ -888,14 +888,13 @@ int main(int argc, char **argv) {
 		set_time(0);
 		k_way_single();
 		set_time(1);
-		set_time(0);
 
-		if (is_sorted(0, SIZE - 1) == true) {
-			printf("Sorted correctly \n");
-		} else {
-			printf("Sorting error \n");
-			exit(1);
-		}
+//		if (is_sorted(0, SIZE - 1) == true) {
+//			printf("Sorted correctly \n");
+//		} else {
+//			printf("Sorting error \n");
+//			exit(1);
+//		}
 
 		set_time(1);
 		printf("Testing completed \t Execution time =  %lf seconds\n", end_time - start_time);
@@ -1011,6 +1010,14 @@ int main(int argc, char **argv) {
 	if (system("rm -f temp_lvl*") == -1) {
 		printf("Removing file failed");
 	}
+	FILE *temp_out = fopen("temp_out", "w+");
+	for (long int i = 0; i < ELE_PER_PC; i++) {
+		if (i < ELE_PER_PC >> 1)
+			fprintf(temp_out,"%ld\n", temp[i]);
+		else
+			fprintf(temp_out,"%ld\n", data[i % NUM_ELE]);
+	}
+	exit(0);
 
 	set_time(1);
 	printf("PHASE 3 Completed\t Execution time =  %lf seconds \n", end_time - orig_time);
@@ -1018,28 +1025,16 @@ int main(int argc, char **argv) {
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	/*PHASE 4 STARTED*/
-
-//	NUM_ELE = ELE_PER_PC >> 1;
-//	FILE *ans = fopen("mem_ans", "w+");
-//	for (long int i = 0; i < ELE_PER_PC; i++) {
-//		if (i < NUM_ELE)
-//			fprintf(ans, "%ld\n", temp[i]);
-//		else
-//			fprintf(ans, "%ld\n", data[i % NUM_ELE]);
-//
-//	}
-//	exit(0);
 	set_time(0);
-	FILE *final = fopen("final_answer4", "w+");
+	FILE *final = fopen("final_answer", "w+");
 	printf("Done creating the files\n");
 	fflush(stdout);
 
 	printf("Waiting for all machines\n");
 	for (long int i = 0; i < 8; i++)
-		consumed[i] = 1;
+		consumed[i] = 0;
 	for (int i = 0; i < 7; i++) {
 		read_long(sfd_client[i], (char *) &nums[i]);
-		consumed[i];
 	}
 	nums[7] = temp[0];
 	started_merge = true;
@@ -1049,16 +1044,12 @@ int main(int argc, char **argv) {
 	long int total = 0;
 	for (long int all_count = 0; all_count < 8000000000; all_count++) {
 		loc = compare_all();
-		bkup_pos = loc;
-//		if ((all_count - 1) % 10 == 0) {
-//		fprintf(final, "%ld\n", nums[loc]);
-//		}
-
-		if (all_count < 20 || all_count > 8000000000 - 20) {
-			fprintf(final, "loc = %ld\tval = %ld\n", loc, nums[loc]);
+//		bkup_pos = loc;
+		if ((all_count - 1) % 10 == 0) {
+			fprintf(final, "%ld\n", nums[loc]);
 		}
 
-		if (all_count % 500000000 == 0) {
+		if (all_count % 1000000000 == 0) {
 			set_time(1);
 			total = 0;
 			printf("all_count = %ld   reached at %lf seconds \n", all_count, end_time - start_time);
@@ -1102,10 +1093,6 @@ int main(int argc, char **argv) {
 
 	set_time(1);
 	printf("PHASE 4 Completed\t Execution time =  %lf seconds \n", end_time - orig_time);
-	/*Cleaning the files here*/
-	if (system("rm -f answer") == -1)
-		perror("System");
-
 	return 0;
 
 }

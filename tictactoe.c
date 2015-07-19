@@ -18,6 +18,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <limits.h>
+#include <string.h>
 
 #define MAXCONN 50
 #define NUMMSG 20
@@ -32,7 +33,7 @@ struct mail {
 	char to_username[STLEN];
 	char title[STLEN];
 	char text[MSGSIZE];
-	long int timestamp;
+	char timestamp[STLEN];
 	bool read_status;
 	bool isfilled;
 };
@@ -49,9 +50,14 @@ struct user {
 	bool quiet;
 	bool playing;
 	bool isloggedin;
+	char message_body[MSGSIZE];
 	int blk_list[MAXCONN];
-	char sent_request[STLEN];
 	struct mail mail_list[NUMMSG];
+	/*Mail temp backup*/
+	bool sending_mail;
+	int temp_sending_to;
+	char temp_title[STLEN];
+	char temp_timestamp[STLEN];
 } reg_users[MAXCONN];
 
 struct guest {
@@ -97,7 +103,7 @@ void set_defaults() {
 		reg_users[i].quiet = false;
 		reg_users[i].playing = false;
 		reg_users[i].isloggedin = false;
-		strcpy(reg_users[i].sent_request, "NULL");
+		strcpy(reg_users[i].message_body, "NULL");
 		for (int j = 0; j < MAXCONN; j++) {
 			reg_users[i].blk_list[j] = -1;
 		}
@@ -106,7 +112,7 @@ void set_defaults() {
 			strcpy(reg_users[i].mail_list[j].to_username, "NULL");
 			strcpy(reg_users[i].mail_list[j].title, "NULL");
 			strcpy(reg_users[i].mail_list[j].text, "NULL");
-			reg_users[i].mail_list[j].timestamp = 0;
+			strcpy(reg_users[i].mail_list[j].timestamp, "NULL");
 			reg_users[i].mail_list[j].read_status = false;
 			reg_users[i].mail_list[j].isfilled = false;
 		}
@@ -154,15 +160,15 @@ void load_files() {
 	strcpy(reg_table[2].username, "chetty");
 	strcpy(reg_table[2].password, "chetty");
 	reg_table[2].logged_in = false;
-	reg_table[1].loc = 2;
+	reg_table[2].loc = 2;
 	strcpy(reg_table[3].username, "hello");
 	strcpy(reg_table[3].password, "world");
 	reg_table[3].logged_in = false;
-	reg_table[3].loc = 2;
+	reg_table[3].loc = 3;
 	strcpy(reg_users[0].username, "harish");
 	strcpy(reg_users[1].username, "jacob");
-	strcpy(reg_users[3].username, "chetty");
-	strcpy(reg_users[4].username, "hello");
+	strcpy(reg_users[2].username, "chetty");
+	strcpy(reg_users[3].username, "hello");
 
 }
 
@@ -185,7 +191,7 @@ void store_files() {
 					fprintf(user_file, "%d\n", reg_users[i].blk_list[j]);
 			}
 			for (int j = 0; j < NUMMSG; j++) {
-				sprintf(data, "%s,%s,%s,%s,%d,%ld\n", reg_users[i].mail_list[j].from_username, reg_users[i].mail_list[j].to_username, reg_users[i].mail_list[j].title, reg_users[i].mail_list[j].text,
+				sprintf(data, "%s,%s,%s,%s,%d,%s\n", reg_users[i].mail_list[j].from_username, reg_users[i].mail_list[j].to_username, reg_users[i].mail_list[j].title, reg_users[i].mail_list[j].text,
 						reg_users[i].mail_list[j].read_status, reg_users[i].mail_list[j].timestamp);
 				fprintf(user_file, "%s", data);
 			}
@@ -304,7 +310,11 @@ void get_stats(int sockfd) {
 				total++;
 		}
 
-		if (total != 0) {
+		if (total == 0) {
+			sprintf(ret_msg, "%s", "<none>\n");
+			write_return(sockfd);
+			return;
+		} else {
 			for (int i = 0; i < MAXCONN; i++) {
 				if (reg_users[ret].blk_list[i] != -1) {
 					printed++;
@@ -324,12 +334,255 @@ void get_stats(int sockfd) {
 					write_return(sockfd);
 				}
 			}
-		} else {
-			sprintf(ret_msg, "%s", "<none>\n");
-			write_return(sockfd);
-			return;
 		}
 	}
+}
+
+void block_cmd(int uid) {
+	int total = 0;
+	int printed = 0;
+	char *username;
+	char temp_cmd[MSGSIZE];
+	strcpy(temp_cmd, usr_msg);
+	username = strtok(temp_cmd, " ");
+	username = strtok(NULL, " ");
+	printf("Trying to block username = %s\n", username);
+	int ret = find_user(username);
+	if (ret == -1) {
+		/*User not found*/
+		sprintf(ret_msg, "User not found, please check the username\n");
+		write_return(reg_users[uid].sockfd);
+		return;
+	} else {
+		/*Test if user was already blocked*/
+		for (int i = 0; i < MAXCONN; i++) {
+			if (reg_users[uid].blk_list[i] == ret) {
+				sprintf(ret_msg, "User <%s> is already blocked\n", username);
+				write_return(reg_users[uid].sockfd);
+				return;
+			}
+
+		}
+		/*Find a spot in the array to block*/
+		for (int i = 0; i < MAXCONN; i++) {
+			if (reg_users[uid].blk_list[i] == -1) {
+				reg_users[uid].blk_list[i] = ret;
+				sprintf(ret_msg, "User <%s> has been blocked\n", username);
+				write_return(reg_users[uid].sockfd);
+				return;
+			}
+		}
+	}
+
+	sprintf(ret_msg, "Your block_list is full\n");
+	write_return(reg_users[uid].sockfd);
+}
+
+void unblock_cmd(int uid) {
+	int total = 0;
+	int printed = 0;
+	char *username;
+	char temp_cmd[MSGSIZE];
+	strcpy(temp_cmd, usr_msg);
+	username = strtok(temp_cmd, " ");
+	username = strtok(NULL, " ");
+	printf("Trying to unblock username = %s\n", username);
+	int ret = find_user(username);
+	if (ret == -1) {
+		/*User not found*/
+		sprintf(ret_msg, "User not found, please check the username\n");
+		write_return(reg_users[uid].sockfd);
+		return;
+	} else {
+		/*Find a spot in the array to block*/
+		for (int i = 0; i < MAXCONN; i++) {
+			if (reg_users[uid].blk_list[i] == ret) {
+				printf("User was found at location %d,%d\n", i, ret);
+				reg_users[uid].blk_list[i] = -1;
+				sprintf(ret_msg, "User <%s> has been unblocked\n", username);
+				write_return(reg_users[uid].sockfd);
+				return;
+			}
+		}
+	}
+
+	sprintf(ret_msg, "User <%s> was never blocked\n", username);
+	write_return(reg_users[uid].sockfd);
+}
+
+void get_info(int uid) {
+	printf("Changing info\n");
+	char *cmd, *msg;
+	char temp_cmd[MSGSIZE];
+	strcpy(temp_cmd, usr_msg);
+	cmd = __strtok_r(temp_cmd, " ", &msg);
+	strcpy(reg_users[uid].info, msg);
+}
+
+void get_passwd(int pos) {
+	printf("Changing password\n");
+	char *passwd;
+	char temp_cmd[MSGSIZE];
+	strcpy(temp_cmd, usr_msg);
+	passwd = strtok(temp_cmd, " ");
+	passwd = strtok(NULL, " ");
+	strcpy(reg_table[pos].password, passwd);
+}
+
+bool check_blocked(int uid, int tid) {
+	for (int i = 0; i < MAXCONN; i++) {
+		if (reg_users[uid].blk_list[i] == tid)
+			return true;
+	}
+	return false;
+}
+
+void shout_msg(int uid) {
+	char *cmd, *msg;
+	char temp_cmd[MSGSIZE];
+	strcpy(temp_cmd, usr_msg);
+	cmd = __strtok_r(temp_cmd, " ", &msg);
+	for (int i = 0; i < MAXCONN; i++) {
+		if (reg_users[i].isloggedin == true && check_blocked(i, uid) == false && reg_users[i].quiet == false) {
+			if (uid != i) {
+				sprintf(ret_msg, "\n!shout! *%s* : %s\n", reg_users[uid].username, msg);
+				write_return(reg_users[i].sockfd);
+			} else {
+				sprintf(ret_msg, "!shout! *%s* : %s\n", reg_users[uid].username, msg);
+				write_return(reg_users[i].sockfd);
+			}
+			if (uid != i) {
+				write_client_id(reg_users[i].sockfd, reg_users[i].username, reg_users[i].cmd_counter);
+			}
+		}
+	}
+}
+
+void tell_msg(int uid) {
+	char *username, *cmd, *msg;
+	char temp_cmd[MSGSIZE];
+	strcpy(temp_cmd, usr_msg);
+	username = __strtok_r(temp_cmd, " ", &msg);
+	username = __strtok_r(NULL, " ", &msg);
+
+	printf("Telling username = %s\t msg = %s\n", username, msg);
+	fflush(stdout);
+	int ret = find_user(username);
+	if (ret == -1) {
+		/*User not found*/
+		sprintf(ret_msg, "User not found, please check the username\n");
+		write_return(reg_users[uid].sockfd);
+		return;
+	}
+
+	if (reg_users[ret].isloggedin == false) {
+		sprintf(ret_msg, "User %s is not online.\n", username);
+		write_return(reg_users[uid].sockfd);
+		return;
+	}
+
+	if (check_blocked(ret, uid) == true) {
+		sprintf(ret_msg, "You cannot talk to %s. You are blocked\n", username);
+		write_return(reg_users[uid].sockfd);
+		return;
+	}
+
+	/*Send the message*/
+	sprintf(ret_msg, "\n%s : %s\n", reg_users[uid].username, msg);
+	write_return(reg_users[ret].sockfd);
+	write_client_id(reg_users[ret].sockfd, reg_users[ret].username, reg_users[ret].cmd_counter);
+	return;
+
+}
+
+void time_to_string(char *str_time) {
+	time_t t = time(0);
+	strftime(str_time, 100, "%a %b %d %H:%M:%S %Y ", localtime(&t));
+}
+
+void list_mail(int uid) {
+	for (int i = 0; i < MAXCONN; i++) {
+		if (i == 0 && reg_users[uid].mail_list[i].isfilled == false) {
+			sprintf(ret_msg, "You have no messages.\n");
+			write_return(reg_users[uid].sockfd);
+			return;
+		}
+		if (reg_users[uid].mail_list[i].isfilled == true) {
+			sprintf(ret_msg, "%2d  %6s  %10s  \" %s \" %s\n", i, (reg_users[uid].mail_list[i].read_status == true) ? ("Read") : ("Unread"), reg_users[uid].mail_list[i].from_username,
+					reg_users[uid].mail_list[i].title, reg_users[uid].mail_list[i].timestamp);
+			write_return(reg_users[uid].sockfd);
+			return;
+		}
+		printf("Not filled\n");
+	}
+}
+
+void read_mail_msg(int uid) {
+	if (strcmp(".", usr_msg) == 0) {
+		int ret = reg_users[uid].temp_sending_to;
+		printf("Message ended\n");
+		reg_users[uid].sending_mail = false;
+
+		/*Send the mail here*/
+		/*Add the mail to the mailbox*/
+		for (int i = 0; i < NUMMSG; i++) {
+			if (reg_users[ret].mail_list[i].isfilled == false) {
+				strcpy(reg_users[ret].mail_list[i].to_username, reg_users[ret].username);
+				strcpy(reg_users[ret].mail_list[i].from_username, reg_users[uid].username);
+				strcpy(reg_users[ret].mail_list[i].title, reg_users[ret].temp_title);
+				strcpy(reg_users[ret].mail_list[i].timestamp, reg_users[ret].temp_timestamp);
+				strcpy(reg_users[ret].mail_list[i].text, reg_users[uid].message_body);
+				reg_users[ret].mail_list[i].read_status = false;
+				reg_users[ret].mail_list[i].isfilled = true;
+
+				if (reg_users[ret].isloggedin == true) {
+					sprintf(ret_msg, "You have received a  new message \n");
+					write_return(reg_users[ret].sockfd);
+				}
+				return;
+			}
+		}
+		sprintf(ret_msg, "%s Mailbox is full.", reg_users[uid].username);
+		write_return(reg_users[uid].sockfd);
+		return;
+	}
+	strcat(reg_users[uid].message_body, usr_msg);
+}
+
+void send_mail(int uid) {
+	char *username, *cmd, *msg;
+	char temp_cmd[MSGSIZE];
+	strcpy(temp_cmd, usr_msg);
+	username = __strtok_r(temp_cmd, " ", &msg);
+	username = __strtok_r(NULL, " ", &msg);
+
+	printf("Telling username = %s\t msg = %s\n", username, msg);
+	fflush(stdout);
+	int ret = find_user(username);
+	if (ret == -1) {
+		/*User not found*/
+		sprintf(ret_msg, "User not found, please check the username\n");
+		write_return(reg_users[uid].sockfd);
+		return;
+	}
+
+	if (check_blocked(ret, uid) == true) {
+		sprintf(ret_msg, "You cannot mail to %s. You are blocked\n", username);
+		write_return(reg_users[uid].sockfd);
+		return;
+	}
+
+	bool sending_mail;
+	int temp_sending_to;
+	char temp_title;
+	char temp_timestamp;
+
+	/*Send the message*/
+	reg_users[uid].sending_mail = true;
+	reg_users[uid].temp_sending_to = ret;
+	strcpy(reg_users[uid].temp_title, msg);
+	time_to_string(reg_users[uid].temp_timestamp);
+	return;
 }
 
 int connect_reg_user(char *username, char *password) {
@@ -640,6 +893,7 @@ int main(int argc, char **argv) {
 										reg_users[userid].isloggedin = true;
 										reset_guest(i, false);
 										write_client_id(reg_users[userid].sockfd, reg_users[userid].username, reg_users[userid].cmd_counter);
+										reg_users[userid].cmd_counter++;
 										printf("User %s has logged in\n", reg_users[userid].username);
 									}
 								}
@@ -706,7 +960,17 @@ int main(int argc, char **argv) {
 						} else {
 							cleanup_usr_msg();
 							int ret = match_command();
+
+							if (reg_users[i].sending_mail == true) {
+								/*In sendmail mode, so ignore everything else */
+								/*and use the special case path*/
+								ret = -1;
+							}
 							switch (ret) {
+							case -1:
+								/*Writing body now so ignore everything else*/
+								read_mail_msg(i);
+								break;
 							case 0:
 								/*who call*/
 								print_who_message(reg_users[i].sockfd);
@@ -715,6 +979,16 @@ int main(int argc, char **argv) {
 							case 1:
 								/*stats call*/
 								get_stats(reg_users[i].sockfd);
+								write_client_id(reg_users[i].sockfd, reg_users[i].username, reg_users[i].cmd_counter);
+								break;
+							case 8:
+								/*Shouting*/
+								shout_msg(i);
+								write_client_id(reg_users[i].sockfd, reg_users[i].username, reg_users[i].cmd_counter);
+								break;
+							case 9:
+								/*Tell*/
+								tell_msg(i);
 								write_client_id(reg_users[i].sockfd, reg_users[i].username, reg_users[i].cmd_counter);
 								break;
 							case 12:
@@ -739,6 +1013,24 @@ int main(int argc, char **argv) {
 							case 15:
 								/*Unblock*/
 								unblock_cmd(i);
+								write_client_id(reg_users[i].sockfd, reg_users[i].username, reg_users[i].cmd_counter);
+								break;
+							case 16:
+								list_mail(i);
+								write_client_id(reg_users[i].sockfd, reg_users[i].username, reg_users[i].cmd_counter);
+								break;
+							case 19:
+								/*Mail message*/
+								send_mail(i);
+								break;
+							case 20:
+								/*Info*/
+								get_info(i);
+								write_client_id(reg_users[i].sockfd, reg_users[i].username, reg_users[i].cmd_counter);
+								break;
+							case 21:
+								/*password*/
+								get_passwd(i);
 								write_client_id(reg_users[i].sockfd, reg_users[i].username, reg_users[i].cmd_counter);
 								break;
 							case 22:
