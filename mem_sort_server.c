@@ -765,6 +765,14 @@ int main(int argc, char **argv) {
 			close(sockfd_server);
 			long int skip = i * 8000000000l;
 
+//			/bin/dd if=../cop5570a/test1 bs=32M  iflag=skip_bytes,count_bytes skip=0 count=8000000000 | ssh m1 'cat > temp'
+//			/bin/dd if=../cop5570a/test1 bs=32M  iflag=skip_bytes,count_bytes skip=8000000000 count=8000000000 | ssh m2 'cat > temp'
+//			/bin/dd if=../cop5570a/test1 bs=32M  iflag=skip_bytes,count_bytes skip=32000000000 count=8000000000 | ssh m5 'cat > temp'
+//			/bin/dd if=../cop5570a/test1 bs=32M  iflag=skip_bytes,count_bytes skip=24000000000 count=8000000000 | ssh m4 'cat > temp'
+//			/bin/dd if=../cop5570a/test1 bs=32M  iflag=skip_bytes,count_bytes skip=16000000000 count=8000000000 | ssh m3 'cat > temp'
+//			/bin/dd if=../cop5570a/test1 bs=32M  iflag=skip_bytes,count_bytes skip=40000000000 count=8000000000 | ssh m6 'cat > temp'
+//			/bin/dd if=../cop5570a/test1 bs=32M  iflag=skip_bytes,count_bytes skip=48000000000 count=8000000000 | ssh m8 'cat > temp'
+//			/bin/dd if=../cop5570a/test1 bs=32M  iflag=skip_bytes,count_bytes skip=56000000000 count=8000000000  > temp
 //			sprintf(buffer_temp, "/bin/dd if=%s bs=32M  iflag=skip_bytes,count_bytes skip=%ld count=8000000000 | ssh %s 'cat > temp'", argv[1], skip, mac_list[i]);
 //			printf("%s\n", buffer_temp);
 //			if (system(buffer_temp) == -1)
@@ -774,7 +782,6 @@ int main(int argc, char **argv) {
 			printf("%s\n", buffer_temp);
 			if (system(buffer_temp) == -1)
 				perror("System");
-
 			sprintf(buffer_temp, "ssh %s gcc -o sort_client sort_client.c "
 					"-march=native -Ofast -std=c99 -lm -pedantic "
 					"-pthread -fopenmp -funroll-loops", mac_list[i]);
@@ -1010,14 +1017,14 @@ int main(int argc, char **argv) {
 	if (system("rm -f temp_lvl*") == -1) {
 		printf("Removing file failed");
 	}
-	FILE *temp_out = fopen("temp_out", "w+");
-	for (long int i = 0; i < ELE_PER_PC; i++) {
-		if (i < ELE_PER_PC >> 1)
-			fprintf(temp_out,"%ld\n", temp[i]);
-		else
-			fprintf(temp_out,"%ld\n", data[i % NUM_ELE]);
-	}
-	exit(0);
+//	FILE *temp_out = fopen("temp_out", "w+");
+//	for (long int i = 0; i < ELE_PER_PC; i++) {
+//		if (i < ELE_PER_PC >> 1)
+//			fprintf(temp_out,"%ld\n", temp[i]);
+//		else
+//			fprintf(temp_out,"%ld\n", data[i % NUM_ELE]);
+//	}
+//	exit(0);
 
 	set_time(1);
 	printf("PHASE 3 Completed\t Execution time =  %lf seconds \n", end_time - orig_time);
@@ -1027,6 +1034,7 @@ int main(int argc, char **argv) {
 	/*PHASE 4 STARTED*/
 	set_time(0);
 	FILE *final = fopen("final_answer", "w+");
+	FILE *final2 = fopen("final_answer2", "w+");
 	printf("Done creating the files\n");
 	fflush(stdout);
 
@@ -1042,11 +1050,15 @@ int main(int argc, char **argv) {
 	fflush(stdout);
 	int loc = -1;
 	long int total = 0;
+
 	for (long int all_count = 0; all_count < 8000000000; all_count++) {
 		loc = compare_all();
 //		bkup_pos = loc;
 		if ((all_count - 1) % 10 == 0) {
-			fprintf(final, "%ld\n", nums[loc]);
+			fprintf(final, "all_count = %10ld val = %10ld\n", all_count, nums[loc]);
+		}
+		if ((all_count) % 10 == 0) {
+			fprintf(final2, "all_count = %10ld val = %10ld\n", all_count, nums[loc]);
 		}
 
 		if (all_count % 1000000000 == 0) {
