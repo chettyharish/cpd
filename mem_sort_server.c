@@ -566,6 +566,7 @@ void merge(long int lo, long int mid, long int hi) {
 void mergesort(long int lo, long int hi) {
 	if (hi <= lo)
 		return;
+
 	long int num = hi - lo + 1;
 	if (num <= 8) {
 		switch (num) {
@@ -590,9 +591,9 @@ void mergesort(long int lo, long int hi) {
 		case 7:
 			sort7(data, lo);
 			return;
-//		case 8:
-//			sort8(data, lo);
-//			return;
+		case 8:
+			sort8(data, lo);
+			return;
 		}
 	}
 
@@ -613,6 +614,20 @@ void *mergesort_caller(void *arg) {
 	mergesort(start, end);
 }
 
+void insertionSort(long int *a) {
+	long int i, j;
+	for (i = 0; i < SIZE; i++) {
+		for (j = i; j > 0; j--) {
+			if (a[j] < a[j - 1]) {
+				long int temp = a[j];
+				a[j] = a[j - 1];
+				a[j - 1] = temp;
+			} else
+				break;
+		}
+	}
+}
+
 void *k_way_merger_single(void *arg) {
 	int myid = *(int *) arg;
 	long int num_ele = ceil((SIZE * 1.0f) / CURR_THREADS);
@@ -625,8 +640,6 @@ void *k_way_merger_single(void *arg) {
 	}
 
 	long int curr1 = start1, curr2 = start2;
-
-//	printf("TID = %10d\t\tstart1 = %10d\tend1 = %10d\tstart2 = %10d\tend2 = %10d\tcurr1 = %10d\tcurr2 = %10d\n", myid, start1, end1, start2, end2, curr1, curr2);
 	long int i = start1;
 	while (curr1 <= end1 && curr2 <= end2) {
 		if (data[curr1] <= data[curr2])
@@ -848,9 +861,7 @@ int main(int argc, char **argv) {
 		FILE *in_file = fopen(argv[1], "r");
 		/*Adjusting in large file*/
 		fseek(in_file, (blk + 14) * RSIZE, SEEK_SET);
-		long int count = 0;
-		long int buf_num = BUFSIZ / 8;
-		bool flag = false;
+
 		for (long int count = 0; count < SIZE; count++) {
 			if (fread(&data[count], sizeof(long int), 1, in_file) == -1) {
 				perror("fread");
@@ -877,8 +888,6 @@ int main(int argc, char **argv) {
 		set_time(0);
 		k_way_single();
 		set_time(1);
-		printf("K-Way Merge completed \t Execution time =  %lf seconds\n", end_time - start_time);
-
 		set_time(0);
 
 		if (is_sorted(0, SIZE - 1) == true) {
@@ -892,10 +901,6 @@ int main(int argc, char **argv) {
 		printf("Testing completed \t Execution time =  %lf seconds\n", end_time - start_time);
 
 		set_time(0);
-		count = 0;
-		buf_num = BUFSIZ / 8;
-		flag = false;
-
 		if (blk == 0) {
 			for (long int count = 0; count < SIZE; count++) {
 				if (fwrite(&data[count], sizeof(long int), 1, out_file) == -1) {
@@ -906,7 +911,6 @@ int main(int argc, char **argv) {
 		} else if (blk == 1) {
 			/*Instead of writing the second block , we can directly merge the 1st block using temp*/
 		}
-
 		set_time(1);
 		printf("Writing completed to file %s\t Execution time =  %lf seconds\n", outfile, end_time - start_time);
 	}
@@ -914,8 +918,8 @@ int main(int argc, char **argv) {
 
 	set_time(1);
 	printf("PHASE 2 Completed\t Execution time =  %lf seconds \n\n\n", end_time - orig_time);
-	set_time(2);
 
+	set_time(2);
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	/*PHASE 3 STARTED*/
 	int LVL = 0;
@@ -947,6 +951,7 @@ int main(int argc, char **argv) {
 			} else {
 				data[pos % NUM_ELE] = num1;
 			}
+
 			pos++;
 			count1++;
 			if (count1 >= NUM_ELE)
@@ -958,6 +963,7 @@ int main(int argc, char **argv) {
 		} else {
 			if (pos < NUM_ELE) {
 				temp[pos] = data[count2];
+				;
 			} else {
 				data[pos % NUM_ELE] = data[count2];
 			}
@@ -967,6 +973,7 @@ int main(int argc, char **argv) {
 			if (count2 >= NUM_ELE)
 				break;
 		}
+
 	}
 
 	while (count1 < NUM_ELE) {
@@ -993,8 +1000,6 @@ int main(int argc, char **argv) {
 		}
 		pos++;
 		count2++;
-		if (count2 >= NUM_ELE)
-			break;
 	}
 
 	printf("EN : first_file = %ld\t NUM_ELE = %ld\n", ftell(first_file), NUM_ELE);
@@ -1014,11 +1019,18 @@ int main(int argc, char **argv) {
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	/*PHASE 4 STARTED*/
 
+//	NUM_ELE = ELE_PER_PC >> 1;
+//	FILE *ans = fopen("mem_ans", "w+");
+//	for (long int i = 0; i < ELE_PER_PC; i++) {
+//		if (i < NUM_ELE)
+//			fprintf(ans, "%ld\n", temp[i]);
+//		else
+//			fprintf(ans, "%ld\n", data[i % NUM_ELE]);
+//
+//	}
+//	exit(0);
 	set_time(0);
-	FILE *final1 = fopen("final_answer1", "w+");
-	FILE *final2 = fopen("final_answer2", "w+");
-	FILE *final3 = fopen("final_answer3", "w+");
-	FILE *final4 = fopen("final_answer4", "w+");
+	FILE *final = fopen("final_answer4", "w+");
 	printf("Done creating the files\n");
 	fflush(stdout);
 
@@ -1027,6 +1039,7 @@ int main(int argc, char **argv) {
 		consumed[i] = 1;
 	for (int i = 0; i < 7; i++) {
 		read_long(sfd_client[i], (char *) &nums[i]);
+		consumed[i];
 	}
 	nums[7] = temp[0];
 	started_merge = true;
@@ -1038,9 +1051,12 @@ int main(int argc, char **argv) {
 		loc = compare_all();
 		bkup_pos = loc;
 //		if ((all_count - 1) % 10 == 0) {
-//		fprintf(final4, "count = %ld\tloc = %d\t%ld\n", all_count, loc, nums[loc]);
-		fprintf(final4, "c=%d v=%d l=%d\n", (int) ((all_count + 1) % 10), (int) (nums[loc] % 10), loc);
+//		fprintf(final, "%ld\n", nums[loc]);
 //		}
+
+		if (all_count < 20 || all_count > 8000000000 - 20) {
+			fprintf(final, "loc = %ld\tval = %ld\n", loc, nums[loc]);
+		}
 
 		if (all_count % 500000000 == 0) {
 			set_time(1);
@@ -1082,7 +1098,6 @@ int main(int argc, char **argv) {
 			break;
 		}
 		consumed[loc]++;
-
 	}
 
 	set_time(1);

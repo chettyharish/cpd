@@ -2,5 +2,9 @@
 #include <stdlib.h>
 
 int main() {
-	printf("Hello World\n");
+	int size = 8192*1023;
+	char temp[size];
+	for (int i = 0; i < size; i++)
+		temp[i] = 'a';
+
 }
