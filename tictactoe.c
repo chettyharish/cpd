@@ -48,16 +48,24 @@ struct user {
 	int losses;
 	int draws;
 	bool quiet;
-	bool playing;
 	bool isloggedin;
-	char message_body[MSGSIZE];
 	int blk_list[MAXCONN];
+	/*Mail temp backup and mailing stuff*/
 	struct mail mail_list[NUMMSG];
-	/*Mail temp backup*/
+	char message_body[MSGSIZE];
 	bool sending_mail;
 	int temp_sending_to;
 	char temp_title[STLEN];
 	char temp_timestamp[STLEN];
+	/*To Handle games*/
+	bool trying_to_match;
+	int trying_to_match_player;
+	int trying_to_match_color;
+	int trying_to_match_time;
+	bool playing;
+	bool isobserving;
+	int gameid;
+	int observeid;
 } reg_users[MAXCONN];
 
 struct guest {
@@ -78,14 +86,17 @@ struct registry {
 } reg_table[MAXCONN];
 
 struct game {
-	int gameid;
-	char game_table[3][3];
-	char player1[STLEN];
-	char p1_color;
-	char player2[STLEN];
-	char p2_color;
+	int num_moves;
+	int observers[MAXCONN];
+	int player1;
+	int player2;
+	bool p1_move;
+	bool p2_move;
+	int game_table[3][3];
+	int p1_color;
+	int p2_color;
 	double start_time;
-	char observers[MAXCONN][STLEN];
+	double end_time;
 } game_list[MAXCONN];
 
 void set_defaults() {
@@ -447,12 +458,11 @@ void shout_msg(int uid) {
 			if (uid != i) {
 				sprintf(ret_msg, "\n!shout! *%s* : %s\n", reg_users[uid].username, msg);
 				write_return(reg_users[i].sockfd);
+				write_client_id(reg_users[i].sockfd, reg_users[i].username, reg_users[i].cmd_counter);
 			} else {
 				sprintf(ret_msg, "!shout! *%s* : %s\n", reg_users[uid].username, msg);
 				write_return(reg_users[i].sockfd);
-			}
-			if (uid != i) {
-				write_client_id(reg_users[i].sockfd, reg_users[i].username, reg_users[i].cmd_counter);
+
 			}
 		}
 	}
@@ -493,96 +503,6 @@ void tell_msg(int uid) {
 	write_client_id(reg_users[ret].sockfd, reg_users[ret].username, reg_users[ret].cmd_counter);
 	return;
 
-}
-
-void time_to_string(char *str_time) {
-	time_t t = time(0);
-	strftime(str_time, 100, "%a %b %d %H:%M:%S %Y ", localtime(&t));
-}
-
-void list_mail(int uid) {
-	for (int i = 0; i < MAXCONN; i++) {
-		if (i == 0 && reg_users[uid].mail_list[i].isfilled == false) {
-			sprintf(ret_msg, "You have no messages.\n");
-			write_return(reg_users[uid].sockfd);
-			return;
-		}
-		if (reg_users[uid].mail_list[i].isfilled == true) {
-			sprintf(ret_msg, "%2d  %6s  %10s  \" %s \" %s\n", i, (reg_users[uid].mail_list[i].read_status == true) ? ("Read") : ("Unread"), reg_users[uid].mail_list[i].from_username,
-					reg_users[uid].mail_list[i].title, reg_users[uid].mail_list[i].timestamp);
-			write_return(reg_users[uid].sockfd);
-			return;
-		}
-		printf("Not filled\n");
-	}
-}
-
-void read_mail_msg(int uid) {
-	if (strcmp(".", usr_msg) == 0) {
-		int ret = reg_users[uid].temp_sending_to;
-		printf("Message ended\n");
-		reg_users[uid].sending_mail = false;
-
-		/*Send the mail here*/
-		/*Add the mail to the mailbox*/
-		for (int i = 0; i < NUMMSG; i++) {
-			if (reg_users[ret].mail_list[i].isfilled == false) {
-				strcpy(reg_users[ret].mail_list[i].to_username, reg_users[ret].username);
-				strcpy(reg_users[ret].mail_list[i].from_username, reg_users[uid].username);
-				strcpy(reg_users[ret].mail_list[i].title, reg_users[ret].temp_title);
-				strcpy(reg_users[ret].mail_list[i].timestamp, reg_users[ret].temp_timestamp);
-				strcpy(reg_users[ret].mail_list[i].text, reg_users[uid].message_body);
-				reg_users[ret].mail_list[i].read_status = false;
-				reg_users[ret].mail_list[i].isfilled = true;
-
-				if (reg_users[ret].isloggedin == true) {
-					sprintf(ret_msg, "You have received a  new message \n");
-					write_return(reg_users[ret].sockfd);
-				}
-				return;
-			}
-		}
-		sprintf(ret_msg, "%s Mailbox is full.", reg_users[uid].username);
-		write_return(reg_users[uid].sockfd);
-		return;
-	}
-	strcat(reg_users[uid].message_body, usr_msg);
-}
-
-void send_mail(int uid) {
-	char *username, *cmd, *msg;
-	char temp_cmd[MSGSIZE];
-	strcpy(temp_cmd, usr_msg);
-	username = __strtok_r(temp_cmd, " ", &msg);
-	username = __strtok_r(NULL, " ", &msg);
-
-	printf("Telling username = %s\t msg = %s\n", username, msg);
-	fflush(stdout);
-	int ret = find_user(username);
-	if (ret == -1) {
-		/*User not found*/
-		sprintf(ret_msg, "User not found, please check the username\n");
-		write_return(reg_users[uid].sockfd);
-		return;
-	}
-
-	if (check_blocked(ret, uid) == true) {
-		sprintf(ret_msg, "You cannot mail to %s. You are blocked\n", username);
-		write_return(reg_users[uid].sockfd);
-		return;
-	}
-
-	bool sending_mail;
-	int temp_sending_to;
-	char temp_title;
-	char temp_timestamp;
-
-	/*Send the message*/
-	reg_users[uid].sending_mail = true;
-	reg_users[uid].temp_sending_to = ret;
-	strcpy(reg_users[uid].temp_title, msg);
-	time_to_string(reg_users[uid].temp_timestamp);
-	return;
 }
 
 int connect_reg_user(char *username, char *password) {
@@ -658,6 +578,312 @@ void register_new_user(int sockfd) {
 	strcpy(reg_users[ret].username, username);
 }
 
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+void reset_game(int uid) {
+	/*Reset the game if someone was playing*/
+}
+
+int test_game_condition(int gid) {
+	/*Determines if someone has won/lost or its a draw*/
+	if ((game_list[gid].game_table[0][1] == 0) && (game_list[gid].game_table[0][1] == 0) && (game_list[gid].game_table[0][2] == 0)) {
+	}
+}
+
+void print_game_table(int gid) {
+	sprintf(ret_msg, "\n   1  2  3\nA  %c  %c  %c\nB  %c  %c  %c\nC  %c  %c  %c\n", game_list[gid].game_table[0][1], game_list[gid].game_table[0][2], game_list[gid].game_table[0][3],
+			game_list[gid].game_table[1][0], game_list[gid].game_table[1][1], game_list[gid].game_table[1][2], game_list[gid].game_table[2][0], game_list[gid].game_table[2][1],
+			game_list[gid].game_table[2][2]);
+	for (int i = 0; i < MAXCONN; i++) {
+		if (game_list[gid].observers[i] != -1) {
+			/*Print stuff to observers*/
+			write_return(reg_users[i].sockfd);
+			write_client_id(reg_users[i].sockfd, reg_users[i].username, reg_users[i].cmd_counter);
+		}
+	}
+	write_return(reg_users[game_list[gid].player1].sockfd);
+	write_client_id(reg_users[game_list[gid].player1].sockfd, reg_users[game_list[gid].player1].username, reg_users[game_list[gid].player1].cmd_counter);
+	write_return(reg_users[game_list[gid].player2].sockfd);
+	write_client_id(reg_users[game_list[gid].player2].sockfd, reg_users[game_list[gid].player2].username, reg_users[game_list[gid].player2].cmd_counter);
+	return;
+}
+
+int test_match_response(int player1, int player2) {
+	/*Detect difference between request or response matches*/
+	/*0 if resquest
+	 * 1 if mismatch in request
+	 * 2 if both want same game*/
+
+	if (reg_users[player1].trying_to_match == true && reg_users[player1].trying_to_match_player == player2) {
+		/*It maybe a response message ,so check for compatible colors and times*/
+		if ((reg_users[player1].trying_to_match_color != reg_users[player2].trying_to_match_color) && (reg_users[player1].trying_to_match_time == reg_users[player2].trying_to_match_time)) {
+			/*Both want same stuff so accept*/
+			return 2;
+		} else {
+			/*Both want a match, but with different specs*/
+			return 1;
+		}
+	}
+
+	/*Its a new request*/
+	return 0;
+}
+
+void setup_match(int uid) {
+	char *username, *color, *time, *rest;
+	bool color_selected = false;
+	int game_time = 600;
+	int color_player = 0;
+	char temp_cmd[MSGSIZE];
+	strcpy(temp_cmd, usr_msg);
+	username = __strtok_r(temp_cmd, " ", &rest);
+	username = __strtok_r(NULL, " ", &rest);
+
+	if (reg_users[uid].playing == true) {
+		sprintf(ret_msg, "You are already playing a game\n");
+		write_return(reg_users[uid].sockfd);
+		return;
+
+	}
+	if (username == NULL) {
+		sprintf(ret_msg, "Please supply a correct username\n");
+		write_return(reg_users[uid].sockfd);
+		return;
+	}
+	int ret = find_user(username);
+	if (ret == -1) {
+		/*User not found*/
+		sprintf(ret_msg, "User not found, please check the username\n");
+		write_return(reg_users[uid].sockfd);
+		return;
+	}
+	if (ret == uid) {
+		/*User not found*/
+		sprintf(ret_msg, "You cannot play against yourself\n");
+		write_return(reg_users[uid].sockfd);
+		return;
+	}
+	if (reg_users[ret].isloggedin == false) {
+		sprintf(ret_msg, "User %s is not online.\n", username);
+		write_return(reg_users[uid].sockfd);
+		return;
+	}
+
+	if (reg_users[ret].playing == true) {
+		sprintf(ret_msg, "User %s is already playing a game.\n", username);
+		write_return(reg_users[uid].sockfd);
+		return;
+	}
+	if (check_blocked(ret, uid) == true) {
+		sprintf(ret_msg, "You cannot match to %s. You are blocked\n", username);
+		write_return(reg_users[uid].sockfd);
+		return;
+	}
+
+	color = __strtok_r(NULL, " ", &rest);
+	if (color == NULL) {
+		printf("No color selected\n");
+		color_player = 0;
+		color_selected = true;
+	} else if (strcmp(color, "b") == 0) {
+		printf("Black color selected\n");
+		color_player = 0;
+		color_selected = true;
+	} else if (strcmp(color, "w") == 0) {
+		printf("White color selected\n");
+		color_player = 1;
+		color_selected = true;
+	} else {
+		/*Wrong color*/
+		sprintf(ret_msg, "Wrong color, please use b/w or nothing\n");
+		write_return(reg_users[uid].sockfd);
+		return;
+	}
+
+	if (color_selected == true) {
+		/*Only try to read time if color is selected*/
+		time = __strtok_r(NULL, " ", &rest);
+		if (time != NULL) {
+			game_time = atoi(time);
+		}
+	}
+
+	reg_users[uid].trying_to_match = true;
+	reg_users[uid].trying_to_match_player = ret;
+	reg_users[uid].trying_to_match_color = color_player;
+	reg_users[uid].trying_to_match_time = game_time;
+
+	int status = test_match_response(ret, uid);
+	if (status == 2) {
+		/*Is a match response and the other player has accepted*/
+		/*Setup and start the game here*/
+		printf("Game: %s %s color = %d time = %d\n", reg_users[uid].username, reg_users[ret].username, color_player, game_time);
+		sprintf(ret_msg, "\n Match started\n");
+		write_return(reg_users[ret].sockfd);
+		write_return(reg_users[uid].sockfd);
+		write_client_id(reg_users[ret].sockfd, reg_users[ret].username, reg_users[ret].cmd_counter);
+
+		/*Start game here*/
+	} else if (status == 1) {
+		/*Is a match response with mismatch*/
+		printf("Game: %s %s color = %d time = %d\n", reg_users[uid].username, reg_users[ret].username, color_player, game_time);
+		sprintf(ret_msg, "\n%s wants <match %s %s %d>; %s wants <match %s %s %d>\n", reg_users[uid].username, reg_users[ret].username, ((reg_users[uid].trying_to_match_color == 0) ? "b" : "w"),
+				reg_users[uid].trying_to_match_time, reg_users[ret].username, reg_users[uid].username, ((reg_users[ret].trying_to_match_color == 0) ? "b" : "w"), reg_users[ret].trying_to_match_time);
+		write_return(reg_users[ret].sockfd);
+		write_client_id(reg_users[ret].sockfd, reg_users[ret].username, reg_users[ret].cmd_counter);
+		sprintf(ret_msg, "%s wants <match %s %s %d>; %s wants <match %s %s %d>\n", reg_users[uid].username, reg_users[ret].username, ((reg_users[uid].trying_to_match_color == 0) ? "b" : "w"),
+				reg_users[uid].trying_to_match_time, reg_users[ret].username, reg_users[uid].username, ((reg_users[ret].trying_to_match_color == 0) ? "b" : "w"), reg_users[ret].trying_to_match_time);
+		write_return(reg_users[uid].sockfd);
+		write_client_id(reg_users[uid].sockfd, reg_users[uid].username, reg_users[uid].cmd_counter);
+	} else if (status == 0) {
+		/*Is a match request, so notify the other player*/
+		printf("Game: %s %s color = %d time = %d\n", reg_users[uid].username, reg_users[ret].username, color_player, game_time);
+		sprintf(ret_msg, "\n%s invites your for a game <match %s %s %d >\n", reg_users[uid].username, reg_users[uid].username, ((reg_users[uid].trying_to_match_color == 0) ? "w" : "b"),
+				reg_users[uid].trying_to_match_time);
+		write_return(reg_users[ret].sockfd);
+		write_client_id(reg_users[ret].sockfd, reg_users[ret].username, reg_users[ret].cmd_counter);
+		return;
+
+	}
+
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+void time_to_string(char *str_time) {
+	time_t t = time(0);
+	strftime(str_time, 100, "%a %b %d %H:%M:%S %Y ", localtime(&t));
+}
+
+void list_mail(int uid) {
+	for (int i = 0; i < MAXCONN; i++) {
+		if (i == 0 && reg_users[uid].mail_list[i].isfilled == false) {
+			sprintf(ret_msg, "You have no messages.\n");
+			write_return(reg_users[uid].sockfd);
+			return;
+		}
+		if (reg_users[uid].mail_list[i].isfilled == true) {
+			sprintf(ret_msg, "%2d  %6s  %10s  \" %s \" %s\n", i, (reg_users[uid].mail_list[i].read_status == true) ? ("Read") : ("Unread"), reg_users[uid].mail_list[i].from_username,
+					reg_users[uid].mail_list[i].title, reg_users[uid].mail_list[i].timestamp);
+			write_return(reg_users[uid].sockfd);
+			return;
+		}
+		printf("Not filled\n");
+	}
+}
+
+void read_mail_msg(int uid) {
+	if (strcmp(".", usr_msg) == 0) {
+		int ret = reg_users[uid].temp_sending_to;
+		printf("Message ended\n");
+		reg_users[uid].sending_mail = false;
+
+		/*Send the mail here*/
+		/*Add the mail to the mailbox*/
+		for (int i = 0; i < NUMMSG; i++) {
+			if (reg_users[ret].mail_list[i].isfilled == false) {
+				strcpy(reg_users[ret].mail_list[i].to_username, reg_users[ret].username);
+				strcpy(reg_users[ret].mail_list[i].from_username, reg_users[uid].username);
+				strcpy(reg_users[ret].mail_list[i].title, reg_users[uid].temp_title);
+				strcpy(reg_users[ret].mail_list[i].timestamp, reg_users[uid].temp_timestamp);
+				strcpy(reg_users[ret].mail_list[i].text, reg_users[uid].message_body);
+				reg_users[ret].mail_list[i].read_status = false;
+				reg_users[ret].mail_list[i].isfilled = true;
+
+				if (reg_users[ret].isloggedin == true) {
+					sprintf(ret_msg, "\nYou have received a  new message \n");
+					write_return(reg_users[ret].sockfd);
+					write_client_id(reg_users[ret].sockfd, reg_users[ret].username, reg_users[ret].cmd_counter);
+				}
+				write_client_id(reg_users[uid].sockfd, reg_users[uid].username, reg_users[uid].cmd_counter);
+				return;
+			}
+		}
+		sprintf(ret_msg, "%s Mailbox is full.", reg_users[uid].username);
+		write_return(reg_users[uid].sockfd);
+		return;
+	}
+	strcat(reg_users[uid].message_body, usr_msg);
+}
+
+void send_mail(int uid) {
+	char *username, *cmd, *msg;
+	char temp_cmd[MSGSIZE];
+	strcpy(temp_cmd, usr_msg);
+	username = __strtok_r(temp_cmd, " ", &msg);
+	username = __strtok_r(NULL, " ", &msg);
+
+	printf("Telling username = %s\t msg = %s\n", username, msg);
+	fflush(stdout);
+	int ret = find_user(username);
+	if (ret == -1) {
+		/*User not found*/
+		sprintf(ret_msg, "User not found, please check the username\n");
+		write_return(reg_users[uid].sockfd);
+		return;
+	}
+
+	if (check_blocked(ret, uid) == true) {
+		sprintf(ret_msg, "You cannot mail to %s. You are blocked\n", username);
+		write_return(reg_users[uid].sockfd);
+		return;
+	}
+
+	bool sending_mail;
+	int temp_sending_to;
+	char temp_title;
+	char temp_timestamp;
+
+	/*Send the message*/
+	reg_users[uid].sending_mail = true;
+	reg_users[uid].temp_sending_to = ret;
+	strcpy(reg_users[uid].temp_title, msg);
+	time_to_string(reg_users[uid].temp_timestamp);
+	return;
+}
+
+void read_mail(int uid) {
+	char *msg_num, *msg;
+	char temp_cmd[MSGSIZE];
+	strcpy(temp_cmd, usr_msg);
+	msg_num = __strtok_r(temp_cmd, " ", &msg);
+	msg_num = __strtok_r(NULL, " ", &msg);
+	int mnum = atoi(msg_num);
+	if (reg_users[uid].mail_list[mnum].isfilled == false) {
+		sprintf(ret_msg, "Message number invalid.\n");
+		write_return(reg_users[uid].sockfd);
+		return;
+	}
+
+	/*Writing the mail to the user*/
+	reg_users[uid].mail_list[mnum].read_status = true;
+	sprintf(ret_msg, "From: %s\nTitle: %s\nTime: %s\n%s\n", reg_users[uid].mail_list[mnum].from_username, reg_users[uid].mail_list[mnum].title, reg_users[uid].mail_list[mnum].timestamp,
+			reg_users[uid].mail_list[mnum].text);
+	write_return(reg_users[uid].sockfd);
+	return;
+
+}
+
+void delete_mail(int uid) {
+	char *msg_num, *msg;
+	char temp_cmd[MSGSIZE];
+	strcpy(temp_cmd, usr_msg);
+	msg_num = __strtok_r(temp_cmd, " ", &msg);
+	msg_num = __strtok_r(NULL, " ", &msg);
+	int mnum = atoi(msg_num);
+	if (reg_users[uid].mail_list[mnum].isfilled == false) {
+		sprintf(ret_msg, "Message number invalid.\n");
+		write_return(reg_users[uid].sockfd);
+		return;
+	}
+
+	/*Writing the mail to the user*/
+	reg_users[uid].mail_list[mnum].isfilled = false;
+	sprintf(ret_msg, "Message deleted.\n");
+	write_return(reg_users[uid].sockfd);
+	return;
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 int match_command() {
 	char temp_cmd[MSGSIZE];
 	strcpy(temp_cmd, usr_msg);
@@ -888,6 +1114,13 @@ int main(int argc, char **argv) {
 									} else {
 										/*There was a username match, so copy to client_list and release guest*/
 										printf("Guest %d is now client %d\n", i, userid);
+										if (reg_table[userid].logged_in == true) {
+											/*Already logged in, so kick him*/
+											reset_game(userid);
+											sprintf(ret_msg, "You have been kicked out due to multiple login\n");
+											write_return(guest_users[i].sockfd);
+											close(guest_users[i].sockfd);
+										}
 										reg_table[userid].logged_in = true;
 										reg_users[userid].sockfd = guest_users[i].sockfd;
 										reg_users[userid].isloggedin = true;
@@ -951,6 +1184,7 @@ int main(int argc, char **argv) {
 						int num = read(reg_users[i].sockfd, usr_msg, MSGSIZE);
 						if (num == 0) {
 							/* client has left */
+							reset_game(i);
 							printf("Client %d has left", i);
 							reg_table[i].logged_in = false;
 							reg_users[i].isloggedin = false;
@@ -980,6 +1214,12 @@ int main(int argc, char **argv) {
 								/*stats call*/
 								get_stats(reg_users[i].sockfd);
 								write_client_id(reg_users[i].sockfd, reg_users[i].username, reg_users[i].cmd_counter);
+								break;
+							case 5:
+								/*match call*/
+								setup_match(i);
+								write_client_id(reg_users[i].sockfd, reg_users[i].username, reg_users[i].cmd_counter);
+
 								break;
 							case 8:
 								/*Shouting*/
@@ -1017,6 +1257,14 @@ int main(int argc, char **argv) {
 								break;
 							case 16:
 								list_mail(i);
+								write_client_id(reg_users[i].sockfd, reg_users[i].username, reg_users[i].cmd_counter);
+								break;
+							case 17:
+								read_mail(i);
+								write_client_id(reg_users[i].sockfd, reg_users[i].username, reg_users[i].cmd_counter);
+								break;
+							case 18:
+								delete_mail(i);
 								write_client_id(reg_users[i].sockfd, reg_users[i].username, reg_users[i].cmd_counter);
 								break;
 							case 19:

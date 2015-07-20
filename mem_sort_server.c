@@ -63,7 +63,7 @@ static __inline__ void read_long(int sockfd_client, char *num) {
 	unsigned int size = sizeof(long int);
 	int rlen = 0;
 	int ret;
-//	set_time(3);
+	set_time(3);
 	while (rlen < size) {
 		if ((ret = read(sockfd_client, (num + rlen), size - rlen)) == -1) {
 			perror("read_long");
@@ -77,17 +77,17 @@ static __inline__ void read_long(int sockfd_client, char *num) {
 		rlen += ret;
 		set_time(4);
 
-//		if (read_timer_end - read_timer_start > 120 && started_merge == true) {
-//			printf("READING HAS FAILED\n");
-//			long int total = 0;
-//			for (int i = 0; i < 8; i++) {
-//				printf("pos = %10d    val =%10ld\n", i, consumed[i]);
-//				total += (consumed[i]);
-//			}
-//			printf("Total elements consumed = %ld\n", total);
-//			printf("Was reading pos = %d\n", bkup_pos);
-//			exit(1);
-//		}
+		if (read_timer_end - read_timer_start > 120 && started_merge == true) {
+			printf("READING HAS FAILED\n");
+			long int total = 0;
+			for (int i = 0; i < 8; i++) {
+				printf("pos = %10d    val =%10ld\n", i, consumed[i]);
+				total += (consumed[i]);
+			}
+			printf("Total elements consumed = %ld\n", total);
+			printf("Was reading pos = %d\n", bkup_pos);
+			exit(1);
+		}
 	}
 }
 
@@ -773,10 +773,10 @@ int main(int argc, char **argv) {
 //			/bin/dd if=../cop5570a/test1 bs=32M  iflag=skip_bytes,count_bytes skip=40000000000 count=8000000000 | ssh m6 'cat > temp'
 //			/bin/dd if=../cop5570a/test1 bs=32M  iflag=skip_bytes,count_bytes skip=48000000000 count=8000000000 | ssh m8 'cat > temp'
 //			/bin/dd if=../cop5570a/test1 bs=32M  iflag=skip_bytes,count_bytes skip=56000000000 count=8000000000  > temp
-//			sprintf(buffer_temp, "/bin/dd if=%s bs=32M  iflag=skip_bytes,count_bytes skip=%ld count=8000000000 | ssh %s 'cat > temp'", argv[1], skip, mac_list[i]);
-//			printf("%s\n", buffer_temp);
-//			if (system(buffer_temp) == -1)
-//				perror("System");
+			sprintf(buffer_temp, "/bin/dd if=%s bs=32M  iflag=skip_bytes,count_bytes skip=%ld count=8000000000 | ssh %s 'cat > temp'", argv[1], skip, mac_list[i]);
+			printf("%s\n", buffer_temp);
+			if (system(buffer_temp) == -1)
+				perror("System");
 
 			sprintf(buffer_temp, "scp sort_client.c %s:", mac_list[i]);
 			printf("%s\n", buffer_temp);
@@ -1053,13 +1053,15 @@ int main(int argc, char **argv) {
 
 	for (long int all_count = 0; all_count < 8000000000; all_count++) {
 		loc = compare_all();
-//		bkup_pos = loc;
-		if ((all_count - 1) % 10 == 0) {
-			fprintf(final, "all_count = %10ld val = %10ld\n", all_count, nums[loc]);
+		bkup_pos = loc;
+		if (all_count % 10 == 0) {
+//			fprintf(final, "all_count = %10ld val = %10ld\n", all_count, nums[loc]);
+			fprintf(final, "%ld\n", nums[loc]);
 		}
-		if ((all_count) % 10 == 0) {
-			fprintf(final2, "all_count = %10ld val = %10ld\n", all_count, nums[loc]);
-		}
+//		if (all_count < 100 || all_count > 8000000000 - 100) {
+//			fprintf(final2, "all_count = %10ld val = %10ld\n", all_count, nums[loc]);
+//		}
+		consumed[loc]++;
 
 		if (all_count % 1000000000 == 0) {
 			set_time(1);
@@ -1100,7 +1102,6 @@ int main(int argc, char **argv) {
 			}
 			break;
 		}
-		consumed[loc]++;
 	}
 
 	set_time(1);

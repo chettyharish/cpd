@@ -856,20 +856,26 @@ int main(int argc, char **argv) {
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	/*PHASE 3 STARTED*/
-	for (long int i = 0; i <= ELE_PER_PC; i++) {
+	long int tem_num;
+	for (long int i = 0; i < ELE_PER_PC; i++) {
 		if (i % 10000000 == 0) {
 			fprintf(log_file, "Writing %ld \n", i);
 			fflush(log_file);
 		}
 		if (i < NUM_ELE) {
-			write_long(sockfd_client, (char *) &temp[i]);
+			tem_num = temp[i];
+//			write_long(sockfd_client, (char *) &temp[i]);
 		} else {
-			write_long(sockfd_client, (char *) &data[i % NUM_ELE]);
+			tem_num = data[i % NUM_ELE];
+//			write_long(sockfd_client, (char *) &data[i % NUM_ELE]);
 		}
+
+		write_long(sockfd_client, (char *) &tem_num);
 	}
 
-	for (int i = 0; i < 10; i++)
-		write_long(sockfd_client, (char *) &data[i % NUM_ELE]);
+	sleep(100);
+//	for (int i = 0; i < 10; i++)
+//		write_long(sockfd_client, (char *) &data[i % NUM_ELE]);
 
 	fprintf(log_file, "Completed correctly!\n");
 	fflush(log_file);
