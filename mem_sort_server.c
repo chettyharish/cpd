@@ -25,7 +25,6 @@
 #define MAXCONN 7
 #define SWAP(x,y,lo) if (data[lo+y] < data[lo+x]) { long int tmp = data[lo+x]; data[lo+x] = data[lo+y]; data[lo+y] = tmp; }
 
-double start_time, end_time, orig_time, read_timer_start, read_timer_end;
 int bkup_pos;
 bool started_merge = false;
 struct timeval t;
@@ -43,94 +42,6 @@ int myid[NUM_THREADS];
 pthread_t tid[NUM_THREADS];
 long int consumed[8];
 long int nums[8];
-
-void set_time(int timer) {
-	gettimeofday(&t, NULL);
-	if (timer == 0) {
-		start_time = 1.0e-6 * t.tv_usec + t.tv_sec;
-	} else if (timer == 1) {
-		end_time = 1.0e-6 * t.tv_usec + t.tv_sec;
-	} else if (timer == 2) {
-		orig_time = 1.0e-6 * t.tv_usec + t.tv_sec;
-	} else if (timer == 3) {
-		read_timer_start = 1.0e-6 * t.tv_usec + t.tv_sec;
-	} else if (timer == 4) {
-		read_timer_end = 1.0e-6 * t.tv_usec + t.tv_sec;
-	}
-}
-
-static __inline__ void read_long(int sockfd_client, char *num) {
-	unsigned int size = sizeof(long int);
-	int rlen = 0;
-	int ret;
-	set_time(3);
-	while (rlen < size) {
-		if ((ret = read(sockfd_client, (num + rlen), size - rlen)) == -1) {
-			perror("read_long");
-			exit(1);
-		}
-
-		if (ret < 0) {
-			perror("socket closed before consumption");
-			exit(1);
-		}
-		rlen += ret;
-		set_time(4);
-
-		if (read_timer_end - read_timer_start > 120 && started_merge == true) {
-			printf("READING HAS FAILED\n");
-			long int total = 0;
-			for (int i = 0; i < 8; i++) {
-				printf("pos = %10d    val =%10ld\n", i, consumed[i]);
-				total += (consumed[i]);
-			}
-			printf("Total elements consumed = %ld\n", total);
-			printf("Was reading pos = %d\n", bkup_pos);
-			exit(1);
-		}
-	}
-}
-
-static __inline__ int compare_all() {
-	/*Looks at the 8 elements in the array for 8 way socket merge*/
-	long int min = LONG_MAX;
-	int pos = -1;
-	for (int i = 0; i < 8; i++) {
-		if (consumed[i] < ELE_PER_PC) {
-			if (nums[i] < min) {
-				min = nums[i];
-				pos = i;
-			}
-		}
-	}
-	return pos;
-}
-
-void tokenize(char *buffer_temp, char *exec_args[]) {
-	int counter = 0;
-	char *token = strtok(buffer_temp, " ");
-	while (token != NULL) {
-		exec_args[counter] = token;
-		counter++;
-		token = strtok(NULL, " ");
-	}
-	exec_args[counter] = NULL;
-}
-
-bool is_sorted(long int start, long int end) {
-	int err_ct = 0;
-	for (long int i = start; i <= end - 1; i++) {
-		if (data[i] > data[i + 1]) {
-			printf("ERROR : %ld\t%ld\t%ld\t%ld\n", data[i], data[i + 1], i, i + 1);
-			err_ct++;
-		}
-	}
-	if (err_ct > 0) {
-		printf("err_ct = %d\n", err_ct);
-		return false;
-	}
-	return true;
-}
 
 static __inline__ void sort2(long int * data, long int lo) {
 	SWAP(0, 1, lo);
@@ -543,12 +454,99 @@ static __inline__ void sort15(long int * data, long int lo) {
 	SWAP(6, 7, lo);
 }
 
+double start_time, end_time, orig_time, read_timer_start, read_timer_end, compare_start, compare_end;
+double total_time_read = 0, total_time_min = 0;
+
+static __inline__ void set_time(int timer) {
+	gettimeofday(&t, NULL);
+	if (timer == 0) {
+		start_time = 1.0e-6 * t.tv_usec + t.tv_sec;
+	} else if (timer == 1) {
+		end_time = 1.0e-6 * t.tv_usec + t.tv_sec;
+	} else if (timer == 2) {
+		orig_time = 1.0e-6 * t.tv_usec + t.tv_sec;
+	} else if (timer == 3) {
+		read_timer_start = 1.0e-6 * t.tv_usec + t.tv_sec;
+	} else if (timer == 4) {
+		read_timer_end = 1.0e-6 * t.tv_usec + t.tv_sec;
+	} else if (timer == 5) {
+		compare_start = 1.0e-6 * t.tv_usec + t.tv_sec;
+	} else if (timer == 6) {
+		compare_end = 1.0e-6 * t.tv_usec + t.tv_sec;
+	}
+}
+
+static __inline__ void read_long(int sockfd_client, char *num) {
+	set_time(3);
+	unsigned int size = sizeof(long int);
+	int rlen = 0;
+	int ret;
+	while (rlen < size) {
+		if ((ret = read(sockfd_client, (num + rlen), size - rlen)) == -1) {
+			perror("read_long");
+			exit(1);
+		}
+
+		if (ret < 0) {
+			perror("socket closed before consumption");
+			exit(1);
+		}
+		rlen += ret;
+	}
+	set_time(4);
+	total_time_read += (read_timer_end - read_timer_start);
+}
+
+static __inline__ int compare_all() {
+	/*Looks at the 8 elements in the array for 8 way socket merge*/
+	set_time(5);
+	long int min = LONG_MAX;
+	int pos = -1;
+	for (int i = 0; i < 8; i++) {
+		if (consumed[i] < ELE_PER_PC) {
+			if (nums[i] < min) {
+				min = nums[i];
+				pos = i;
+			}
+		}
+	}
+	set_time(6);
+	total_time_min += (compare_end - compare_start);
+	return pos;
+}
+
+void tokenize(char *buffer_temp, char *exec_args[]) {
+	int counter = 0;
+	char *token = strtok(buffer_temp, " ");
+	while (token != NULL) {
+		exec_args[counter] = token;
+		counter++;
+		token = strtok(NULL, " ");
+	}
+	exec_args[counter] = NULL;
+}
+
+bool is_sorted(long int start, long int end) {
+	int err_ct = 0;
+	for (long int i = start; i <= end - 1; i++) {
+		if (data[i] > data[i + 1]) {
+			printf("ERROR : %ld\t%ld\t%ld\t%ld\n", data[i], data[i + 1], i, i + 1);
+			err_ct++;
+		}
+	}
+	if (err_ct > 0) {
+		printf("err_ct = %d\n", err_ct);
+		return false;
+	}
+	return true;
+}
+
 void merge(long int lo, long int mid, long int hi) {
 	long int i, j, k;
-//	memcpy(&temp[lo], &data[lo], (hi - lo + 1) * sizeof(long int));
-	for (long int i = lo; i <= hi; i++) {
-		temp[i] = data[i];
-	}
+	memcpy(&temp[lo], &data[lo], (hi - lo + 1) * sizeof(long int));
+//	for (long int i = lo; i <= hi; i++) {
+//		temp[i] = data[i];
+//	}
 	i = lo, j = mid + 1;
 
 	for (k = lo; k <= hi; k++) {
@@ -564,12 +562,10 @@ void merge(long int lo, long int mid, long int hi) {
 }
 
 void mergesort(long int lo, long int hi) {
-	if (hi <= lo)
-		return;
-
 	long int num = hi - lo + 1;
-	if (num <= 8) {
+	if (num <= 15) {
 		switch (num) {
+		default:
 		case 0:
 		case 1:
 			return;
@@ -594,16 +590,37 @@ void mergesort(long int lo, long int hi) {
 		case 8:
 			sort8(data, lo);
 			return;
+		case 9:
+			sort9(data, lo);
+			return;
+		case 10:
+			sort10(data, lo);
+			return;
+		case 11:
+			sort11(data, lo);
+			return;
+		case 12:
+			sort12(data, lo);
+			return;
+		case 13:
+			sort13(data, lo);
+			return;
+		case 14:
+			sort14(data, lo);
+			return;
+		case 15:
+			sort15(data, lo);
+			return;
 		}
 	}
 
 	long int mid = lo + (hi - lo) / 2;
 	mergesort(lo, mid);
 	mergesort(mid + 1, hi);
-//	if (!(data[mid] < data[mid + 1])) {
+	if (!(data[mid] < data[mid + 1])) {
 //		Merge only if data is sorted
-	merge(lo, mid, hi);
-//	}
+		merge(lo, mid, hi);
+	}
 }
 
 void *mergesort_caller(void *arg) {
@@ -773,10 +790,10 @@ int main(int argc, char **argv) {
 //			/bin/dd if=../cop5570a/test1 bs=32M  iflag=skip_bytes,count_bytes skip=40000000000 count=8000000000 | ssh m6 'cat > temp'
 //			/bin/dd if=../cop5570a/test1 bs=32M  iflag=skip_bytes,count_bytes skip=48000000000 count=8000000000 | ssh m8 'cat > temp'
 //			/bin/dd if=../cop5570a/test1 bs=32M  iflag=skip_bytes,count_bytes skip=56000000000 count=8000000000  > temp
-			sprintf(buffer_temp, "/bin/dd if=%s bs=32M  iflag=skip_bytes,count_bytes skip=%ld count=8000000000 | ssh %s 'cat > temp'", argv[1], skip, mac_list[i]);
-			printf("%s\n", buffer_temp);
-			if (system(buffer_temp) == -1)
-				perror("System");
+//			sprintf(buffer_temp, "/bin/dd if=%s bs=32M  iflag=skip_bytes,count_bytes skip=%ld count=8000000000 | ssh %s 'cat > temp'", argv[1], skip, mac_list[i]);
+//			printf("%s\n", buffer_temp);
+//			if (system(buffer_temp) == -1)
+//				perror("System");
 
 			sprintf(buffer_temp, "scp sort_client.c %s:", mac_list[i]);
 			printf("%s\n", buffer_temp);
@@ -836,6 +853,7 @@ int main(int argc, char **argv) {
 	/*PHASE 2 STARTED*/
 	char outfile[100];
 	FILE *in_file = fopen(argv[1], "r");
+	setvbuf(in_file, NULL, _IOFBF, BUFSIZ*10);
 	if (!in_file) {
 		printf("Input file missing\n");
 		exit(1);
@@ -843,6 +861,7 @@ int main(int argc, char **argv) {
 
 	sprintf(outfile, "temp_lvl%d", 0);
 	FILE *out_file = fopen(outfile, "w+");
+	setvbuf(out_file, NULL, _IOFBF, BUFSIZ*10);
 	if (!out_file) {
 		printf("Unable to create output file\n");
 		exit(1);
@@ -866,6 +885,7 @@ int main(int argc, char **argv) {
 		printf("\nStarting with BLK = %d\n", blk);
 		set_time(0);
 		FILE *in_file = fopen(argv[1], "r");
+		setvbuf(in_file, NULL, _IOFBF, BUFSIZ*10);
 		/*Adjusting in large file*/
 		fseek(in_file, (blk + 14) * RSIZE, SEEK_SET);
 
@@ -875,6 +895,8 @@ int main(int argc, char **argv) {
 				exit(1);
 			}
 		}
+
+
 		fclose(in_file);
 
 		set_time(1);
@@ -934,6 +956,7 @@ int main(int argc, char **argv) {
 	char remove_fn[100];
 	sprintf(f1, "temp_lvl%d", LVL);
 	FILE *first_file = fopen(f1, "r");
+	setvbuf(first_file, NULL, _IOFBF, BUFSIZ*10);
 	/*Adjusting for less elements by changing it to >> 6*/
 	NUM_ELE = ELE_PER_PC >> 1;
 
@@ -1015,16 +1038,8 @@ int main(int argc, char **argv) {
 
 	/*Remove all temporary files*/
 	if (system("rm -f temp_lvl*") == -1) {
-		printf("Removing file failed");
+		printf("Removing file failed\n");
 	}
-//	FILE *temp_out = fopen("temp_out", "w+");
-//	for (long int i = 0; i < ELE_PER_PC; i++) {
-//		if (i < ELE_PER_PC >> 1)
-//			fprintf(temp_out,"%ld\n", temp[i]);
-//		else
-//			fprintf(temp_out,"%ld\n", data[i % NUM_ELE]);
-//	}
-//	exit(0);
 
 	set_time(1);
 	printf("PHASE 3 Completed\t Execution time =  %lf seconds \n", end_time - orig_time);
@@ -1035,6 +1050,8 @@ int main(int argc, char **argv) {
 	set_time(0);
 	FILE *final = fopen("final_answer", "w+");
 	FILE *final2 = fopen("final_answer2", "w+");
+	setvbuf(final, NULL, _IOFBF, BUFSIZ*10);
+	setvbuf(final2, NULL, _IOFBF, BUFSIZ*10);
 	printf("Done creating the files\n");
 	fflush(stdout);
 
@@ -1106,6 +1123,8 @@ int main(int argc, char **argv) {
 
 	set_time(1);
 	printf("PHASE 4 Completed\t Execution time =  %lf seconds \n", end_time - orig_time);
+	printf("Total time wasted reading = %f\n", total_time_read);
+	printf("Total time wasted min = %f\n", total_time_min);
 	return 0;
 
 }

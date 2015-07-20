@@ -65,7 +65,7 @@ struct user {
 	bool playing;
 	bool isobserving;
 	int gameid;
-	int observeid;
+	int observeids[MAXCONN];
 } reg_users[MAXCONN];
 
 struct guest {
@@ -86,6 +86,7 @@ struct registry {
 } reg_table[MAXCONN];
 
 struct game {
+	bool in_use;
 	int num_moves;
 	int observers[MAXCONN];
 	int player1;
@@ -117,6 +118,7 @@ void set_defaults() {
 		strcpy(reg_users[i].message_body, "NULL");
 		for (int j = 0; j < MAXCONN; j++) {
 			reg_users[i].blk_list[j] = -1;
+			reg_users[i].observeids[j] = -1;
 		}
 		for (int j = 0; j < NUMMSG; j++) {
 			strcpy(reg_users[i].mail_list[j].from_username, "NULL");
@@ -130,18 +132,38 @@ void set_defaults() {
 
 	}
 
+	/*Default the registry table*/
 	for (int i = 0; i < MAXCONN; i++) {
-		/*Default the registry table*/
-		for (int i = 0; i < MAXCONN; i++) {
-			reg_table[i].loc = -1;
-			reg_table[i].logged_in = false;
-			strcpy(reg_table[i].username, "NULL");
-			strcpy(reg_table[i].password, "NULL");
-		}
+		reg_table[i].loc = -1;
+		reg_table[i].logged_in = false;
+		strcpy(reg_table[i].username, "NULL");
+		strcpy(reg_table[i].password, "NULL");
 	}
 
 	for (int i = 0; i < MAXCONN; i++) {
 		/*Default the games*/
+		game_list[i].in_use = false;
+		game_list[i].num_moves = 0;
+		game_list[i].player1 = -1;
+		game_list[i].player2 = -1;
+		game_list[i].p1_move = false;
+		game_list[i].p2_move = false;
+		game_list[i].p1_color = -1;
+		game_list[i].p2_color = -1;
+		game_list[i].start_time = 0;
+		game_list[i].end_time = 0;
+		game_list[i].game_table[0][0] = -1;
+		game_list[i].game_table[0][1] = -1;
+		game_list[i].game_table[0][2] = -1;
+		game_list[i].game_table[1][0] = -1;
+		game_list[i].game_table[1][1] = -1;
+		game_list[i].game_table[1][2] = -1;
+		game_list[i].game_table[2][0] = -1;
+		game_list[i].game_table[2][1] = -1;
+		game_list[i].game_table[2][2] = -1;
+		for (int j = 0; j < MAXCONN; j++) {
+			game_list[i].observers[j] = -1;
+		}
 	}
 
 	for (int i = 0; i < MAXCONN; i++) {
@@ -243,8 +265,9 @@ void cleanup_usr_msg() {
 
 void write_client_id(int sockfd, char *username, int cmd_counter) {
 	/*Must write the client name and command number*/
-	sprintf(ret_msg, "<%s: %d>", username, cmd_counter);
-	write_return(sockfd);
+	char id_msg[STLEN];
+	sprintf(id_msg, "<%s: %d>", username, cmd_counter);
+	int ret = write(sockfd, id_msg, strlen(id_msg));
 }
 
 int find_user(char *username) {
@@ -586,25 +609,60 @@ void reset_game(int uid) {
 
 int test_game_condition(int gid) {
 	/*Determines if someone has won/lost or its a draw*/
-	if ((game_list[gid].game_table[0][1] == 0) && (game_list[gid].game_table[0][1] == 0) && (game_list[gid].game_table[0][2] == 0)) {
+	/*0 if 0 has won , 1 if 1 has won, 2 for draw and -1 for none*/
+	if (((game_list[gid].game_table[0][0] == 0) && (game_list[gid].game_table[0][1] == 0) && (game_list[gid].game_table[0][2] == 0))
+			|| ((game_list[gid].game_table[1][0] == 0) && (game_list[gid].game_table[1][1] == 0) && (game_list[gid].game_table[1][2] == 0))
+			|| ((game_list[gid].game_table[2][0] == 0) && (game_list[gid].game_table[2][1] == 0) && (game_list[gid].game_table[2][2] == 0))
+			|| ((game_list[gid].game_table[0][0] == 0) && (game_list[gid].game_table[1][0] == 0) && (game_list[gid].game_table[2][0] == 0))
+			|| ((game_list[gid].game_table[0][1] == 0) && (game_list[gid].game_table[1][1] == 0) && (game_list[gid].game_table[2][1] == 0))
+			|| ((game_list[gid].game_table[0][2] == 0) && (game_list[gid].game_table[1][2] == 0) && (game_list[gid].game_table[2][2] == 0))
+			|| ((game_list[gid].game_table[0][0] == 0) && (game_list[gid].game_table[1][1] == 0) && (game_list[gid].game_table[2][2] == 0))
+			|| ((game_list[gid].game_table[0][2] == 0) && (game_list[gid].game_table[1][1] == 0) && (game_list[gid].game_table[2][0] == 0))) {
+		/*The player with 0 has won*/
+		return 0;
 	}
+
+	if (((game_list[gid].game_table[0][0] == 1) && (game_list[gid].game_table[0][1] == 1) && (game_list[gid].game_table[0][2] == 1))
+			|| ((game_list[gid].game_table[1][0] == 1) && (game_list[gid].game_table[1][1] == 1) && (game_list[gid].game_table[1][2] == 1))
+			|| ((game_list[gid].game_table[2][0] == 1) && (game_list[gid].game_table[2][1] == 1) && (game_list[gid].game_table[2][2] == 1))
+			|| ((game_list[gid].game_table[0][0] == 1) && (game_list[gid].game_table[1][0] == 1) && (game_list[gid].game_table[2][0] == 1))
+			|| ((game_list[gid].game_table[0][1] == 1) && (game_list[gid].game_table[1][1] == 1) && (game_list[gid].game_table[2][1] == 1))
+			|| ((game_list[gid].game_table[0][2] == 1) && (game_list[gid].game_table[1][2] == 1) && (game_list[gid].game_table[2][2] == 1))
+			|| ((game_list[gid].game_table[0][0] == 1) && (game_list[gid].game_table[1][1] == 1) && (game_list[gid].game_table[2][2] == 1))
+			|| ((game_list[gid].game_table[0][2] == 1) && (game_list[gid].game_table[1][1] == 1) && (game_list[gid].game_table[2][0] == 1))) {
+		/*The player with 1 has won*/
+		return 1;
+	}
+
+	if (game_list[gid].num_moves == 9) {
+		/*The game has drawn*/
+		return 2;
+	}
+
+	/*Nothing special has happened*/
+	return -1;
 }
 
 void print_game_table(int gid) {
-	sprintf(ret_msg, "\n   1  2  3\nA  %c  %c  %c\nB  %c  %c  %c\nC  %c  %c  %c\n", game_list[gid].game_table[0][1], game_list[gid].game_table[0][2], game_list[gid].game_table[0][3],
-			game_list[gid].game_table[1][0], game_list[gid].game_table[1][1], game_list[gid].game_table[1][2], game_list[gid].game_table[2][0], game_list[gid].game_table[2][1],
-			game_list[gid].game_table[2][2]);
+	sprintf(ret_msg, "\n   1  2  3\nA  %c  %c  %c\nB  %c  %c  %c\nC  %c  %c  %c\n",
+			(game_list[gid].game_table[0][1] != 0 && game_list[gid].game_table[0][1] != 1) ? ('.') : ((game_list[gid].game_table[0][1] == 0) ? ('#') : ('O')),
+			(game_list[gid].game_table[0][2] != 0 && game_list[gid].game_table[0][2] != 1) ? ('.') : ((game_list[gid].game_table[0][2] == 0) ? ('#') : ('O')),
+			(game_list[gid].game_table[0][3] != 0 && game_list[gid].game_table[0][3] != 1) ? ('.') : ((game_list[gid].game_table[0][3] == 0) ? ('#') : ('O')),
+			(game_list[gid].game_table[1][0] != 0 && game_list[gid].game_table[1][0] != 1) ? ('.') : ((game_list[gid].game_table[1][0] == 0) ? ('#') : ('O')),
+			(game_list[gid].game_table[1][1] != 0 && game_list[gid].game_table[1][1] != 1) ? ('.') : ((game_list[gid].game_table[1][1] == 0) ? ('#') : ('O')),
+			(game_list[gid].game_table[1][2] != 0 && game_list[gid].game_table[1][2] != 1) ? ('.') : ((game_list[gid].game_table[1][2] == 0) ? ('#') : ('O')),
+			(game_list[gid].game_table[2][0] != 0 && game_list[gid].game_table[2][0] != 1) ? ('.') : ((game_list[gid].game_table[2][0] == 0) ? ('#') : ('O')),
+			(game_list[gid].game_table[2][1] != 0 && game_list[gid].game_table[2][1] != 1) ? ('.') : ((game_list[gid].game_table[2][1] == 0) ? ('#') : ('O')),
+			(game_list[gid].game_table[2][2] != 0 && game_list[gid].game_table[2][2] != 1) ? ('.') : ((game_list[gid].game_table[2][2] == 0) ? ('#') : ('O')));
 	for (int i = 0; i < MAXCONN; i++) {
 		if (game_list[gid].observers[i] != -1) {
 			/*Print stuff to observers*/
-			write_return(reg_users[i].sockfd);
-			write_client_id(reg_users[i].sockfd, reg_users[i].username, reg_users[i].cmd_counter);
+			write_return(reg_users[game_list[gid].observers[i]].sockfd);
+			write_client_id(reg_users[game_list[gid].observers[i]].sockfd, reg_users[game_list[gid].observers[i]].username, reg_users[game_list[gid].observers[i]].cmd_counter);
 		}
 	}
 	write_return(reg_users[game_list[gid].player1].sockfd);
-	write_client_id(reg_users[game_list[gid].player1].sockfd, reg_users[game_list[gid].player1].username, reg_users[game_list[gid].player1].cmd_counter);
 	write_return(reg_users[game_list[gid].player2].sockfd);
-	write_client_id(reg_users[game_list[gid].player2].sockfd, reg_users[game_list[gid].player2].username, reg_users[game_list[gid].player2].cmd_counter);
 	return;
 }
 
@@ -721,9 +779,34 @@ void setup_match(int uid) {
 		sprintf(ret_msg, "\n Match started\n");
 		write_return(reg_users[ret].sockfd);
 		write_return(reg_users[uid].sockfd);
-		write_client_id(reg_users[ret].sockfd, reg_users[ret].username, reg_users[ret].cmd_counter);
-
 		/*Start game here*/
+		for (int i = 0; i < MAXCONN; i++) {
+			if (game_list[i].in_use == false) {
+				/*Found a open game, copy the stuff*/
+				game_list[i].in_use = true;
+				game_list[i].player1 = ret;
+				game_list[i].player2 = uid;
+
+				if (reg_users[ret].trying_to_match_color == 0) {
+					game_list[i].p1_move = true;
+					game_list[i].p1_color = 0;
+					game_list[i].p2_color = 1;
+				} else {
+					game_list[i].p2_move = true;
+					game_list[i].p1_color = 1;
+					game_list[i].p2_color = 0;
+				}
+
+				/*Timing stuff*/
+				game_list[i].start_time = 0;
+				game_list[i].end_time = game_time;
+				printf("request = %d , response = %d\n", ret, uid);
+				print_game_table(i);
+				write_client_id(reg_users[ret].sockfd, reg_users[ret].username, reg_users[ret].cmd_counter);
+				return;
+			}
+		}
+
 	} else if (status == 1) {
 		/*Is a match response with mismatch*/
 		printf("Game: %s %s color = %d time = %d\n", reg_users[uid].username, reg_users[ret].username, color_player, game_time);
@@ -1117,9 +1200,10 @@ int main(int argc, char **argv) {
 										if (reg_table[userid].logged_in == true) {
 											/*Already logged in, so kick him*/
 											reset_game(userid);
-											sprintf(ret_msg, "You have been kicked out due to multiple login\n");
-											write_return(guest_users[i].sockfd);
-											close(guest_users[i].sockfd);
+											sprintf(ret_msg, "\nYou have been kicked out due to multiple login\n");
+											write_return(reg_users[userid].sockfd);
+											FD_CLR(reg_users[userid].sockfd, &allset);
+											close(reg_users[userid].sockfd);
 										}
 										reg_table[userid].logged_in = true;
 										reg_users[userid].sockfd = guest_users[i].sockfd;
