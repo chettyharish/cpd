@@ -96,8 +96,8 @@ struct game {
 	int game_table[3][3];
 	int p1_color;
 	int p2_color;
-	double start_time;
-	double end_time;
+	double p1_time;
+	double p2_time;
 } game_list[MAXCONN];
 
 void set_defaults() {
@@ -150,8 +150,8 @@ void set_defaults() {
 		game_list[i].p2_move = false;
 		game_list[i].p1_color = -1;
 		game_list[i].p2_color = -1;
-		game_list[i].start_time = 0;
-		game_list[i].end_time = 0;
+		game_list[i].p1_time = 0;
+		game_list[i].p2_time = 0;
 		game_list[i].game_table[0][0] = -1;
 		game_list[i].game_table[0][1] = -1;
 		game_list[i].game_table[0][2] = -1;
@@ -647,17 +647,26 @@ void list_games(int sockfd) {
 }
 
 void print_game_table(int gid, bool to_all, int uid) {
-	sprintf(ret_msg, "\n   1  2  3\nA  %c  %c  %c\nB  %c  %c  %c\nC  %c  %c  %c\n",
-			(game_list[gid].game_table[0][1] != 0 && game_list[gid].game_table[0][1] != 1) ? ('.') : ((game_list[gid].game_table[0][1] == 0) ? ('#') : ('O')),
-			(game_list[gid].game_table[0][2] != 0 && game_list[gid].game_table[0][2] != 1) ? ('.') : ((game_list[gid].game_table[0][2] == 0) ? ('#') : ('O')),
-			(game_list[gid].game_table[0][3] != 0 && game_list[gid].game_table[0][3] != 1) ? ('.') : ((game_list[gid].game_table[0][3] == 0) ? ('#') : ('O')),
-			(game_list[gid].game_table[1][0] != 0 && game_list[gid].game_table[1][0] != 1) ? ('.') : ((game_list[gid].game_table[1][0] == 0) ? ('#') : ('O')),
-			(game_list[gid].game_table[1][1] != 0 && game_list[gid].game_table[1][1] != 1) ? ('.') : ((game_list[gid].game_table[1][1] == 0) ? ('#') : ('O')),
-			(game_list[gid].game_table[1][2] != 0 && game_list[gid].game_table[1][2] != 1) ? ('.') : ((game_list[gid].game_table[1][2] == 0) ? ('#') : ('O')),
-			(game_list[gid].game_table[2][0] != 0 && game_list[gid].game_table[2][0] != 1) ? ('.') : ((game_list[gid].game_table[2][0] == 0) ? ('#') : ('O')),
-			(game_list[gid].game_table[2][1] != 0 && game_list[gid].game_table[2][1] != 1) ? ('.') : ((game_list[gid].game_table[2][1] == 0) ? ('#') : ('O')),
-			(game_list[gid].game_table[2][2] != 0 && game_list[gid].game_table[2][2] != 1) ? ('.') : ((game_list[gid].game_table[2][2] == 0) ? ('#') : ('O')));
+	sprintf(ret_msg, "\nBlack:%10s\tWhite:%10s\nTime:%5d seconds\t%5d seconds\n   1  2  3\nA  %c  %c  %c\nB  %c  %c  %c\nC  %c  %c  %c\n",
+			((game_list[gid].p1_color == 0) ? (reg_users[game_list[gid].player1].username) : (reg_users[game_list[gid].player2].username)),
+			((game_list[gid].p1_color == 1) ? (reg_users[game_list[gid].player1].username) : (reg_users[game_list[gid].player2].username)), (int) game_list[gid].p1_time, (int) game_list[gid].p2_time,
+			(game_list[gid].game_table[0][0] == -1) ? ('.') : ((game_list[gid].game_table[0][0] == 0) ? ('#') : ('O')),
+			(game_list[gid].game_table[0][1] == -1) ? ('.') : ((game_list[gid].game_table[0][1] == 0) ? ('#') : ('O')),
+			(game_list[gid].game_table[0][2] == -1) ? ('.') : ((game_list[gid].game_table[0][2] == 0) ? ('#') : ('O')),
+			(game_list[gid].game_table[1][0] == -1) ? ('.') : ((game_list[gid].game_table[1][0] == 0) ? ('#') : ('O')),
+			(game_list[gid].game_table[1][1] == -1) ? ('.') : ((game_list[gid].game_table[1][1] == 0) ? ('#') : ('O')),
+			(game_list[gid].game_table[1][2] == -1) ? ('.') : ((game_list[gid].game_table[1][2] == 0) ? ('#') : ('O')),
+			(game_list[gid].game_table[2][0] == -1) ? ('.') : ((game_list[gid].game_table[2][0] == 0) ? ('#') : ('O')),
+			(game_list[gid].game_table[2][1] == -1) ? ('.') : ((game_list[gid].game_table[2][1] == 0) ? ('#') : ('O')),
+			(game_list[gid].game_table[2][2] == -1) ? ('.') : ((game_list[gid].game_table[2][2] == 0) ? ('#') : ('O')));
 
+	printf("Table = \n");
+	for (int i = 0; i < 3; i++) {
+		for (int j = 0; j < 3; j++) {
+			printf("%d   ", game_list[gid].game_table[i][j]);
+		}
+		printf("\n");
+	}
 	if (to_all == true) {
 		for (int i = 0; i < MAXCONN; i++) {
 			if (game_list[gid].observers[i] != -1) {
@@ -795,7 +804,8 @@ void setup_match(int uid) {
 				game_list[i].in_use = true;
 				game_list[i].player1 = ret;
 				game_list[i].player2 = uid;
-
+				reg_users[uid].playing = true;
+				reg_users[ret].playing = true;
 				if (reg_users[ret].trying_to_match_color == 0) {
 					game_list[i].p1_move = true;
 					game_list[i].p1_color = 0;
@@ -807,8 +817,8 @@ void setup_match(int uid) {
 				}
 
 				/*Timing stuff*/
-				game_list[i].start_time = 0;
-				game_list[i].end_time = game_time;
+				game_list[i].p1_time = game_time;
+				game_list[i].p2_time = game_time;
 				printf("request = %d , response = %d\n", ret, uid);
 				print_game_table(i, true, -1);
 				write_client_id(reg_users[ret].sockfd, reg_users[ret].username, reg_users[ret].cmd_counter);
@@ -838,10 +848,6 @@ void setup_match(int uid) {
 
 	}
 
-}
-
-void reset_game(int uid) {
-	/*Reset the game if someone was playing*/
 }
 
 void observe_game(int uid) {
@@ -953,6 +959,35 @@ void refresh_game(int uid) {
 	}
 }
 
+void reset_game(int gid) {
+	/*Reset the game if someone was playing*/
+	printf("inside\n");
+	game_list[gid].in_use = false;
+	game_list[gid].num_moves = 0;
+	game_list[gid].player1 = -1;
+	game_list[gid].player2 = -1;
+	game_list[gid].p1_move = false;
+	game_list[gid].p2_move = false;
+	game_list[gid].p1_color = -1;
+	game_list[gid].p2_color = -1;
+	printf("inside\n");
+	game_list[gid].p1_time = 0;
+	game_list[gid].p2_time = 0;
+	game_list[gid].game_table[0][0] = -1;
+	game_list[gid].game_table[0][1] = -1;
+	game_list[gid].game_table[0][2] = -1;
+	game_list[gid].game_table[1][0] = -1;
+	game_list[gid].game_table[1][1] = -1;
+	game_list[gid].game_table[1][2] = -1;
+	game_list[gid].game_table[2][0] = -1;
+	game_list[gid].game_table[2][1] = -1;
+	game_list[gid].game_table[2][2] = -1;
+	for (int j = 0; j < MAXCONN; j++) {
+		game_list[gid].observers[j] = -1;
+	}
+	printf("inside\n");
+}
+
 int test_game_condition(int gid) {
 	/*Determines if someone has won/lost or its a draw*/
 	/*0 if 0 has won , 1 if 1 has won, 2 for draw and -1 for none*/
@@ -989,6 +1024,10 @@ int test_game_condition(int gid) {
 	return -1;
 }
 
+void set_rating(int uid) {
+	reg_users[uid].rating = (reg_users[uid].wins * 1.0f) / (reg_users[uid].wins + reg_users[uid].losses + reg_users[uid].draws);
+}
+
 void make_move(int uid) {
 	char *cmd, *rest;
 	char temp_cmd[MSGSIZE];
@@ -1000,13 +1039,178 @@ void make_move(int uid) {
 		write_return(reg_users[uid].sockfd);
 		return;
 	}
-	sad
 
-	if (reg_users[uid].playing == false) {
-		sprintf(ret_msg, "You are not playing a game\n");
+	int gid = reg_users[uid].gameid;
+	if ((game_list[gid].player1 == uid && game_list[gid].p1_move == false) || (game_list[gid].player2 == uid && game_list[gid].p2_move == false)) {
+		/*Not the players turn*/
+		sprintf(ret_msg, "Its not your turn.\n");
 		write_return(reg_users[uid].sockfd);
 		return;
 	}
+
+	int pos1 = -1, pos2 = -1;
+	switch (cmd[0]) {
+	case 'a':
+	case 'A':
+		switch (cmd[1]) {
+		case '1':
+			pos1 = 0;
+			pos2 = 0;
+			break;
+		case '2':
+			pos1 = 0;
+			pos2 = 1;
+			break;
+		case '3':
+			pos1 = 0;
+			pos2 = 2;
+			break;
+		}
+		break;
+	case 'b':
+	case 'B':
+		switch (cmd[1]) {
+		case '1':
+			pos1 = 1;
+			pos2 = 0;
+			break;
+		case '2':
+			pos1 = 1;
+			pos2 = 1;
+			break;
+		case '3':
+			pos1 = 1;
+			pos2 = 2;
+			break;
+		}
+		break;
+	case 'c':
+	case 'C':
+		switch (cmd[1]) {
+		case '1':
+			pos1 = 2;
+			pos2 = 0;
+			break;
+		case '2':
+			pos1 = 2;
+			pos2 = 1;
+			break;
+		case '3':
+			pos1 = 2;
+			pos2 = 2;
+			break;
+		}
+		break;
+	}
+
+	if (game_list[gid].game_table[pos1][pos2] != -1) {
+		/*Position already full*/
+		sprintf(ret_msg, "<Position is occupied>.\n");
+		write_return(reg_users[uid].sockfd);
+		return;
+	}
+	/*Position available, so place the stuff*/
+	int p_color = ((game_list[gid].player1 == uid) ? game_list[gid].p1_color : game_list[gid].p2_color);
+	game_list[gid].game_table[pos1][pos2] = p_color;
+
+	printf("Player %s played pos1 = %d pos2 = %d", reg_users[uid].username, pos1, pos2);
+	if ((game_list[gid].player1 == uid)) {
+		game_list[gid].p1_move = false;
+		game_list[gid].p2_move = true;
+	} else {
+		game_list[gid].p1_move = true;
+		game_list[gid].p2_move = false;
+	}
+
+	printf("\n%s moving %d to (%d,%d)\n", reg_users[uid].username, p_color, pos1, pos2);
+	int stat = test_game_condition(gid);
+	print_game_table(gid, true, -1);
+	if (stat == 0) {
+		/*Player 0 has won*/
+		sprintf(ret_msg, "\n%s has won game %d\n", ((game_list[gid].p1_color == 0) ? (reg_users[game_list[gid].player1].username) : (reg_users[game_list[gid].player2].username)), gid);
+		for (int i = 0; i < MAXCONN; i++) {
+			if (game_list[gid].observers[i] != -1) {
+				write_return(reg_users[game_list[gid].observers[i]].sockfd);
+				write_client_id(reg_users[game_list[gid].observers[i]].sockfd, reg_users[game_list[gid].observers[i]].username, reg_users[game_list[gid].observers[i]].cmd_counter);
+			}
+		}
+
+		printf("1 here\n");
+		write_return(reg_users[game_list[gid].player1].sockfd);
+		write_return(reg_users[game_list[gid].player2].sockfd);
+		printf("2 here\n");
+		/*Update stats*/
+		if (game_list[gid].p1_color == 0) {
+			reg_users[game_list[gid].player1].wins++;
+			reg_users[game_list[gid].player2].losses++;
+		} else {
+			reg_users[game_list[gid].player2].wins++;
+			reg_users[game_list[gid].player1].losses++;
+		}
+		printf("3 here\n");
+		reg_users[game_list[gid].player1].playing = false;
+		reg_users[game_list[gid].player2].playing = false;
+		printf("4 here\n");
+		set_rating(game_list[gid].player1);
+		set_rating(game_list[gid].player2);
+		reset_game(gid);
+		printf("5 here\n");
+		return;
+	} else if (stat == 1) {
+		/*Player 1 has won*/
+		sprintf(ret_msg, "\n%s has won game %d\n", ((game_list[gid].p1_color == 1) ? (reg_users[game_list[gid].player1].username) : (reg_users[game_list[gid].player2].username)), gid);
+		for (int i = 0; i < MAXCONN; i++) {
+			if (game_list[gid].observers[i] != -1) {
+				write_return(reg_users[game_list[gid].observers[i]].sockfd);
+				write_client_id(reg_users[game_list[gid].observers[i]].sockfd, reg_users[game_list[gid].observers[i]].username, reg_users[game_list[gid].observers[i]].cmd_counter);
+			}
+		}
+		write_return(reg_users[game_list[gid].player1].sockfd);
+		write_return(reg_users[game_list[gid].player2].sockfd);
+		/*Update stats*/
+		if (game_list[gid].p1_color == 1) {
+			reg_users[game_list[gid].player1].wins++;
+			reg_users[game_list[gid].player2].losses++;
+		} else {
+			reg_users[game_list[gid].player2].wins++;
+			reg_users[game_list[gid].player1].losses++;
+		}
+		reg_users[game_list[gid].player1].playing = false;
+		reg_users[game_list[gid].player2].playing = false;
+		set_rating(game_list[gid].player1);
+		set_rating(game_list[gid].player2);
+		reset_game(gid);
+		return;
+	} else if (stat == 2) {
+		/*The game has drawn*/
+		sprintf(ret_msg, "\nThe game %d has drawn\n", gid);
+		for (int i = 0; i < MAXCONN; i++) {
+			if (game_list[gid].observers[i] != -1) {
+				write_return(reg_users[game_list[gid].observers[i]].sockfd);
+				write_client_id(reg_users[game_list[gid].observers[i]].sockfd, reg_users[game_list[gid].observers[i]].username, reg_users[game_list[gid].observers[i]].cmd_counter);
+			}
+		}
+		write_return(reg_users[game_list[gid].player1].sockfd);
+		write_return(reg_users[game_list[gid].player2].sockfd);
+		/*Update stats*/
+		reg_users[game_list[gid].player1].draws++;
+		reg_users[game_list[gid].player2].draws++;
+		reg_users[game_list[gid].player1].playing = false;
+		reg_users[game_list[gid].player2].playing = false;
+		set_rating(game_list[gid].player1);
+		set_rating(game_list[gid].player2);
+		reset_game(gid);
+		return;
+	} else {
+		/*Nothing fancy happened*/
+		game_list[gid].num_moves++;
+		if (game_list[gid].player1 != uid) {
+			write_client_id(reg_users[game_list[gid].player1].sockfd, reg_users[game_list[gid].player1].username, reg_users[game_list[gid].player1].cmd_counter);
+		} else {
+			write_client_id(reg_users[game_list[gid].player2].sockfd, reg_users[game_list[gid].player2].username, reg_users[game_list[gid].player2].cmd_counter);
+		}
+	}
+
 }
 
 void kibitz_message(int uid) {
