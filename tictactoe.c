@@ -182,26 +182,36 @@ void set_defaults() {
 void load_files() {
 	set_defaults();
 	/*Fake entries*/
-	strcpy(reg_table[0].username, "harish");
-	strcpy(reg_table[0].password, "harish");
+	strcpy(reg_table[0].username, "a");
+	strcpy(reg_table[0].password, "a");
 	reg_table[0].logged_in = false;
 	reg_table[0].loc = 0;
-	strcpy(reg_table[1].username, "jacob");
-	strcpy(reg_table[1].password, "jacob");
+	strcpy(reg_table[1].username, "b");
+	strcpy(reg_table[1].password, "b");
 	reg_table[1].logged_in = false;
 	reg_table[1].loc = 1;
-	strcpy(reg_table[2].username, "chetty");
-	strcpy(reg_table[2].password, "chetty");
+	strcpy(reg_table[2].username, "c");
+	strcpy(reg_table[2].password, "c");
 	reg_table[2].logged_in = false;
 	reg_table[2].loc = 2;
-	strcpy(reg_table[3].username, "hello");
-	strcpy(reg_table[3].password, "world");
+	strcpy(reg_table[3].username, "d");
+	strcpy(reg_table[3].password, "d");
 	reg_table[3].logged_in = false;
 	reg_table[3].loc = 3;
-	strcpy(reg_users[0].username, "harish");
-	strcpy(reg_users[1].username, "jacob");
-	strcpy(reg_users[2].username, "chetty");
-	strcpy(reg_users[3].username, "hello");
+	strcpy(reg_table[4].username, "e");
+	strcpy(reg_table[4].password, "e");
+	reg_table[4].logged_in = false;
+	reg_table[4].loc = 4;
+	strcpy(reg_table[5].username, "f");
+	strcpy(reg_table[5].password, "f");
+	reg_table[5].logged_in = false;
+	reg_table[5].loc = 5;
+	strcpy(reg_users[0].username, "a");
+	strcpy(reg_users[1].username, "b");
+	strcpy(reg_users[2].username, "c");
+	strcpy(reg_users[3].username, "d");
+	strcpy(reg_users[4].username, "e");
+	strcpy(reg_users[5].username, "f");
 
 }
 
@@ -476,6 +486,13 @@ void shout_msg(int uid) {
 	char temp_cmd[MSGSIZE];
 	strcpy(temp_cmd, usr_msg);
 	cmd = __strtok_r(temp_cmd, " ", &msg);
+
+	if (msg == NULL) {
+		sprintf(ret_msg, "Please enter a message\n");
+		write_return(reg_users[uid].sockfd);
+		return;
+	}
+
 	for (int i = 0; i < MAXCONN; i++) {
 		if (reg_users[i].isloggedin == true && check_blocked(i, uid) == false && reg_users[i].quiet == false) {
 			if (uid != i) {
@@ -498,8 +515,14 @@ void tell_msg(int uid) {
 	username = __strtok_r(temp_cmd, " ", &msg);
 	username = __strtok_r(NULL, " ", &msg);
 
+	if (msg == NULL) {
+		sprintf(ret_msg, "Please enter a message\n");
+		write_return(reg_users[uid].sockfd);
+		return;
+	}
 	printf("Telling username = %s\t msg = %s\n", username, msg);
 	fflush(stdout);
+
 	int ret = find_user(username);
 	if (ret == -1) {
 		/*User not found*/
@@ -623,10 +646,6 @@ void list_games(int sockfd) {
 	}
 }
 
-void reset_game(int uid) {
-	/*Reset the game if someone was playing*/
-}
-
 void print_game_table(int gid, bool to_all, int uid) {
 	sprintf(ret_msg, "\n   1  2  3\nA  %c  %c  %c\nB  %c  %c  %c\nC  %c  %c  %c\n",
 			(game_list[gid].game_table[0][1] != 0 && game_list[gid].game_table[0][1] != 1) ? ('.') : ((game_list[gid].game_table[0][1] == 0) ? ('#') : ('O')),
@@ -654,134 +673,6 @@ void print_game_table(int gid, bool to_all, int uid) {
 		write_return(reg_users[uid].sockfd);
 	}
 	return;
-}
-
-void observe_game(int uid) {
-	char *gid_str, *rest;
-	char temp_cmd[MSGSIZE];
-	strcpy(temp_cmd, usr_msg);
-	gid_str = __strtok_r(temp_cmd, " ", &rest);
-	gid_str = __strtok_r(NULL, " ", &rest);
-
-	if (gid_str == NULL) {
-		sprintf(ret_msg, "Please enter a game id\n");
-		write_return(reg_users[uid].sockfd);
-		return;
-	}
-
-	int game_id = atoi(gid_str);
-	if (game_list[game_id].in_use == false) {
-		sprintf(ret_msg, "Please check the game id\n");
-		write_return(reg_users[uid].sockfd);
-		return;
-	}
-
-	int ob_loc = -1;
-	for (int i = 0; i < MAXCONN; i++) {
-		if (reg_users[uid].observeids[i] == -1) {
-			reg_users[uid].observeids[i] = game_id;
-		}
-	}
-
-	if (ob_loc == -1) {
-		sprintf(ret_msg, "You cannot observe more games\n");
-		write_return(reg_users[uid].sockfd);
-		return;
-	}
-
-	for (int i = 0; i < MAXCONN; i++) {
-		if (game_list[game_id].observers[i] == -1) {
-			/*Empty spot found*/
-
-			sprintf(ret_msg, "Observing <%d>\n", game_id);
-			write_return(reg_users[uid].sockfd);
-			game_list[game_id].observers[i] = uid;
-			print_game_table(game_id, false, uid);
-			return;
-		}
-	}
-
-	reg_users[uid].observeids[ob_loc] = -1;
-	sprintf(ret_msg, "The Observer list is full\n");
-	write_return(reg_users[uid].sockfd);
-	return;
-}
-
-void unobserve_game(int uid) {
-	char *gid_str, *rest;
-	char temp_cmd[MSGSIZE];
-	strcpy(temp_cmd, usr_msg);
-	gid_str = __strtok_r(temp_cmd, " ", &rest);
-	gid_str = __strtok_r(NULL, " ", &rest);
-
-	if (gid_str == NULL) {
-		sprintf(ret_msg, "Please enter a game id\n");
-		write_return(reg_users[uid].sockfd);
-		return;
-	}
-	int game_id = atoi(gid_str);
-	if (game_list[game_id].in_use == false) {
-		sprintf(ret_msg, "Please check the game id\n");
-		write_return(reg_users[uid].sockfd);
-		return;
-	}
-
-	for (int i = 0; i < MAXCONN; i++) {
-		if (game_list[game_id].observers[i] == uid) {
-			/*Empty spot found*/
-			game_list[game_id].observers[i] = -1;
-
-			sprintf(ret_msg, "Unobserving <%d>\n", game_id);
-			write_return(reg_users[uid].sockfd);
-			for (int j = 0; j < MAXCONN; j++) {
-				if (reg_users[uid].observeids[j] == game_id) {
-					/*Resetting players observing list*/
-					reg_users[uid].observeids[j] = -1;
-				}
-			}
-			return;
-		}
-	}
-
-	sprintf(ret_msg, "You are not observing <%d>\n", game_id);
-	write_return(reg_users[uid].sockfd);
-	return;
-}
-
-int test_game_condition(int gid) {
-	/*Determines if someone has won/lost or its a draw*/
-	/*0 if 0 has won , 1 if 1 has won, 2 for draw and -1 for none*/
-	if (((game_list[gid].game_table[0][0] == 0) && (game_list[gid].game_table[0][1] == 0) && (game_list[gid].game_table[0][2] == 0))
-			|| ((game_list[gid].game_table[1][0] == 0) && (game_list[gid].game_table[1][1] == 0) && (game_list[gid].game_table[1][2] == 0))
-			|| ((game_list[gid].game_table[2][0] == 0) && (game_list[gid].game_table[2][1] == 0) && (game_list[gid].game_table[2][2] == 0))
-			|| ((game_list[gid].game_table[0][0] == 0) && (game_list[gid].game_table[1][0] == 0) && (game_list[gid].game_table[2][0] == 0))
-			|| ((game_list[gid].game_table[0][1] == 0) && (game_list[gid].game_table[1][1] == 0) && (game_list[gid].game_table[2][1] == 0))
-			|| ((game_list[gid].game_table[0][2] == 0) && (game_list[gid].game_table[1][2] == 0) && (game_list[gid].game_table[2][2] == 0))
-			|| ((game_list[gid].game_table[0][0] == 0) && (game_list[gid].game_table[1][1] == 0) && (game_list[gid].game_table[2][2] == 0))
-			|| ((game_list[gid].game_table[0][2] == 0) && (game_list[gid].game_table[1][1] == 0) && (game_list[gid].game_table[2][0] == 0))) {
-		/*The player with 0 has won*/
-		return 0;
-	}
-
-	if (((game_list[gid].game_table[0][0] == 1) && (game_list[gid].game_table[0][1] == 1) && (game_list[gid].game_table[0][2] == 1))
-			|| ((game_list[gid].game_table[1][0] == 1) && (game_list[gid].game_table[1][1] == 1) && (game_list[gid].game_table[1][2] == 1))
-			|| ((game_list[gid].game_table[2][0] == 1) && (game_list[gid].game_table[2][1] == 1) && (game_list[gid].game_table[2][2] == 1))
-			|| ((game_list[gid].game_table[0][0] == 1) && (game_list[gid].game_table[1][0] == 1) && (game_list[gid].game_table[2][0] == 1))
-			|| ((game_list[gid].game_table[0][1] == 1) && (game_list[gid].game_table[1][1] == 1) && (game_list[gid].game_table[2][1] == 1))
-			|| ((game_list[gid].game_table[0][2] == 1) && (game_list[gid].game_table[1][2] == 1) && (game_list[gid].game_table[2][2] == 1))
-			|| ((game_list[gid].game_table[0][0] == 1) && (game_list[gid].game_table[1][1] == 1) && (game_list[gid].game_table[2][2] == 1))
-			|| ((game_list[gid].game_table[0][2] == 1) && (game_list[gid].game_table[1][1] == 1) && (game_list[gid].game_table[2][0] == 1))) {
-		/*The player with 1 has won*/
-		return 1;
-	}
-
-	if (game_list[gid].num_moves == 9) {
-		/*The game has drawn*/
-		return 2;
-	}
-
-	/*Nothing special has happened*/
-	return -1;
 }
 
 int test_match_response(int player1, int player2) {
@@ -947,6 +838,270 @@ void setup_match(int uid) {
 
 	}
 
+}
+
+void reset_game(int uid) {
+	/*Reset the game if someone was playing*/
+}
+
+void observe_game(int uid) {
+	char *gid_str, *rest;
+	char temp_cmd[MSGSIZE];
+	strcpy(temp_cmd, usr_msg);
+	gid_str = __strtok_r(temp_cmd, " ", &rest);
+	gid_str = __strtok_r(NULL, " ", &rest);
+
+	if (gid_str == NULL) {
+		sprintf(ret_msg, "Please enter a game id\n");
+		write_return(reg_users[uid].sockfd);
+		return;
+	}
+
+	int game_id = atoi(gid_str);
+	if (game_list[game_id].in_use == false) {
+		sprintf(ret_msg, "Please check the game id\n");
+		write_return(reg_users[uid].sockfd);
+		return;
+	}
+
+	int ob_loc = -1;
+	for (int i = 0; i < MAXCONN; i++) {
+		if (reg_users[uid].observeids[i] == -1) {
+			reg_users[uid].observeids[i] = game_id;
+			ob_loc = game_id;
+			break;
+		}
+	}
+
+	if (ob_loc == -1) {
+		sprintf(ret_msg, "You cannot observe more games\n");
+		write_return(reg_users[uid].sockfd);
+		return;
+	}
+
+	for (int i = 0; i < MAXCONN; i++) {
+		if (game_list[game_id].observers[i] == -1) {
+			/*Empty spot found*/
+
+			sprintf(ret_msg, "Observing <%d>\n", game_id);
+			write_return(reg_users[uid].sockfd);
+			game_list[game_id].observers[i] = uid;
+			print_game_table(game_id, false, uid);
+			return;
+		}
+	}
+
+	reg_users[uid].observeids[ob_loc] = -1;
+	sprintf(ret_msg, "The Observer list is full\n");
+	write_return(reg_users[uid].sockfd);
+	return;
+}
+
+void unobserve_game(int uid) {
+	char *gid_str, *rest;
+	char temp_cmd[MSGSIZE];
+	strcpy(temp_cmd, usr_msg);
+	gid_str = __strtok_r(temp_cmd, " ", &rest);
+	gid_str = __strtok_r(NULL, " ", &rest);
+
+	if (gid_str == NULL) {
+		sprintf(ret_msg, "Please enter a game id\n");
+		write_return(reg_users[uid].sockfd);
+		return;
+	}
+	int game_id = atoi(gid_str);
+	if (game_list[game_id].in_use == false) {
+		sprintf(ret_msg, "Please check the game id\n");
+		write_return(reg_users[uid].sockfd);
+		return;
+	}
+
+	for (int i = 0; i < MAXCONN; i++) {
+		if (game_list[game_id].observers[i] == uid) {
+			/*Empty spot found*/
+			game_list[game_id].observers[i] = -1;
+
+			sprintf(ret_msg, "Unobserving <%d>\n", game_id);
+			write_return(reg_users[uid].sockfd);
+			for (int j = 0; j < MAXCONN; j++) {
+				if (reg_users[uid].observeids[j] == game_id) {
+					/*Resetting players observing list*/
+					reg_users[uid].observeids[j] = -1;
+				}
+			}
+			return;
+		}
+	}
+	sprintf(ret_msg, "You are not observing <%d>\n", game_id);
+	write_return(reg_users[uid].sockfd);
+	return;
+}
+
+void refresh_game(int uid) {
+	bool loc_obs = false;
+	for (int i = 0; i < MAXCONN; i++) {
+		if (reg_users[uid].observeids[i] != -1) {
+			loc_obs = true;
+			print_game_table(reg_users[uid].observeids[i], false, uid);
+		}
+	}
+
+	if (loc_obs == false) {
+		sprintf(ret_msg, "You are not observing any games\n");
+		write_return(reg_users[uid].sockfd);
+		return;
+	}
+}
+
+int test_game_condition(int gid) {
+	/*Determines if someone has won/lost or its a draw*/
+	/*0 if 0 has won , 1 if 1 has won, 2 for draw and -1 for none*/
+	if (((game_list[gid].game_table[0][0] == 0) && (game_list[gid].game_table[0][1] == 0) && (game_list[gid].game_table[0][2] == 0))
+			|| ((game_list[gid].game_table[1][0] == 0) && (game_list[gid].game_table[1][1] == 0) && (game_list[gid].game_table[1][2] == 0))
+			|| ((game_list[gid].game_table[2][0] == 0) && (game_list[gid].game_table[2][1] == 0) && (game_list[gid].game_table[2][2] == 0))
+			|| ((game_list[gid].game_table[0][0] == 0) && (game_list[gid].game_table[1][0] == 0) && (game_list[gid].game_table[2][0] == 0))
+			|| ((game_list[gid].game_table[0][1] == 0) && (game_list[gid].game_table[1][1] == 0) && (game_list[gid].game_table[2][1] == 0))
+			|| ((game_list[gid].game_table[0][2] == 0) && (game_list[gid].game_table[1][2] == 0) && (game_list[gid].game_table[2][2] == 0))
+			|| ((game_list[gid].game_table[0][0] == 0) && (game_list[gid].game_table[1][1] == 0) && (game_list[gid].game_table[2][2] == 0))
+			|| ((game_list[gid].game_table[0][2] == 0) && (game_list[gid].game_table[1][1] == 0) && (game_list[gid].game_table[2][0] == 0))) {
+		/*The player with 0 has won*/
+		return 0;
+	}
+
+	if (((game_list[gid].game_table[0][0] == 1) && (game_list[gid].game_table[0][1] == 1) && (game_list[gid].game_table[0][2] == 1))
+			|| ((game_list[gid].game_table[1][0] == 1) && (game_list[gid].game_table[1][1] == 1) && (game_list[gid].game_table[1][2] == 1))
+			|| ((game_list[gid].game_table[2][0] == 1) && (game_list[gid].game_table[2][1] == 1) && (game_list[gid].game_table[2][2] == 1))
+			|| ((game_list[gid].game_table[0][0] == 1) && (game_list[gid].game_table[1][0] == 1) && (game_list[gid].game_table[2][0] == 1))
+			|| ((game_list[gid].game_table[0][1] == 1) && (game_list[gid].game_table[1][1] == 1) && (game_list[gid].game_table[2][1] == 1))
+			|| ((game_list[gid].game_table[0][2] == 1) && (game_list[gid].game_table[1][2] == 1) && (game_list[gid].game_table[2][2] == 1))
+			|| ((game_list[gid].game_table[0][0] == 1) && (game_list[gid].game_table[1][1] == 1) && (game_list[gid].game_table[2][2] == 1))
+			|| ((game_list[gid].game_table[0][2] == 1) && (game_list[gid].game_table[1][1] == 1) && (game_list[gid].game_table[2][0] == 1))) {
+		/*The player with 1 has won*/
+		return 1;
+	}
+
+	if (game_list[gid].num_moves == 9) {
+		/*The game has drawn*/
+		return 2;
+	}
+
+	/*Nothing special has happened*/
+	return -1;
+}
+
+void make_move(int uid) {
+	char *cmd, *rest;
+	char temp_cmd[MSGSIZE];
+	strcpy(temp_cmd, usr_msg);
+	cmd = __strtok_r(temp_cmd, " ", &rest);
+
+	if (reg_users[uid].playing == false) {
+		sprintf(ret_msg, "You are not playing a game\n");
+		write_return(reg_users[uid].sockfd);
+		return;
+	}
+	sad
+
+	if (reg_users[uid].playing == false) {
+		sprintf(ret_msg, "You are not playing a game\n");
+		write_return(reg_users[uid].sockfd);
+		return;
+	}
+}
+
+void kibitz_message(int uid) {
+	bool observing_flag = false;
+	char *cmd, *msg;
+	char temp_cmd[MSGSIZE];
+	strcpy(temp_cmd, usr_msg);
+	cmd = __strtok_r(temp_cmd, " ", &msg);
+
+	if (msg == NULL) {
+		sprintf(ret_msg, "Please enter a message\n");
+		write_return(reg_users[uid].sockfd);
+		return;
+	}
+
+	for (int i = 0; i < MAXCONN; i++) {
+		if (reg_users[uid].observeids[i] != -1) {
+			/*Found a game the player is observing*/
+			observing_flag = true;
+			int gid = reg_users[uid].observeids[i];
+			printf("Found game = %d\n", gid);
+			for (int j = 0; j < MAXCONN; j++) {
+				/*Send message to all observes if not blocked or quiet*/
+				if (game_list[gid].observers[j] != -1) {
+					/*Game observe found*/
+					int pid = game_list[gid].observers[j];
+					if (check_blocked(pid, uid) == false) {
+						printf("Found player = %d\n", pid);
+						sprintf(ret_msg, "Kibitz* %s: %s\n", reg_users[uid].username, msg);
+						write_return(reg_users[pid].sockfd);
+						write_client_id(reg_users[pid].sockfd, reg_users[pid].username, reg_users[pid].cmd_counter);
+					}
+				}
+			}
+		}
+	}
+
+	if (observing_flag == false) {
+		sprintf(ret_msg, "You are not observing any games\n");
+		write_return(reg_users[uid].sockfd);
+	}
+}
+
+void quot_message(int uid) {
+	/*Same as kibitz, just added the players too*/
+	bool observing_flag = false;
+	char *cmd, *msg;
+	char temp_cmd[MSGSIZE];
+	strcpy(temp_cmd, usr_msg);
+	cmd = __strtok_r(temp_cmd, " ", &msg);
+
+	if (msg == NULL) {
+		sprintf(ret_msg, "Please enter a message\n");
+		write_return(reg_users[uid].sockfd);
+		return;
+	}
+
+	for (int i = 0; i < MAXCONN; i++) {
+		if (reg_users[uid].observeids[i] != -1) {
+			/*Found a game the player is observing*/
+			observing_flag = true;
+			int gid = reg_users[uid].observeids[i];
+			for (int j = 0; j < MAXCONN; j++) {
+				/*Send message to all observes if not blocked or quiet*/
+				if (game_list[gid].observers[j] != -1) {
+					/*Game observe found*/
+					int pid = game_list[gid].observers[j];
+					if (check_blocked(pid, uid) == false) {
+						sprintf(ret_msg, "quot* %s: %s\n", reg_users[uid].username, msg);
+						write_return(reg_users[pid].sockfd);
+						write_client_id(reg_users[pid].sockfd, reg_users[pid].username, reg_users[pid].cmd_counter);
+					}
+				}
+
+				int p1 = game_list[gid].player1;
+				int p2 = game_list[gid].player2;
+				if (check_blocked(p1, uid) == false) {
+					sprintf(ret_msg, "quot* %s: %s\n", reg_users[uid].username, msg);
+					write_return(reg_users[p1].sockfd);
+					write_client_id(reg_users[p1].sockfd, reg_users[p1].username, reg_users[p1].cmd_counter);
+				}
+
+				if (check_blocked(p2, uid) == false) {
+					sprintf(ret_msg, "quot* %s: %s\n", reg_users[uid].username, msg);
+					write_return(reg_users[p2].sockfd);
+					write_client_id(reg_users[p2].sockfd, reg_users[p2].username, reg_users[p2].cmd_counter);
+				}
+			}
+		}
+	}
+
+	if (observing_flag == false) {
+		sprintf(ret_msg, "You are not observing any games\n");
+		write_return(reg_users[uid].sockfd);
+	}
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1130,7 +1285,7 @@ int match_command() {
 		printf("Calling kibitz\n");
 		return 10;
 	} else if (strcmp(cmd, "'") == 0) {
-		printf("Calling '\n");
+		printf("Calling quot\n");
 		return 11;
 	} else if (strcmp(cmd, "quiet") == 0) {
 		printf("Calling quiet\n");
@@ -1177,10 +1332,16 @@ int match_command() {
 	} else if (strcmp(cmd, "register") == 0) {
 		printf("Calling register\n");
 		return 26;
-	} else if (strlen(cmd) == 1) {
+	} else if (strcmp(cmd, "\n") == 0) {
 		/*Empty line*/
 		printf("Empty Line\n");
 		return 27;
+	} else if ((strcmp(cmd, "a1") == 0) || (strcmp(cmd, "b1") == 0) || (strcmp(cmd, "c1") == 0) || (strcmp(cmd, "a2") == 0) || (strcmp(cmd, "b2") == 0) || (strcmp(cmd, "c2") == 0)
+			|| (strcmp(cmd, "a3") == 0) || (strcmp(cmd, "b3") == 0) || (strcmp(cmd, "c3") == 0) || (strcmp(cmd, "A1") == 0) || (strcmp(cmd, "B1") == 0) || (strcmp(cmd, "C1") == 0)
+			|| (strcmp(cmd, "A2") == 0) || (strcmp(cmd, "B2") == 0) || (strcmp(cmd, "C2") == 0) || (strcmp(cmd, "A3") == 0) || (strcmp(cmd, "B3") == 0) || (strcmp(cmd, "C3") == 0)) {
+		/*A game move*/
+		printf("Game move detected\n");
+		return 29;
 	} else {
 		/*Command not supported*/
 		printf("Unknown command\n");
@@ -1423,17 +1584,17 @@ int main(int argc, char **argv) {
 								write_client_id(reg_users[i].sockfd, reg_users[i].username, reg_users[i].cmd_counter);
 
 								break;
-							case 5:
-								/*match call*/
-								setup_match(i);
-								write_client_id(reg_users[i].sockfd, reg_users[i].username, reg_users[i].cmd_counter);
-								break;
 							case 3:
 								observe_game(i);
 								write_client_id(reg_users[i].sockfd, reg_users[i].username, reg_users[i].cmd_counter);
 								break;
 							case 4:
 								unobserve_game(i);
+								write_client_id(reg_users[i].sockfd, reg_users[i].username, reg_users[i].cmd_counter);
+								break;
+							case 5:
+								/*match call*/
+								setup_match(i);
 								write_client_id(reg_users[i].sockfd, reg_users[i].username, reg_users[i].cmd_counter);
 								break;
 							case 8:
@@ -1444,6 +1605,14 @@ int main(int argc, char **argv) {
 							case 9:
 								/*Tell*/
 								tell_msg(i);
+								write_client_id(reg_users[i].sockfd, reg_users[i].username, reg_users[i].cmd_counter);
+								break;
+							case 10:
+								kibitz_message(i);
+								write_client_id(reg_users[i].sockfd, reg_users[i].username, reg_users[i].cmd_counter);
+								break;
+							case 11:
+								quot_message(i);
 								write_client_id(reg_users[i].sockfd, reg_users[i].username, reg_users[i].cmd_counter);
 								break;
 							case 12:
@@ -1525,6 +1694,10 @@ int main(int argc, char **argv) {
 								break;
 							case 28:
 								write_wrong_syntax(reg_users[i].sockfd);
+								write_client_id(reg_users[i].sockfd, reg_users[i].username, reg_users[i].cmd_counter);
+								break;
+							case 29:
+								make_move(i);
 								write_client_id(reg_users[i].sockfd, reg_users[i].username, reg_users[i].cmd_counter);
 								break;
 							}
