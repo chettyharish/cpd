@@ -179,6 +179,20 @@ void set_defaults() {
 	}
 }
 
+void remove_endlines(char *text) {
+	for (int i = 0; i < strlen(text); i++) {
+		if (text[i] == '\n')
+			text[i] = '|';
+	}
+}
+
+void add_endlines(char *text) {
+	for (int i = 0; i < strlen(text); i++) {
+		if (text[i] == '|')
+			text[i] = '\n';
+	}
+}
+
 void load_files() {
 	set_defaults();
 	/*Fake entries*/
@@ -215,28 +229,116 @@ void load_files() {
 
 }
 
-void store_files() {
+void load_db() {
+	set_defaults();
 	char data[2 * MSGSIZE];
+	char temp_msg[2 * MSGSIZE];
+	FILE *registry = fopen("ttt_registry_table", "r");
+
+	char *username, *password, *loc, *rest;
+	for (int i = 0; i < MAXCONN; i++) {
+		if (fgets(data, 2 * MSGSIZE, registry) == NULL) {
+			perror("fgets");
+		}
+		username = __strtok_r(data, "^", &rest);
+		password = __strtok_r(NULL, "^", &rest);
+		loc = __strtok_r(NULL, "\n", &rest);
+		if (strcmp(username, "NULL") == 0)
+			break;
+
+		strcpy(reg_table[i].username, username);
+		strcpy(reg_table[i].password, password);
+		reg_table[i].loc = atoi(loc);
+		printf("Read username = %s , password = %s , loc = %d\n", username, password, atoi(loc));
+	}
+
+	char *username2, *info, *rating, *wins, *losses, *draws, *quiet;
+	for (int i = 0; i < MAXCONN; i++) {
+		if (strcmp(reg_table[i].username, "NULL") == 0)
+			break;
+		sprintf(data, "ttt_user_%s", reg_table[i].username);
+		FILE *user_file = fopen(data, "r");
+		if (fgets(data, 2 * MSGSIZE, user_file) == NULL) {
+			perror("fgets");
+		}
+		username2 = __strtok_r(data, "^", &rest);
+		info = __strtok_r(NULL, "^", &rest);
+		rating = __strtok_r(NULL, "^", &rest);
+		wins = __strtok_r(NULL, "^", &rest);
+		losses = __strtok_r(NULL, "^", &rest);
+		draws = __strtok_r(NULL, "^", &rest);
+		quiet = __strtok_r(NULL, "^", &rest);
+//		printf("u2 = %s , i = %s , r = %f , w = %d, l = %d , d = %d , q = %d\n", username2, info, atof(rating), atoi(wins), atoi(losses), atoi(draws), atoi(quiet));
+
+		strcpy(reg_users[i].username, username2);
+		strcpy(reg_users[i].info, info);
+		reg_users[i].rating = atof(rating);
+		reg_users[i].wins = atoi(wins);
+		reg_users[i].losses = atoi(losses);
+		reg_users[i].draws = atoi(draws);
+		reg_users[i].quiet = atoi(quiet);
+
+		for (int j = 0; j < NUMMSG; j++) {
+			char *from, *to, *title, *text, *read_status, *timestamp;
+			if (fgets(data, 2 * MSGSIZE, user_file) == NULL) {
+				perror("fgets");
+			}
+			from = __strtok_r(data, "^", &rest);
+			to = __strtok_r(NULL, "^", &rest);
+			title = __strtok_r(NULL, "^", &rest);
+			text = __strtok_r(NULL, "^", &rest);
+			read_status = __strtok_r(NULL, "^", &rest);
+			timestamp = __strtok_r(NULL, "\n", &rest);
+			add_endlines(text);
+//			printf("f = %s, t = %s , t = %s  , rs = %d , ts = %s\n", from, to, title, atoi(read_status), timestamp);
+//			printf("text : %s", text);
+
+			strcpy(reg_users[i].mail_list[j].from_username, from);
+			strcpy(reg_users[i].mail_list[j].to_username, to);
+			strcpy(reg_users[i].mail_list[j].title, title);
+			strcpy(reg_users[i].mail_list[j].text, text);
+			reg_users[i].mail_list[j].read_status = atoi(read_status);
+			strcpy(reg_users[i].mail_list[j].timestamp, timestamp);
+		}
+
+		if (fgets(data, 2 * MSGSIZE, user_file) == NULL) {
+			perror("fgets");
+		}
+		char *blk;
+		blk = __strtok_r(data, "^", &rest);
+		for (int j = 0; j < MAXCONN; j++) {
+//			printf("j = %d blk = %d\n",j, atoi(blk));
+			reg_users[i].blk_list[j] = atoi(blk);
+			blk = __strtok_r(NULL, "^", &rest);
+		}
+		fclose(user_file);
+	}
+}
+
+void store_db() {
+	char data[2 * MSGSIZE];
+	char temp_msg[2 * MSGSIZE];
 	FILE *registry = fopen("ttt_registry_table", "w+");
 	for (int i = 0; i < MAXCONN; i++) {
-		sprintf(data, "%s,%s,%d\n", reg_table[i].username, reg_table[i].password, reg_table[i].loc);
+		sprintf(data, "%s^%s^%d\n", reg_table[i].username, reg_table[i].password, reg_table[i].loc);
 		fprintf(registry, "%s", data);
-
 		if (strcmp(reg_table[i].username, "NULL") != 0) {
 			sprintf(data, "ttt_user_%s", reg_table[i].username);
 			FILE *user_file = fopen(data, "w+");
-			sprintf(data, "%s,%s,%f,%d,%d,%d,%d\n", reg_users[i].username, reg_users[i].info, reg_users[i].rating, reg_users[i].wins, reg_users[i].losses, reg_users[i].draws, reg_users[i].quiet);
+			sprintf(data, "%s^%s^%f^%d^%d^%d^%d\n", reg_users[i].username, reg_users[i].info, reg_users[i].rating, reg_users[i].wins, reg_users[i].losses, reg_users[i].draws, reg_users[i].quiet);
 			fprintf(user_file, "%s", data);
-			for (int j = 0; j < MAXCONN; j++) {
-				if (j != MAXCONN - 1)
-					fprintf(user_file, "%d,", reg_users[i].blk_list[j]);
-				else
-					fprintf(user_file, "%d\n", reg_users[i].blk_list[j]);
-			}
 			for (int j = 0; j < NUMMSG; j++) {
-				sprintf(data, "%s,%s,%s,%s,%d,%s\n", reg_users[i].mail_list[j].from_username, reg_users[i].mail_list[j].to_username, reg_users[i].mail_list[j].title, reg_users[i].mail_list[j].text,
+				strcpy(temp_msg, reg_users[i].mail_list[j].text);
+				remove_endlines(temp_msg);
+				sprintf(data, "%s^%s^%s^%s^%d^%s\n", reg_users[i].mail_list[j].from_username, reg_users[i].mail_list[j].to_username, reg_users[i].mail_list[j].title, temp_msg,
 						reg_users[i].mail_list[j].read_status, reg_users[i].mail_list[j].timestamp);
 				fprintf(user_file, "%s", data);
+			}
+			for (int j = 0; j < MAXCONN; j++) {
+				if (j < MAXCONN - 1)
+					fprintf(user_file, "%d^", reg_users[i].blk_list[j]);
+				else
+					fprintf(user_file, "%d\n", reg_users[i].blk_list[j]);
 			}
 			fclose(user_file);
 		}
@@ -582,6 +684,13 @@ void reset_guest(int gid, bool closed) {
 	guest_users[gid].trying_to_register = false;
 }
 
+void reset_client(int uid) {
+	close(reg_users[uid].sockfd);
+	reg_users[uid].sockfd = -1;
+	reg_users[uid].cmd_counter = 0;
+	reg_users[uid].isloggedin = false;
+}
+
 int find_free_loc() {
 	for (int i = 0; i < MAXCONN; i++) {
 		if (reg_table[i].loc == -1) {
@@ -822,6 +931,17 @@ void setup_match(int uid) {
 				printf("request = %d , response = %d\n", ret, uid);
 				print_game_table(i, true, -1);
 				write_client_id(reg_users[ret].sockfd, reg_users[ret].username, reg_users[ret].cmd_counter);
+
+				/*Delete the temp stuff*/
+				reg_users[uid].trying_to_match = false;
+				reg_users[uid].trying_to_match_color = -1;
+				reg_users[uid].trying_to_match_time = 0;
+				reg_users[uid].trying_to_match_player = -1;
+
+				reg_users[ret].trying_to_match = false;
+				reg_users[ret].trying_to_match_color = -1;
+				reg_users[ret].trying_to_match_time = 0;
+				reg_users[uid].trying_to_match_player = -1;
 				return;
 			}
 		}
@@ -951,6 +1071,10 @@ void refresh_game(int uid) {
 			print_game_table(reg_users[uid].observeids[i], false, uid);
 		}
 	}
+	if (reg_users[uid].playing == true) {
+		loc_obs = true;
+		print_game_table(reg_users[uid].gameid, false, uid);
+	}
 
 	if (loc_obs == false) {
 		sprintf(ret_msg, "You are not observing any games\n");
@@ -961,7 +1085,6 @@ void refresh_game(int uid) {
 
 void reset_game(int gid) {
 	/*Reset the game if someone was playing*/
-	printf("inside\n");
 	game_list[gid].in_use = false;
 	game_list[gid].num_moves = 0;
 	game_list[gid].player1 = -1;
@@ -970,7 +1093,6 @@ void reset_game(int gid) {
 	game_list[gid].p2_move = false;
 	game_list[gid].p1_color = -1;
 	game_list[gid].p2_color = -1;
-	printf("inside\n");
 	game_list[gid].p1_time = 0;
 	game_list[gid].p2_time = 0;
 	game_list[gid].game_table[0][0] = -1;
@@ -983,9 +1105,17 @@ void reset_game(int gid) {
 	game_list[gid].game_table[2][1] = -1;
 	game_list[gid].game_table[2][2] = -1;
 	for (int j = 0; j < MAXCONN; j++) {
+		if (game_list[gid].observers[j] != -1) {
+			/*Remove gid from persons list*/
+			int pid = game_list[gid].observers[j];
+			for (int k = 0; k < MAXCONN; k++) {
+				if (reg_users[k].observeids[k] == gid) {
+					reg_users[k].observeids[k] = -1;
+				}
+			}
+		}
 		game_list[gid].observers[j] = -1;
 	}
-	printf("inside\n");
 }
 
 int test_game_condition(int gid) {
@@ -1135,10 +1265,8 @@ void make_move(int uid) {
 			}
 		}
 
-		printf("1 here\n");
 		write_return(reg_users[game_list[gid].player1].sockfd);
 		write_return(reg_users[game_list[gid].player2].sockfd);
-		printf("2 here\n");
 		/*Update stats*/
 		if (game_list[gid].p1_color == 0) {
 			reg_users[game_list[gid].player1].wins++;
@@ -1147,14 +1275,11 @@ void make_move(int uid) {
 			reg_users[game_list[gid].player2].wins++;
 			reg_users[game_list[gid].player1].losses++;
 		}
-		printf("3 here\n");
 		reg_users[game_list[gid].player1].playing = false;
 		reg_users[game_list[gid].player2].playing = false;
-		printf("4 here\n");
 		set_rating(game_list[gid].player1);
 		set_rating(game_list[gid].player2);
 		reset_game(gid);
-		printf("5 here\n");
 		return;
 	} else if (stat == 1) {
 		/*Player 1 has won*/
@@ -1211,6 +1336,42 @@ void make_move(int uid) {
 		}
 	}
 
+}
+
+void resign_game(int uid) {
+	if (reg_users[uid].playing == false) {
+		sprintf(ret_msg, "You are not playing a game\n");
+		write_return(reg_users[uid].sockfd);
+		return;
+	}
+
+	int gid = reg_users[uid].gameid;
+	if (game_list[gid].player1 == uid) {
+		/*Player 1 has quit*/
+		reg_users[game_list[gid].player1].losses++;
+		reg_users[game_list[gid].player2].wins++;
+	} else {
+		/*Player 2 has quit*/
+		reg_users[game_list[gid].player1].wins++;
+		reg_users[game_list[gid].player2].losses++;
+		return;
+	}
+	sprintf(ret_msg, "\n<%s resigned>\n", reg_users[uid].username);
+	for (int i = 0; i < MAXCONN; i++) {
+		if (game_list[gid].observers[i] != -1) {
+			write_return(reg_users[game_list[gid].observers[i]].sockfd);
+			write_client_id(reg_users[game_list[gid].observers[i]].sockfd, reg_users[game_list[gid].observers[i]].username, reg_users[game_list[gid].observers[i]].cmd_counter);
+		}
+	}
+	write_return(reg_users[game_list[gid].player1].sockfd);
+	write_return(reg_users[game_list[gid].player2].sockfd);
+	reg_users[game_list[gid].player1].playing = false;
+	reg_users[game_list[gid].player2].playing = false;
+	reg_users[game_list[gid].player1].gameid = -1;
+	reg_users[game_list[gid].player2].gameid = -1;
+	set_rating(game_list[gid].player1);
+	set_rating(game_list[gid].player2);
+	reset_game(gid);
 }
 
 void kibitz_message(int uid) {
@@ -1284,20 +1445,20 @@ void quot_message(int uid) {
 						write_client_id(reg_users[pid].sockfd, reg_users[pid].username, reg_users[pid].cmd_counter);
 					}
 				}
+			}
 
-				int p1 = game_list[gid].player1;
-				int p2 = game_list[gid].player2;
-				if (check_blocked(p1, uid) == false) {
-					sprintf(ret_msg, "quot* %s: %s\n", reg_users[uid].username, msg);
-					write_return(reg_users[p1].sockfd);
-					write_client_id(reg_users[p1].sockfd, reg_users[p1].username, reg_users[p1].cmd_counter);
-				}
+			int p1 = game_list[gid].player1;
+			int p2 = game_list[gid].player2;
+			if (check_blocked(p1, uid) == false) {
+				sprintf(ret_msg, "quot* %s: %s\n", reg_users[uid].username, msg);
+				write_return(reg_users[p1].sockfd);
+				write_client_id(reg_users[p1].sockfd, reg_users[p1].username, reg_users[p1].cmd_counter);
+			}
 
-				if (check_blocked(p2, uid) == false) {
-					sprintf(ret_msg, "quot* %s: %s\n", reg_users[uid].username, msg);
-					write_return(reg_users[p2].sockfd);
-					write_client_id(reg_users[p2].sockfd, reg_users[p2].username, reg_users[p2].cmd_counter);
-				}
+			if (check_blocked(p2, uid) == false) {
+				sprintf(ret_msg, "quot* %s: %s\n", reg_users[uid].username, msg);
+				write_return(reg_users[p2].sockfd);
+				write_client_id(reg_users[p2].sockfd, reg_users[p2].username, reg_users[p2].cmd_counter);
 			}
 		}
 	}
@@ -1355,22 +1516,31 @@ void read_mail_msg(int uid) {
 					write_client_id(reg_users[ret].sockfd, reg_users[ret].username, reg_users[ret].cmd_counter);
 				}
 				write_client_id(reg_users[uid].sockfd, reg_users[uid].username, reg_users[uid].cmd_counter);
+				strcpy(usr_msg, "");
 				return;
 			}
 		}
 		sprintf(ret_msg, "%s Mailbox is full.", reg_users[uid].username);
 		write_return(reg_users[uid].sockfd);
+		strcpy(usr_msg, "");
 		return;
 	}
-	strcat(reg_users[uid].message_body, usr_msg);
+	if (strcmp(reg_users[uid].message_body, "NULL") == 0) {
+		/*First word so remove that null*/
+		strcpy(reg_users[uid].message_body, usr_msg);
+		strcat(reg_users[uid].message_body, "\n");
+	} else {
+		strcat(reg_users[uid].message_body, usr_msg);
+		strcat(reg_users[uid].message_body, "\n");
+	}
 }
 
 void send_mail(int uid) {
-	char *username, *cmd, *msg;
+	char *username, *cmd, *msg, *rest;
 	char temp_cmd[MSGSIZE];
 	strcpy(temp_cmd, usr_msg);
-	username = __strtok_r(temp_cmd, " ", &msg);
-	username = __strtok_r(NULL, " ", &msg);
+	username = __strtok_r(temp_cmd, " ", &rest);
+	username = __strtok_r(NULL, " ", &rest);
 
 	printf("Telling username = %s\t msg = %s\n", username, msg);
 	fflush(stdout);
@@ -1379,12 +1549,22 @@ void send_mail(int uid) {
 		/*User not found*/
 		sprintf(ret_msg, "User not found, please check the username\n");
 		write_return(reg_users[uid].sockfd);
+		write_client_id(reg_users[uid].sockfd, reg_users[uid].username, reg_users[uid].cmd_counter);
 		return;
 	}
 
 	if (check_blocked(ret, uid) == true) {
 		sprintf(ret_msg, "You cannot mail to %s. You are blocked\n", username);
 		write_return(reg_users[uid].sockfd);
+		write_client_id(reg_users[uid].sockfd, reg_users[uid].username, reg_users[uid].cmd_counter);
+		return;
+	}
+
+	msg = __strtok_r(NULL, "\n", &rest);
+	if (msg == NULL) {
+		sprintf(ret_msg, "Your mail does not have a title\n");
+		write_return(reg_users[uid].sockfd);
+		write_client_id(reg_users[uid].sockfd, reg_users[uid].username, reg_users[uid].cmd_counter);
 		return;
 	}
 
@@ -1561,7 +1741,9 @@ int main(int argc, char **argv) {
 	fd_set allset, rset;
 	int maxfd = 0;
 
-	load_files();
+	load_db();
+
+//	load_files();
 
 	saddr_server.sin_addr.s_addr = INADDR_ANY;
 	saddr_server.sin_family = AF_INET;
@@ -1651,6 +1833,14 @@ int main(int argc, char **argv) {
 
 						switch (ret) {
 						case 27:
+							if (guest_users[i].entered_username == true) {
+								/*Password is a empty line so close connection*/
+								printf("Guest %d has left\n", i);
+								sprintf(ret_msg, "Login failed!!\nThank you for using Online Tic-tac-toe Server.\nSee you next time.\n");
+								write_return(guest_users[i].sockfd);
+								FD_CLR(guest_users[i].sockfd, &allset);
+								reset_guest(i, true);
+							}
 							if (guest_users[i].entered_username == false) {
 								/*Going to register mode*/
 								guest_users[i].trying_to_register = true;
@@ -1687,6 +1877,7 @@ int main(int argc, char **argv) {
 											write_return(reg_users[userid].sockfd);
 											FD_CLR(reg_users[userid].sockfd, &allset);
 											close(reg_users[userid].sockfd);
+											reset_client(userid);
 										}
 										reg_table[userid].logged_in = true;
 										reg_users[userid].sockfd = guest_users[i].sockfd;
@@ -1717,7 +1908,6 @@ int main(int argc, char **argv) {
 						case 24:
 							/*Calling for help via help or ?*/
 						case 25:
-							store_files();
 							printMenu(guest_users[i].sockfd);
 							guest_users[i].cmd_counter++;
 							write_client_id(guest_users[i].sockfd, guest_users[i].username, guest_users[i].cmd_counter);
@@ -1771,6 +1961,8 @@ int main(int argc, char **argv) {
 							case -1:
 								/*Writing body now so ignore everything else*/
 								read_mail_msg(i);
+								/*To counter the addition at the end*/
+								reg_users[i].cmd_counter--;
 								break;
 							case 0:
 								/*who call*/
@@ -1799,6 +1991,14 @@ int main(int argc, char **argv) {
 							case 5:
 								/*match call*/
 								setup_match(i);
+								write_client_id(reg_users[i].sockfd, reg_users[i].username, reg_users[i].cmd_counter);
+								break;
+							case 6:
+								resign_game(i);
+								write_client_id(reg_users[i].sockfd, reg_users[i].username, reg_users[i].cmd_counter);
+								break;
+							case 7:
+								refresh_game(i);
 								write_client_id(reg_users[i].sockfd, reg_users[i].username, reg_users[i].cmd_counter);
 								break;
 							case 8:
@@ -1880,7 +2080,7 @@ int main(int argc, char **argv) {
 								reg_users[i].isloggedin = false;
 								reg_users[i].isloggedin = false;
 								close(reg_users[i].sockfd);
-								reg_users[i].sockfd = -1;
+								reset_client(i);
 								break;
 							case 24:
 								/*Calling for help via help or ?*/
@@ -1891,6 +2091,7 @@ int main(int argc, char **argv) {
 								break;
 							case 26:
 								sprintf(ret_msg, "Only guest users can register.\n");
+								write_return(reg_users[i].sockfd);
 								write_client_id(reg_users[i].sockfd, reg_users[i].username, reg_users[i].cmd_counter);
 								break;
 							case 27:
@@ -1905,6 +2106,7 @@ int main(int argc, char **argv) {
 								write_client_id(reg_users[i].sockfd, reg_users[i].username, reg_users[i].cmd_counter);
 								break;
 							}
+							store_db();
 							reg_users[i].cmd_counter++;
 						}
 					} // user switch ends
