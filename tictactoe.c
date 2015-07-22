@@ -20,11 +20,11 @@
 #include <limits.h>
 #include <string.h>
 
+#define brutal 2
 #define MAXCONN 50
 #define NUMMSG 20
 #define MSGSIZE 2048
 #define STLEN 100
-//#define ALRMTIME 30
 char usr_msg[MSGSIZE];
 char ret_msg[MSGSIZE];
 
@@ -1697,6 +1697,34 @@ void delete_mail(int uid) {
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+bool test_length(int num, bool gt) {
+#if brutal==1
+	char temp[MSGSIZE];
+	strcpy(temp, usr_msg);
+	int counter = 0;
+	char * newString;
+	newString = strtok(usr_msg, " ");
+	while (newString != NULL) {
+		counter++;
+		newString = strtok(NULL, " ");
+	}
+
+	if (gt == true) {
+		/*Must be equal or greater than num*/
+		if (counter >= num)
+			return true;
+		return false;
+	} else {
+		/*Must exactly be equal to num*/
+		if (counter == num)
+			return true;
+		return false;
+	}
+#else
+	return true;
+#endif
+}
+
 int match_command() {
 	char temp_cmd[MSGSIZE];
 	strcpy(temp_cmd, usr_msg);
@@ -1710,85 +1738,139 @@ int match_command() {
 
 	if (strcmp(cmd, "who") == 0) {
 		printf("Calling who\n");
-		return 0;
+		if (test_length(1, false))
+			return 0;
+		return 28;
 	} else if (strcmp(cmd, "stats") == 0) {
 		printf("Calling stats\n");
-		return 1;
+		if (test_length(2, false))
+			return 1;
+		return 28;
 	} else if (strcmp(cmd, "game") == 0) {
 		printf("Calling game\n");
-		return 2;
+		if (test_length(1, false))
+			return 2;
+		return 28;
 	} else if (strcmp(cmd, "observe") == 0) {
 		printf("Calling observe\n");
-		return 3;
+		if (test_length(2, false))
+			return 3;
+		return 28;
 	} else if (strcmp(cmd, "unobserve") == 0) {
 		printf("Calling unobserve\n");
-		return 4;
+		if (test_length(2, false))
+			return 4;
+		return 28;
 	} else if (strcmp(cmd, "match") == 0) {
 		printf("Calling match\n");
-		return 5;
+		if (test_length(2, true))
+			return 5;
+		return 28;
 	} else if (strcmp(cmd, "resign") == 0) {
 		printf("Calling resign\n");
-		return 6;
+		if (test_length(1, false))
+			return 6;
+		return 28;
 	} else if (strcmp(cmd, "refresh") == 0) {
 		printf("Calling refresh\n");
-		return 7;
+		if (test_length(1, false))
+			return 7;
+		return 28;
 	} else if (strcmp(cmd, "shout") == 0) {
 		printf("Calling shout\n");
-		return 8;
+		if (test_length(2, true))
+			return 8;
+		return 28;
 	} else if (strcmp(cmd, "tell") == 0) {
 		printf("Calling tell\n");
-		return 9;
+		if (test_length(3, true))
+			return 9;
+		return 28;
 	} else if (strcmp(cmd, "kibitz") == 0) {
 		printf("Calling kibitz\n");
-		return 10;
+		if (test_length(2, true))
+			return 10;
+		return 28;
 	} else if (strcmp(cmd, "'") == 0) {
 		printf("Calling quot\n");
-		return 11;
+		if (test_length(2, true))
+			return 11;
+		return 28;
 	} else if (strcmp(cmd, "quiet") == 0) {
 		printf("Calling quiet\n");
-		return 12;
+		if (test_length(1, false))
+			return 12;
+		return 28;
 	} else if (strcmp(cmd, "nonquiet") == 0) {
 		printf("Calling nonquiet\n");
-		return 13;
+		if (test_length(1, false))
+			return 13;
+		return 28;
 	} else if (strcmp(cmd, "block") == 0) {
 		printf("Calling block\n");
-		return 14;
+		if (test_length(2, false))
+			return 14;
+		return 28;
 	} else if (strcmp(cmd, "unblock") == 0) {
 		printf("Calling unblock\n");
-		return 15;
+		if (test_length(2, false))
+			return 15;
+		return 28;
 	} else if (strcmp(cmd, "listmail") == 0) {
 		printf("Calling listmail\n");
-		return 16;
+		if (test_length(1, false))
+			return 16;
+		return 28;
 	} else if (strcmp(cmd, "readmail") == 0) {
 		printf("Calling readmail\n");
-		return 17;
+		if (test_length(2, false))
+			return 17;
+		return 28;
 	} else if (strcmp(cmd, "deletemail") == 0) {
 		printf("Calling deletemail\n");
-		return 18;
+		if (test_length(2, false))
+			return 18;
+		return 28;
 	} else if (strcmp(cmd, "mail") == 0) {
 		printf("Calling mail\n");
-		return 19;
+		if (test_length(3, true))
+			return 19;
+		return 28;
 	} else if (strcmp(cmd, "info") == 0) {
 		printf("Calling info\n");
-		return 20;
+		if (test_length(2, true))
+			return 20;
+		return 28;
 	} else if (strcmp(cmd, "passwd") == 0) {
 		printf("Calling passwd\n");
-		return 21;
+		if (test_length(2, false))
+			return 21;
+		return 28;
 	} else if (strcmp(cmd, "exit") == 0) {
 		printf("Calling exit\n");
-		return 22;
+		if (test_length(1, false))
+			return 22;
+		return 28;
 	} else if (strcmp(cmd, "quit") == 0) {
 		printf("Calling quit\n");
-		return 23;
+		if (test_length(1, false))
+			return 23;
+		return 28;
 	} else if (strcmp(cmd, "help") == 0) {
 		printf("Calling help\n");
-		return 24;
+		if (test_length(1, false))
+			return 24;
+		return 28;
 	} else if (strcmp(cmd, "?") == 0) {
 		printf("Calling ?\n");
-		return 25;
+		if (test_length(1, false))
+			return 25;
+		return 28;
 	} else if (strcmp(cmd, "register") == 0) {
 		printf("Calling register\n");
-		return 26;
+		if (test_length(3, false))
+			return 26;
+		return 28;
 	} else if (strcmp(cmd, "\n") == 0) {
 		/*Empty line*/
 		printf("Empty Line\n");
