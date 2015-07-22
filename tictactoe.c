@@ -24,7 +24,7 @@
 #define NUMMSG 20
 #define MSGSIZE 2048
 #define STLEN 100
-#define ALRMTIME 30
+//#define ALRMTIME 30
 char usr_msg[MSGSIZE];
 char ret_msg[MSGSIZE];
 
@@ -96,6 +96,8 @@ struct game {
 	int game_table[3][3];
 	int p1_color;
 	int p2_color;
+	size_t p1_start;
+	size_t p2_start;
 	double p1_time;
 	double p2_time;
 } game_list[MAXCONN];
@@ -831,7 +833,7 @@ int test_match_response(int player1, int player2) {
 }
 
 void setup_match(int uid) {
-	char *username, *color, *time, *rest;
+	char *username, *color, *time_num, *rest;
 	bool color_selected = false;
 	int game_time = 600;
 	int color_player = 0;
@@ -903,9 +905,9 @@ void setup_match(int uid) {
 
 	if (color_selected == true) {
 		/*Only try to read time if color is selected*/
-		time = __strtok_r(NULL, " ", &rest);
-		if (time != NULL) {
-			game_time = atoi(time);
+		time_num = __strtok_r(NULL, " ", &rest);
+		if (time_num != NULL) {
+			game_time = atoi(time_num);
 		}
 	}
 
@@ -932,10 +934,12 @@ void setup_match(int uid) {
 				reg_users[uid].playing = true;
 				reg_users[ret].playing = true;
 				if (reg_users[ret].trying_to_match_color == 0) {
+					game_list[i].p1_start = time(0);
 					game_list[i].p1_move = true;
 					game_list[i].p1_color = 0;
 					game_list[i].p2_color = 1;
 				} else {
+					game_list[i].p2_start = time(0);
 					game_list[i].p2_move = true;
 					game_list[i].p1_color = 1;
 					game_list[i].p2_color = 0;
@@ -1174,68 +1178,28 @@ void set_rating(int uid) {
 	reg_users[uid].rating = (reg_users[uid].wins * 1.0f) / (reg_users[uid].wins + reg_users[uid].losses + reg_users[uid].draws);
 }
 
-static __inline__ void signal_alarm(int signo) {
-	for (int i = 0; i < MAXCONN; i++) {
-		if (game_list[i].in_use == true) {
-			if (game_list[i].p1_move == true) {
-				game_list[i].p1_time -= ALRMTIME;
-			} else {
-				game_list[i].p2_time -= ALRMTIME;
-			}
+//static __inline__ void signal_alarm(int signo) {
+//	for (int i = 0; i < MAXCONN; i++) {
+//		if (game_list[i].in_use == true) {
+//			if (game_list[i].p1_move == true) {
+//				game_list[i].p1_time -= ALRMTIME;
+//			} else {
+//				game_list[i].p2_time -= ALRMTIME;
+//			}
+//
+//			if (game_list[i].p2_time < 0) {
+/*Player  1 has won due to time out*/
 
-			if (game_list[i].p2_time < 0) {
-				/*Player  1 has won due to time out*/
-				print_game_table(i, true, -1);
-				sprintf(ret_msg, "\n%s has won game %d due to timeout\n", reg_users[game_list[i].player1].username, i);
-				reg_users[game_list[i].player1].wins++;
-				reg_users[game_list[i].player2].losses++;
+//			} else if (game_list[i].p1_time < 0) {
+/*Player  2 has won due to time out*/
 
-				for (int i = 0; i < MAXCONN; i++) {
-					if (game_list[i].observers[i] != -1) {
-						write_return(reg_users[game_list[i].observers[i]].sockfd);
-						write_client_id(reg_users[game_list[i].observers[i]].sockfd, reg_users[game_list[i].observers[i]].username, reg_users[game_list[i].observers[i]].cmd_counter);
-
-					}
-				}
-
-				write_return(reg_users[game_list[i].player1].sockfd);
-				write_return(reg_users[game_list[i].player2].sockfd);
-				reg_users[game_list[i].player1].playing = false;
-				reg_users[game_list[i].player2].playing = false;
-				set_rating(game_list[i].player1);
-				set_rating(game_list[i].player2);
-				reset_game(i);
-			} else if (game_list[i].p1_time < 0) {
-				/*Player  2 has won due to time out*/
-				print_game_table(i, true, -1);
-				sprintf(ret_msg, "\n%s has won game %d due to timeout\n", reg_users[game_list[i].player2].username, i);
-				reg_users[game_list[i].player1].losses++;
-				reg_users[game_list[i].player2].wins++;
-
-				for (int i = 0; i < MAXCONN; i++) {
-					if (game_list[i].observers[i] != -1) {
-						write_return(reg_users[game_list[i].observers[i]].sockfd);
-						write_client_id(reg_users[game_list[i].observers[i]].sockfd, reg_users[game_list[i].observers[i]].username, reg_users[game_list[i].observers[i]].cmd_counter);
-					}
-				}
-
-				write_return(reg_users[game_list[i].player1].sockfd);
-				write_return(reg_users[game_list[i].player2].sockfd);
-				write_client_id(reg_users[game_list[i].player1].sockfd, reg_users[game_list[i].player1].username, reg_users[game_list[i].player1].cmd_counter);
-				write_client_id(reg_users[game_list[i].player2].sockfd, reg_users[game_list[i].player2].username, reg_users[game_list[i].player2].cmd_counter);
-				reg_users[game_list[i].player1].playing = false;
-				reg_users[game_list[i].player2].playing = false;
-				set_rating(game_list[i].player1);
-				set_rating(game_list[i].player2);
-				reset_game(i);
-			}
-		}
-
-	}
-
-	alarm(ALRMTIME);
-}
-
+//			}
+//		}
+//
+//	}
+//
+//	alarm(ALRMTIME);
+//}
 void make_move(int uid) {
 	char *cmd, *rest;
 	char temp_cmd[MSGSIZE];
@@ -1249,6 +1213,64 @@ void make_move(int uid) {
 	}
 
 	int gid = reg_users[uid].gameid;
+
+	if (game_list[gid].p1_move == true) {
+		game_list[gid].p1_time -= difftime(time(0), game_list[gid].p1_start);
+		game_list[gid].p1_start = time(0);
+	} else {
+		game_list[gid].p2_time -= difftime(time(0), game_list[gid].p2_start);
+		game_list[gid].p2_start = time(0);
+	}
+
+	if (game_list[gid].p1_time < 0) {
+		/*Player 2 has won*/
+		print_game_table(gid, true, -1);
+		sprintf(ret_msg, "\n%s has won game %d due to timeout\n", reg_users[game_list[gid].player2].username, gid);
+		reg_users[game_list[gid].player1].losses++;
+		reg_users[game_list[gid].player2].wins++;
+
+		for (int i = 0; i < MAXCONN; i++) {
+			if (game_list[i].observers[i] != -1) {
+				write_return(reg_users[game_list[i].observers[i]].sockfd);
+				write_client_id(reg_users[game_list[i].observers[i]].sockfd, reg_users[game_list[i].observers[i]].username, reg_users[game_list[i].observers[i]].cmd_counter);
+			}
+		}
+
+		write_return(reg_users[game_list[gid].player1].sockfd);
+		write_return(reg_users[game_list[gid].player2].sockfd);
+		write_client_id(reg_users[game_list[gid].player1].sockfd, reg_users[game_list[gid].player1].username, reg_users[game_list[gid].player1].cmd_counter);
+		write_client_id(reg_users[game_list[gid].player2].sockfd, reg_users[game_list[gid].player2].username, reg_users[game_list[gid].player2].cmd_counter);
+		reg_users[game_list[gid].player1].playing = false;
+		reg_users[game_list[gid].player2].playing = false;
+		set_rating(game_list[gid].player1);
+		set_rating(game_list[gid].player2);
+		reset_game(gid);
+		return;
+	} else if (game_list[gid].p2_time < 0) {
+		/*Player 1 has won*/
+		print_game_table(gid, true, -1);
+		sprintf(ret_msg, "\n%s has won game %d due to timeout\n", reg_users[game_list[gid].player1].username, gid);
+		reg_users[game_list[gid].player1].wins++;
+		reg_users[game_list[gid].player2].losses++;
+
+		for (int i = 0; i < MAXCONN; i++) {
+			if (game_list[i].observers[i] != -1) {
+				write_return(reg_users[game_list[i].observers[i]].sockfd);
+				write_client_id(reg_users[game_list[i].observers[i]].sockfd, reg_users[game_list[i].observers[i]].username, reg_users[game_list[i].observers[i]].cmd_counter);
+
+			}
+		}
+
+		write_return(reg_users[game_list[gid].player1].sockfd);
+		write_return(reg_users[game_list[gid].player2].sockfd);
+		reg_users[game_list[gid].player1].playing = false;
+		reg_users[game_list[gid].player2].playing = false;
+		set_rating(game_list[gid].player1);
+		set_rating(game_list[gid].player2);
+		reset_game(gid);
+		return;
+	}
+
 	if ((game_list[gid].player1 == uid && game_list[gid].p1_move == false) || (game_list[gid].player2 == uid && game_list[gid].p2_move == false)) {
 		/*Not the players turn*/
 		sprintf(ret_msg, "Its not your turn.\n");
@@ -1325,9 +1347,11 @@ void make_move(int uid) {
 	if ((game_list[gid].player1 == uid)) {
 		game_list[gid].p1_move = false;
 		game_list[gid].p2_move = true;
+		game_list[gid].p2_start = time(0);
 	} else {
 		game_list[gid].p1_move = true;
 		game_list[gid].p2_move = false;
+		game_list[gid].p1_start = time(0);
 	}
 
 	printf("\n%s moving %d to (%d,%d)\n", reg_users[uid].username, p_color, pos1, pos2);
@@ -1791,14 +1815,6 @@ int main(int argc, char **argv) {
 	int maxfd = 0;
 
 	load_db();
-
-	/*Setup time handler here*/
-	struct sigaction action;
-	action.sa_handler = signal_alarm;
-	sigemptyset(&action.sa_mask);
-	action.sa_flags = 0;
-	sigaction(SIGALRM, &action, 0);
-	alarm(ALRMTIME);
 
 	saddr_server.sin_addr.s_addr = INADDR_ANY;
 	saddr_server.sin_family = AF_INET;
