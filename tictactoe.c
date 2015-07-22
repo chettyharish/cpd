@@ -723,8 +723,26 @@ void register_new_user(int sockfd) {
 	char temp_cmd[MSGSIZE];
 	strcpy(temp_cmd, usr_msg);
 	username = strtok(temp_cmd, " ");
-	username = strtok(NULL, " "); // Since first is register command
+	username = strtok(NULL, " ");
+
+	if(username == NULL){
+		sprintf(ret_msg, "Please enter a username\n");
+		write_return(sockfd);
+		return;
+
+	}
+
 	password = strtok(NULL, " \n");
+
+	if(password == NULL){
+		sprintf(ret_msg, "Please enter a password\n");
+		write_return(sockfd);
+		return;
+
+	}
+
+
+
 	printf("Trying to register username = %s with pass = %s\n", username, password);
 
 	for (int i = 0; i < MAXCONN; i++) {
@@ -1712,12 +1730,12 @@ bool test_length(int num, bool gt) {
 	if (gt == true) {
 		/*Must be equal or greater than num*/
 		if (counter >= num)
-			return true;
+		return true;
 		return false;
 	} else {
 		/*Must exactly be equal to num*/
 		if (counter == num)
-			return true;
+		return true;
 		return false;
 	}
 #else
@@ -1896,6 +1914,10 @@ int main(int argc, char **argv) {
 	fd_set allset, rset;
 	int maxfd = 0;
 
+	if (argc < 2) {
+		printf("Usage ./tictactoe pot_num\n");
+		exit(1);
+	}
 	load_db();
 
 	saddr_server.sin_addr.s_addr = INADDR_ANY;
@@ -2079,7 +2101,7 @@ int main(int argc, char **argv) {
 							guest_users[i].cmd_counter++;
 							break;
 						}
-
+						store_db();
 						guest_call = true;
 					}
 				}
