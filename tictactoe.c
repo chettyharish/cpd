@@ -607,10 +607,11 @@ bool check_blocked(int uid, int tid) {
 }
 
 void shout_msg(int uid) {
-	char *cmd, *msg;
+	char *cmd, *msg , *rest;
 	char temp_cmd[MSGSIZE];
 	strcpy(temp_cmd, usr_msg);
-	cmd = __strtok_r(temp_cmd, " ", &msg);
+	cmd = __strtok_r(temp_cmd, " ", &rest);
+	msg = __strtok_r(NULL, " ", &rest);
 
 	if (msg == NULL) {
 		sprintf(ret_msg, "Please enter a message\n");
@@ -634,17 +635,19 @@ void shout_msg(int uid) {
 }
 
 void tell_msg(int uid) {
-	char *username, *cmd, *msg;
+	char *username, *cmd, *msg , *rest;
 	char temp_cmd[MSGSIZE];
 	strcpy(temp_cmd, usr_msg);
-	username = __strtok_r(temp_cmd, " ", &msg);
-	username = __strtok_r(NULL, " ", &msg);
+	username = __strtok_r(temp_cmd, " ", &rest);
+	username = __strtok_r(NULL, " ", &rest);
+	msg = __strtok_r(NULL, " ", &rest);
 
 	if (msg == NULL) {
 		sprintf(ret_msg, "Please enter a message\n");
 		write_return(reg_users[uid].sockfd);
 		return;
 	}
+	printf("%d\n",msg[0]);
 	printf("Telling username = %s\t msg = %s\n", username, msg);
 	fflush(stdout);
 
@@ -1784,7 +1787,7 @@ bool test_length(int num, bool gt) {
 #endif
 }
 
-int match_command() {
+int match_command(int uid, bool isguest) {
 	char temp_cmd[MSGSIZE];
 	strcpy(temp_cmd, usr_msg);
 	char *cmd = usr_msg;
@@ -1907,28 +1910,63 @@ int match_command() {
 		return 28;
 	} else if (strcmp(cmd, "exit") == 0) {
 		printf("Calling exit\n");
-		if (test_length(1, false))
-			return 22;
+		if (test_length(1, false)) {
+			if (isguest == true) {
+				if (guest_users[uid].trying_to_register == true) {
+					return 22;
+				}
+			} else {
+				return 22;
+			}
+		}
 		return 28;
 	} else if (strcmp(cmd, "quit") == 0) {
 		printf("Calling quit\n");
-		if (test_length(1, false))
-			return 23;
+		if (test_length(1, false)) {
+			if (isguest == true) {
+				if (guest_users[uid].trying_to_register == true) {
+					return 23;
+				}
+			} else {
+				return 23;
+			}
+		}
 		return 28;
 	} else if (strcmp(cmd, "help") == 0) {
 		printf("Calling help\n");
-		if (test_length(1, false))
-			return 24;
+		if (test_length(1, false)) {
+			if (isguest == true) {
+				if (guest_users[uid].trying_to_register == true) {
+					return 24;
+				}
+			} else {
+				return 24;
+			}
+		}
 		return 28;
 	} else if (strcmp(cmd, "?") == 0) {
 		printf("Calling ?\n");
-		if (test_length(1, false))
-			return 25;
+		if (test_length(1, false)) {
+			if (isguest == true) {
+				if (guest_users[uid].trying_to_register == true) {
+					return 25;
+				}
+			} else {
+				return 25;
+			}
+		}
 		return 28;
 	} else if (strcmp(cmd, "register") == 0) {
 		printf("Calling register\n");
-		if (test_length(3, false))
-			return 26;
+		if (test_length(1, false)) {
+			if (isguest == true) {
+				if (guest_users[uid].trying_to_register == true) {
+					return 26;
+				}
+			} else {
+				return 26;
+			}
+		}
 		return 28;
 	} else if (strcmp(cmd, "\n") == 0) {
 		/*Empty line*/
@@ -2125,7 +2163,7 @@ int main(int argc, char **argv) {
 						reset_guest(i, true);
 					} else {
 						cleanup_usr_msg();
-						int ret = match_command();
+						int ret = match_command(i, true);
 
 						switch (ret) {
 						case 27:
@@ -2245,7 +2283,7 @@ int main(int argc, char **argv) {
 							reg_users[i].sockfd = -1;
 						} else {
 							cleanup_usr_msg();
-							int ret = match_command();
+							int ret = match_command(i, false);
 
 							if (reg_users[i].sending_mail == true) {
 								/*In sendmail mode, so ignore everything else */
@@ -2382,7 +2420,6 @@ int main(int argc, char **argv) {
 								/*Calling for help via help or ?*/
 							case 25:
 								printMenu(reg_users[i].sockfd);
-								reg_users[i].cmd_counter++;
 								write_client_id(reg_users[i].sockfd, reg_users[i].username, reg_users[i].cmd_counter);
 								break;
 							case 26:
