@@ -1523,14 +1523,15 @@ void print_num_unread_msg(int uid) {
 }
 
 void list_mail(int uid) {
+	sprintf(ret_msg, "!MAILBOX!\n");
 	for (int i = 0; i < NUMMSG; i++) {
 		if (i == 0 && reg_users[uid].mail_list[i].isfilled == false) {
-			sprintf(ret_msg, "!MAILBOX!\nYou have no messages.\n");
+			sprintf(ret_msg + strlen(ret_msg), "You have no messages.\n");
 			write_return(reg_users[uid].sockfd);
 			return;
 		}
 		if (reg_users[uid].mail_list[i].isfilled == true) {
-			sprintf(ret_msg + strlen(ret_msg), "!MAILBOX!\n%2d  %6s  %10s  \" %s \" %s\n", i, (reg_users[uid].mail_list[i].read_status == true) ? ("Read") : ("Unread"), reg_users[uid].mail_list[i].from_username,
+			sprintf(ret_msg + strlen(ret_msg), "%2d  %6s  %10s  \" %s \" %s\n", i, (reg_users[uid].mail_list[i].read_status == true) ? ("Read") : ("Unread"), reg_users[uid].mail_list[i].from_username,
 					reg_users[uid].mail_list[i].title, reg_users[uid].mail_list[i].timestamp);
 		}
 	}
@@ -1559,6 +1560,8 @@ void read_mail_msg(int uid) {
 					write_return(reg_users[ret].sockfd);
 					write_client_id(reg_users[ret].sockfd, reg_users[ret].username, reg_users[ret].cmd_counter);
 				}
+				sprintf(ret_msg,"Your message has been sent\n");
+				write_return(reg_users[uid].sockfd);
 				write_client_id(reg_users[uid].sockfd, reg_users[uid].username, reg_users[uid].cmd_counter);
 				strcpy(usr_msg, "");
 				strcpy(reg_users[uid].message_body, "");
