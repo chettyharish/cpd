@@ -1539,9 +1539,12 @@ void list_mail(int uid) {
 }
 
 void read_mail_msg(int uid) {
+	printf("Reading msg\n");
+	fflush(0);
 	if (strcmp(".", usr_msg) == 0) {
 		int ret = reg_users[uid].temp_sending_to;
 		printf("Message ended\n");
+		fflush(0);
 		reg_users[uid].sending_mail = false;
 		/*Send the mail here*/
 		/*Add the mail to the mailbox*/
@@ -1593,6 +1596,7 @@ void send_mail(int uid) {
 	username = __strtok_r(NULL, " ", &rest);
 
 	printf("Telling username = %s\t msg = %s\n", username, msg);
+	fflush(0);
 	fflush(stdout);
 	int ret = find_user(username);
 	if (ret == -1) {
