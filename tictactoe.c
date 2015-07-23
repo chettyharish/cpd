@@ -23,7 +23,7 @@
 #define brutal 2
 #define MAXCONN 50
 #define NUMMSG 20
-#define MSGSIZE 2048
+#define MSGSIZE 4096
 #define STLEN 100
 char usr_msg[MSGSIZE];
 char ret_msg[MSGSIZE];
@@ -338,7 +338,7 @@ void store_db() {
 				strcpy(temp_msg, reg_users[i].mail_list[j].text);
 				remove_endlines(temp_msg);
 				sprintf(data, "%s^%s^%s^%s^%d^%s^%d\n", reg_users[i].mail_list[j].from_username, reg_users[i].mail_list[j].to_username, reg_users[i].mail_list[j].title, temp_msg,
-						reg_users[i].mail_list[j].read_status, reg_users[i].mail_list[j].timestamp,reg_users[i].mail_list[j].isfilled);
+						reg_users[i].mail_list[j].read_status, reg_users[i].mail_list[j].timestamp, reg_users[i].mail_list[j].isfilled);
 				fprintf(user_file, "%s", data);
 			}
 			for (int j = 0; j < MAXCONN; j++) {
@@ -454,40 +454,45 @@ void get_stats(int sockfd) {
 		write_return(sockfd);
 		return;
 	} else {
-		sprintf(ret_msg, "User: %s\nInfo: %s\nRating: %f\nWins: %d, Loses: %d, Draws %d\nQuiet: %s\nBlocked users: ", reg_users[ret].username,
+		sprintf(ret_msg, "!STATS!\nUser: %s\nInfo: %s\nRating: %f\nWins: %d, Loses: %d, Draws %d\nQuiet: %s\nBlocked users: ", reg_users[ret].username,
 				(strcmp(reg_users[ret].info, "NULL") == 0) ? ("<none>") : (reg_users[ret].info), reg_users[ret].rating, reg_users[ret].wins, reg_users[ret].losses, reg_users[ret].draws,
 				(reg_users[ret].quiet) ? ("Yes") : ("No"));
-		write_return(sockfd);
+
+//		write_return(sockfd);
+
 		for (int i = 0; i < MAXCONN; i++) {
 			if (reg_users[ret].blk_list[i] != -1)
 				total++;
 		}
 
 		if (total == 0) {
-			sprintf(ret_msg, "%s", "<none>\n");
-			write_return(sockfd);
-			return;
+//			sprintf(ret_msg, "%s", "<none>");
+//			write_return(sockfd);
+			sprintf(ret_msg + strlen(ret_msg), "%s\n", "<none>");
 		} else {
 			for (int i = 0; i < MAXCONN; i++) {
 				if (reg_users[ret].blk_list[i] != -1) {
 					printed++;
 					if (total != 1) {
 						if (printed == 1) {
-							sprintf(ret_msg, "%s", reg_users[reg_users[ret].blk_list[i]].username);
+							sprintf(ret_msg + strlen(ret_msg), "%s", reg_users[reg_users[ret].blk_list[i]].username);
 						} else if (printed == total) {
-							sprintf(ret_msg, "\t%s\n", reg_users[reg_users[ret].blk_list[i]].username);
+							sprintf(ret_msg + strlen(ret_msg), "\t%s\n", reg_users[reg_users[ret].blk_list[i]].username);
 						} else {
-							sprintf(ret_msg, "\t%s", reg_users[reg_users[ret].blk_list[i]].username);
+							sprintf(ret_msg + strlen(ret_msg), "\t%s", reg_users[reg_users[ret].blk_list[i]].username);
 						}
 					} else {
-						sprintf(ret_msg, "%s\n", reg_users[reg_users[ret].blk_list[i]].username);
-						write_return(sockfd);
+						sprintf(ret_msg + strlen(ret_msg), "%s\n", reg_users[reg_users[ret].blk_list[i]].username);
+//						sprintf(ret_msg, "%s\n", reg_users[reg_users[ret].blk_list[i]].username);
+//						write_return(sockfd);
 						return;
 					}
-					write_return(sockfd);
+//					write_return(sockfd);
 				}
 			}
+
 		}
+		write_return(sockfd);
 	}
 }
 
@@ -1180,28 +1185,6 @@ void set_rating(int uid) {
 	reg_users[uid].rating = (reg_users[uid].wins * 1.0f) / (reg_users[uid].wins + reg_users[uid].losses + reg_users[uid].draws);
 }
 
-//static __inline__ void signal_alarm(int signo) {
-//	for (int i = 0; i < MAXCONN; i++) {
-//		if (game_list[i].in_use == true) {
-//			if (game_list[i].p1_move == true) {
-//				game_list[i].p1_time -= ALRMTIME;
-//			} else {
-//				game_list[i].p2_time -= ALRMTIME;
-//			}
-//
-//			if (game_list[i].p2_time < 0) {
-/*Player  1 has won due to time out*/
-
-//			} else if (game_list[i].p1_time < 0) {
-/*Player  2 has won due to time out*/
-
-//			}
-//		}
-//
-//	}
-//
-//	alarm(ALRMTIME);
-//}
 void make_move(int uid) {
 	char *cmd, *rest;
 	char temp_cmd[MSGSIZE];
