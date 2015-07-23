@@ -1042,9 +1042,6 @@ int main(int argc, char **argv) {
 	if( remove( "temp_lvl0" ) != 0 ){
 		perror( "Error deleting file" );
 	}
-//	if (system("rm -f temp_lvl*") == -1) {
-//		printf("Removing file failed\n");
-//	}
 
 	set_time(1);
 	printf("PHASE 3 Completed\t Execution time =  %lf seconds \n", end_time - orig_time);
@@ -1075,7 +1072,6 @@ int main(int argc, char **argv) {
 		loc = compare_all();
 		bkup_pos = loc;
 		if (all_count % 10 == 0) {
-//			fprintf(final, "all_count = %10ld val = %10ld\n", all_count, nums[loc]);
 			fprintf(final, "%ld\n", nums[loc]);
 		}
 		consumed[loc]++;
