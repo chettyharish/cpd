@@ -1539,7 +1539,7 @@ void list_mail(int uid) {
 }
 
 void read_mail_msg(int uid) {
-	printf("Reading msg\n");
+	printf("Reading msg %s\n" , usr_msg);
 	fflush(0);
 	if (strcmp(".", usr_msg) == 0) {
 		int ret = reg_users[uid].temp_sending_to;
