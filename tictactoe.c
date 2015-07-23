@@ -727,10 +727,22 @@ void register_new_user(int sockfd) {
 
 	for (int i = 0; i < MAXCONN; i++) {
 		if (find_user(username) != -1) {
-			sprintf(ret_msg, "User %s already exists. Please try another username", username);
+			sprintf(ret_msg, "User %s already exists. Please try another username\n", username);
 			write_return(sockfd);
 			return;
 		}
+	}
+
+	if (username == NULL) {
+		sprintf(ret_msg, "Username cannot be empty\n");
+		write_return(sockfd);
+		return;
+	}
+
+	if (password == NULL) {
+		sprintf(ret_msg, "Password cannot be empty\n");
+		write_return(sockfd);
+		return;
 	}
 
 	int ret = find_free_loc();
@@ -2124,13 +2136,12 @@ int main(int argc, char **argv) {
 								write_return(guest_users[i].sockfd);
 								FD_CLR(guest_users[i].sockfd, &allset);
 								reset_guest(i, true);
-							}
-							if (guest_users[i].entered_username == false) {
+							} else if (guest_users[i].entered_username == false) {
 								/*Going to register mode*/
 								guest_users[i].trying_to_register = true;
+								write_client_id(guest_users[i].sockfd, guest_users[i].username, guest_users[i].cmd_counter);
+								guest_users[i].cmd_counter++;
 							}
-							write_client_id(guest_users[i].sockfd, guest_users[i].username, guest_users[i].cmd_counter);
-							guest_users[i].cmd_counter++;
 							break;
 						case 28:
 							if (guest_users[i].trying_to_register == false) {
