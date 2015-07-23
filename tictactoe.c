@@ -297,8 +297,8 @@ void load_db() {
 			timestamp = __strtok_r(NULL, "^", &rest);
 			isfilled = __strtok_r(NULL, "\n", &rest);
 			add_endlines(text);
-			printf("f = %s, t = %s , t = %s  , rs = %d , ts = %s\n", from, to, title, atoi(read_status), timestamp);
-			printf("text : %s", text);
+//			printf("f = %s, t = %s , t = %s  , rs = %d , ts = %s\n", from, to, title, atoi(read_status), timestamp);
+//			printf("text : %s", text);
 			strcpy(reg_users[i].mail_list[j].from_username, from);
 			strcpy(reg_users[i].mail_list[j].to_username, to);
 			strcpy(reg_users[i].mail_list[j].title, title);
@@ -465,7 +465,6 @@ void get_stats(int sockfd) {
 				total++;
 		}
 
-		/*test*/
 		if (total == 0) {
 //			sprintf(ret_msg, "%s", "<none>");
 //			write_return(sockfd);
@@ -1526,16 +1525,16 @@ void print_num_unread_msg(int uid) {
 void list_mail(int uid) {
 	for (int i = 0; i < NUMMSG; i++) {
 		if (i == 0 && reg_users[uid].mail_list[i].isfilled == false) {
-			sprintf(ret_msg, "You have no messages.\n");
+			sprintf(ret_msg, "!LISTMAIL!\nYou have no messages.\n");
 			write_return(reg_users[uid].sockfd);
 			return;
 		}
 		if (reg_users[uid].mail_list[i].isfilled == true) {
-			sprintf(ret_msg, "%2d  %6s  %10s  \" %s \" %s\n", i, (reg_users[uid].mail_list[i].read_status == true) ? ("Read") : ("Unread"), reg_users[uid].mail_list[i].from_username,
+			sprintf(ret_msg + strlen(ret_msg), "!LISTMAIL!\n%2d  %6s  %10s  \" %s \" %s\n", i, (reg_users[uid].mail_list[i].read_status == true) ? ("Read") : ("Unread"), reg_users[uid].mail_list[i].from_username,
 					reg_users[uid].mail_list[i].title, reg_users[uid].mail_list[i].timestamp);
-			write_return(reg_users[uid].sockfd);
 		}
 	}
+	write_return(reg_users[uid].sockfd);
 }
 
 void read_mail_msg(int uid) {
