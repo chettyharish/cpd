@@ -17,13 +17,15 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
-//FILE *log_file;
+FILE *log_file;
+
+#define BUFFERSIZ 8192
 #define NAME_LEN 1000
 #define NUM_THREADS 16
 #define MAXCONN 7
 #define SWAP(x,y,lo) if (data[lo+y] < data[lo+x]) { long int tmp = data[lo+x]; data[lo+x] = data[lo+y]; data[lo+y] = tmp; }
 
-double start_time, end_time, orig_time;
+
 struct timeval t;
 long int *data;
 long int *temp;
@@ -448,6 +450,7 @@ static __inline__ void sort15(long int * data, long int lo) {
 	SWAP(6, 7, lo);
 }
 
+double start_time, end_time, orig_time, write_timer_start, write_timer_end, total_time_write;
 void set_time(int timer) {
 	gettimeofday(&t, NULL);
 	if (timer == 0) {
@@ -456,10 +459,15 @@ void set_time(int timer) {
 		end_time = 1.0e-6 * t.tv_usec + t.tv_sec;
 	} else if (timer == 2) {
 		orig_time = 1.0e-6 * t.tv_usec + t.tv_sec;
+	} else if (timer == 3) {
+		write_timer_start = 1.0e-6 * t.tv_usec + t.tv_sec;
+	} else if (timer == 4) {
+		write_timer_end = 1.0e-6 * t.tv_usec + t.tv_sec;
 	}
 }
 
 void write_long(int sockfd_client, char *num) {
+	set_time(3);
 	unsigned int size = sizeof(long int);
 	int rlen = 0;
 	int ret;
@@ -478,6 +486,10 @@ void write_long(int sockfd_client, char *num) {
 		}
 		rlen += ret;
 	}
+
+
+	set_time(4);
+	total_time_write += (write_timer_end - write_timer_start);
 }
 
 bool is_sorted(long int start, long int end) {
@@ -635,7 +647,7 @@ void k_way_single() {
 }
 
 int main(int argc, char **argv) {
-//	log_file = fopen("log", "w+");
+	log_file = fopen("log", "w+");
 
 	set_time(2);
 	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -663,7 +675,7 @@ int main(int argc, char **argv) {
 	/*PHASE 1 STARTED*/
 	char outfile[100];
 	FILE *in_file = fopen("temp", "r");
-	setvbuf(in_file, NULL, _IOFBF, BUFSIZ*10);
+	setvbuf(in_file, NULL, _IOFBF, BUFFERSIZ);
 	if (!in_file) {
 		printf("Input file missing\n");
 		exit(1);
@@ -671,7 +683,7 @@ int main(int argc, char **argv) {
 
 	sprintf(outfile, "temp_lvl%d", 0);
 	FILE *out_file = fopen(outfile, "w+");
-	setvbuf(out_file, NULL, _IOFBF, BUFSIZ*10);
+	setvbuf(out_file, NULL, _IOFBF, BUFFERSIZ);
 	if (!out_file) {
 		printf("Unable to create output file\n");
 		exit(1);
@@ -700,7 +712,7 @@ int main(int argc, char **argv) {
 		set_time(0);
 
 		FILE *in_file = fopen("temp", "r");
-		setvbuf(in_file, NULL, _IOFBF, BUFSIZ*10);
+		setvbuf(in_file, NULL, _IOFBF, BUFFERSIZ);
 		fseek(in_file, blk * RSIZE, SEEK_SET);
 		long int count = 0;
 		long int buf_num = BUFSIZ / 8;
@@ -782,7 +794,7 @@ int main(int argc, char **argv) {
 	char remove_fn[100];
 	sprintf(f1, "temp_lvl%d", LVL);
 	FILE *first_file = fopen(f1, "r");
-	setvbuf(first_file, NULL, _IOFBF, BUFSIZ*10);
+	setvbuf(first_file, NULL, _IOFBF, BUFFERSIZ);
 	NUM_ELE = ELE_PER_PC >> 1;
 
 	long int count1 = 0;
@@ -863,8 +875,11 @@ int main(int argc, char **argv) {
 
 
 	/*Remove all temporary files*/
-	if (system("rm -f temp_lvl*") == -1) {
-		printf("Removing file failed\n");
+//	if (system("rm -f temp_lvl*") == -1) {
+//		printf("Removing file failed\n");
+//	}
+	if( remove( "temp_lvl0" ) != 0 ){
+		perror( "Error deleting file" );
 	}
 
 //	fprintf(log_file, "Merge LVL = %d Completed\t Execution time =  %lf seconds \n\n\n", LVL + 1, end_time - start_time);
@@ -890,12 +905,19 @@ int main(int argc, char **argv) {
 		}
 	}
 
-//	fprintf(log_file, "Completed correctly!\n");
-//	fflush(log_file);
+	fprintf(log_file,"Port = %d\tTotal time wasted writing = %f\n", total_time_write);
+	fprintf(log_file, "Completed correctly!\n");
+	fflush(log_file);
+
+	free(temp);
+	free(data);
+
 
 	/*Cleaning the files here*/
-	if (system("rm -f temp answer sort_client sort_client.c log") == -1)
-		perror("System");
+//	if (system("rm -f temp answer sort_client sort_client.c log") == -1)
+//		perror("System");
+
+
 
 
 	return 0;

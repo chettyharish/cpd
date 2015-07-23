@@ -19,6 +19,7 @@
 #include <arpa/inet.h>
 #include <limits.h>
 
+#define BUFFERSIZ 8192
 #define START_SOCK 5555
 #define NAME_LEN 1000
 #define NUM_THREADS 16
@@ -790,10 +791,10 @@ int main(int argc, char **argv) {
 //			/bin/dd if=../cop5570a/test1 bs=32M  iflag=skip_bytes,count_bytes skip=40000000000 count=8000000000 | ssh m6 'cat > temp'
 //			/bin/dd if=../cop5570a/test1 bs=32M  iflag=skip_bytes,count_bytes skip=48000000000 count=8000000000 | ssh m8 'cat > temp'
 //			/bin/dd if=../cop5570a/test1 bs=32M  iflag=skip_bytes,count_bytes skip=56000000000 count=8000000000  > temp
-//			sprintf(buffer_temp, "/bin/dd if=%s bs=32M  iflag=skip_bytes,count_bytes skip=%ld count=8000000000 | ssh %s 'cat > temp'", argv[1], skip, mac_list[i]);
-//			printf("%s\n", buffer_temp);
-//			if (system(buffer_temp) == -1)
-//				perror("System");
+			sprintf(buffer_temp, "/bin/dd if=%s bs=32M  iflag=skip_bytes,count_bytes skip=%ld count=8000000000 | ssh %s 'cat > temp'", argv[1], skip, mac_list[i]);
+			printf("%s\n", buffer_temp);
+			if (system(buffer_temp) == -1)
+				perror("System");
 
 			sprintf(buffer_temp, "scp sort_client.c %s:", mac_list[i]);
 			printf("%s\n", buffer_temp);
@@ -853,7 +854,7 @@ int main(int argc, char **argv) {
 	/*PHASE 2 STARTED*/
 	char outfile[100];
 	FILE *in_file = fopen(argv[1], "r");
-	setvbuf(in_file, NULL, _IOFBF, BUFSIZ*10);
+	setvbuf(in_file, NULL, _IOFBF, BUFFERSIZ);
 	if (!in_file) {
 		printf("Input file missing\n");
 		exit(1);
@@ -861,7 +862,7 @@ int main(int argc, char **argv) {
 
 	sprintf(outfile, "temp_lvl%d", 0);
 	FILE *out_file = fopen(outfile, "w+");
-	setvbuf(out_file, NULL, _IOFBF, BUFSIZ*10);
+	setvbuf(out_file, NULL, _IOFBF, BUFFERSIZ);
 	if (!out_file) {
 		printf("Unable to create output file\n");
 		exit(1);
@@ -885,7 +886,7 @@ int main(int argc, char **argv) {
 		printf("\nStarting with BLK = %d\n", blk);
 		set_time(0);
 		FILE *in_file = fopen(argv[1], "r");
-		setvbuf(in_file, NULL, _IOFBF, BUFSIZ*10);
+		setvbuf(in_file, NULL, _IOFBF, BUFFERSIZ);
 		/*Adjusting in large file*/
 		fseek(in_file, (blk + 14) * RSIZE, SEEK_SET);
 
@@ -956,7 +957,7 @@ int main(int argc, char **argv) {
 	char remove_fn[100];
 	sprintf(f1, "temp_lvl%d", LVL);
 	FILE *first_file = fopen(f1, "r");
-	setvbuf(first_file, NULL, _IOFBF, BUFSIZ*10);
+	setvbuf(first_file, NULL, _IOFBF, BUFFERSIZ);
 	/*Adjusting for less elements by changing it to >> 6*/
 	NUM_ELE = ELE_PER_PC >> 1;
 
@@ -1037,9 +1038,13 @@ int main(int argc, char **argv) {
 	printf("Merge LVL = %d Completed\t Execution time =  %lf seconds \n\n\n", LVL + 1, end_time - start_time);
 
 	/*Remove all temporary files*/
-	if (system("rm -f temp_lvl*") == -1) {
-		printf("Removing file failed\n");
+
+	if( remove( "temp_lvl0" ) != 0 ){
+		perror( "Error deleting file" );
 	}
+//	if (system("rm -f temp_lvl*") == -1) {
+//		printf("Removing file failed\n");
+//	}
 
 	set_time(1);
 	printf("PHASE 3 Completed\t Execution time =  %lf seconds \n", end_time - orig_time);
@@ -1049,9 +1054,7 @@ int main(int argc, char **argv) {
 	/*PHASE 4 STARTED*/
 	set_time(0);
 	FILE *final = fopen("final_answer", "w+");
-	FILE *final2 = fopen("final_answer2", "w+");
-	setvbuf(final, NULL, _IOFBF, BUFSIZ*10);
-	setvbuf(final2, NULL, _IOFBF, BUFSIZ*10);
+	setvbuf(final, NULL, _IOFBF, BUFFERSIZ);
 	printf("Done creating the files\n");
 	fflush(stdout);
 
@@ -1075,9 +1078,6 @@ int main(int argc, char **argv) {
 //			fprintf(final, "all_count = %10ld val = %10ld\n", all_count, nums[loc]);
 			fprintf(final, "%ld\n", nums[loc]);
 		}
-//		if (all_count < 100 || all_count > 8000000000 - 100) {
-//			fprintf(final2, "all_count = %10ld val = %10ld\n", all_count, nums[loc]);
-//		}
 		consumed[loc]++;
 
 		if (all_count % 1000000000 == 0) {
