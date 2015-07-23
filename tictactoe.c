@@ -465,6 +465,7 @@ void get_stats(int sockfd) {
 				total++;
 		}
 
+		/*test*/
 		if (total == 0) {
 //			sprintf(ret_msg, "%s", "<none>");
 //			write_return(sockfd);
