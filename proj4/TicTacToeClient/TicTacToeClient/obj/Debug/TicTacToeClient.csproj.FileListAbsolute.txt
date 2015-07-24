@@ -1,0 +1,17 @@
+c:\users\dell\documents\visual studio 2013\Projects\TicTacToeClient\TicTacToeClient\bin\Debug\TicTacToeClient.exe.config
+c:\users\dell\documents\visual studio 2013\Projects\TicTacToeClient\TicTacToeClient\bin\Debug\TicTacToeClient.exe
+c:\users\dell\documents\visual studio 2013\Projects\TicTacToeClient\TicTacToeClient\bin\Debug\TicTacToeClient.pdb
+c:\users\dell\documents\visual studio 2013\Projects\TicTacToeClient\TicTacToeClient\obj\Debug\TicTacToeClient.csprojResolveAssemblyReference.cache
+c:\users\dell\documents\visual studio 2013\Projects\TicTacToeClient\TicTacToeClient\obj\Debug\TicTacToeClient.Form1.resources
+c:\users\dell\documents\visual studio 2013\Projects\TicTacToeClient\TicTacToeClient\obj\Debug\TicTacToeClient.LoginDialog.resources
+c:\users\dell\documents\visual studio 2013\Projects\TicTacToeClient\TicTacToeClient\obj\Debug\TicTacToeClient.Properties.Resources.resources
+c:\users\dell\documents\visual studio 2013\Projects\TicTacToeClient\TicTacToeClient\obj\Debug\TicTacToeClient.csproj.GenerateResource.Cache
+c:\users\dell\documents\visual studio 2013\Projects\TicTacToeClient\TicTacToeClient\obj\Debug\TicTacToeClient.exe
+c:\users\dell\documents\visual studio 2013\Projects\TicTacToeClient\TicTacToeClient\obj\Debug\TicTacToeClient.pdb
+C:\Users\Dell\Documents\Visual Studio 2013\Projects\TicTacToeClient\TicTacToeClient\obj\Debug\TicTacToeClient.GameBoard.resources
+C:\Users\Dell\Documents\Visual Studio 2013\Projects\TicTacToeClient\TicTacToeClient\obj\Debug\TicTacToeClient.ComposeMail.resources
+C:\Users\Dell\Documents\Visual Studio 2013\Projects\TicTacToeClient\TicTacToeClient\obj\Debug\TicTacToeClient.MatchRequest.resources
+C:\Users\Dell\Documents\Visual Studio 2013\Projects\TicTacToeClient\TicTacToeClient\bin\Debug\TicTacToeClient.exe.manifest
+C:\Users\Dell\Documents\Visual Studio 2013\Projects\TicTacToeClient\TicTacToeClient\bin\Debug\TicTacToeClient.application
+C:\Users\Dell\Documents\Visual Studio 2013\Projects\TicTacToeClient\TicTacToeClient\obj\Debug\TicTacToeClient.exe.manifest
+C:\Users\Dell\Documents\Visual Studio 2013\Projects\TicTacToeClient\TicTacToeClient\obj\Debug\TicTacToeClient.application

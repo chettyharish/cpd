@@ -1,0 +1,61 @@
+##README
+
+Compiling:
+use make to compile
+use make clean to remove all the backups and compiled codes.
+
+
+Commands:
+Use these commands to execute different operations
+who                           # List all online users
+stats [name]                  # Display user information
+game                          # list all current games
+observe <game_num>            # Observe a game    
+unobserve                     # Unobserve a game  
+match <name> <b|w> [t]        # Try to start a game
+<A|B|C><1|2|3>                # Make a move in a game
+resign                        # Resign a game     
+refresh                       # Refresh a game    
+shout <msg>                   # shout <msg> to every one online
+tell <name> <msg>             # tell user <name> message
+kibitz <msg>                  # Comment on a game when observing
+' <msg>                       # Comment on a game 
+quiet                         # Quiet mode, no broadcast messages
+nonquiet                      # Non-quiet mode    
+block <id>                    # No more communication from <id>
+unblock <id>                  # Allow communication from <id>
+listmail                      # List the header of the mails
+readmail <msg_num>            # Read the particular mail
+deletemail <msg_num>          # Delete the particular mail
+mail <id> <title>             # Send id a mail    
+info <msg>                    # change your information to <msg>
+passwd <new>                  # change password   
+exit                          # quit the system   
+quit                          # quit the system   
+help                          # print this message
+?                             # print this message
+register <name> <pwd>         # register a new user
+
+Behavior:
+--> Enter guest mode by pressing Enter key at username
+--> Guests cannot make duplicate accounts with same username
+--> Once a user is blocked, there is no way they can communicate till they are unblocked
+--> Register only works for guests
+--> You can win, lose or draw in a game.
+--> There is a limit of 50 users in total
+--> There is a limit of 50 games in total
+--> There is a limit of 20 mails per user
+--> There is a limit of 50 blocked users per user
+--> The rating is defined by Wins/(Wins+Losses+Draws)
+--> The data is backed up after every command
+--> The game diffs time and tests whether a player
+	 has timed-out when he plays a move.
+--> The database uses special characters as delimiters.
+--> Every user has an entry in ttt_registry_table for login management
+--> Every user has a file named ttt_username with all his data
+
+Changes:
+--> We have used aditional headers to make it usable in GUI Client
+--> The GUI client can do everything which the terminal version can
+--> All the information is sent in single messages to guide the client
+
