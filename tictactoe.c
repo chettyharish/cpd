@@ -1676,17 +1676,17 @@ void print_num_unread_msg(int uid) {
 }
 
 void list_mail(int uid) {
-	bool flag = false;
+	int total = 0;
 	sprintf(ret_msg, "!MAILBOX!\n");
 	for (int i = 0; i < NUMMSG; i++) {
 		if (reg_users[uid].mail_list[i].isfilled == true) {
-			flag = true;
-			sprintf(ret_msg + strlen(ret_msg), "%2d  %6s  %10s  \" %s \" %s\n", i, (reg_users[uid].mail_list[i].read_status == true) ? ("Read") : ("Unread"), reg_users[uid].mail_list[i].from_username,
-					reg_users[uid].mail_list[i].title, reg_users[uid].mail_list[i].timestamp);
+			sprintf(ret_msg + strlen(ret_msg), "%2d  %6s  %10s  \" %s \" %s\n", total, (reg_users[uid].mail_list[i].read_status == true) ? ("Read") : ("Unread"),
+					reg_users[uid].mail_list[i].from_username, reg_users[uid].mail_list[i].title, reg_users[uid].mail_list[i].timestamp);
+			total++;
 		}
 	}
 
-	if (flag == true) {
+	if (total > 0) {
 		write_return(reg_users[uid].sockfd);
 	} else {
 		sprintf(ret_msg + strlen(ret_msg), "You have no messages.\n");
@@ -1807,16 +1807,28 @@ void read_mail(int uid) {
 		return;
 	}
 	int mnum = atoi(msg_num);
-	if (reg_users[uid].mail_list[mnum].isfilled == false) {
+	int total = 0;
+	int loc = -1;
+
+	for (int i = 0; i < NUMMSG; i++) {
+		if (reg_users[uid].mail_list[i].isfilled == true) {
+			if (total == mnum) {
+				loc = i;
+			}
+			total++;
+		}
+	}
+
+	if (loc == -1) {
 		sprintf(ret_msg, "Message number invalid.\n");
 		write_return(reg_users[uid].sockfd);
 		return;
 	}
 
 	/*Writing the mail to the user*/
-	reg_users[uid].mail_list[mnum].read_status = true;
-	sprintf(ret_msg, "From: %s\nTitle: %s\nTime: %s\n%s\n", reg_users[uid].mail_list[mnum].from_username, reg_users[uid].mail_list[mnum].title, reg_users[uid].mail_list[mnum].timestamp,
-			reg_users[uid].mail_list[mnum].text);
+	reg_users[uid].mail_list[loc].read_status = true;
+	sprintf(ret_msg, "From: %s\nTitle: %s\nTime: %s\n%s\n", reg_users[uid].mail_list[loc].from_username, reg_users[uid].mail_list[loc].title, reg_users[uid].mail_list[loc].timestamp,
+			reg_users[uid].mail_list[loc].text);
 	write_return(reg_users[uid].sockfd);
 	return;
 
@@ -1834,14 +1846,26 @@ void delete_mail(int uid) {
 		return;
 	}
 	int mnum = atoi(msg_num);
-	if (reg_users[uid].mail_list[mnum].isfilled == false) {
+	int total = 0;
+	int loc = -1;
+
+	for (int i = 0; i < NUMMSG; i++) {
+		if (reg_users[uid].mail_list[i].isfilled == true) {
+			if (total == mnum) {
+				loc = i;
+			}
+			total++;
+		}
+	}
+
+	if (loc == -1) {
 		sprintf(ret_msg, "Message number invalid.\n");
 		write_return(reg_users[uid].sockfd);
 		return;
 	}
 
-	/*Writing the mail to the user*/
-	reg_users[uid].mail_list[mnum].isfilled = false;
+	/*Deleting the mail*/
+	reg_users[uid].mail_list[loc].isfilled = false;
 	sprintf(ret_msg, "Message deleted.\n");
 	write_return(reg_users[uid].sockfd);
 	return;
