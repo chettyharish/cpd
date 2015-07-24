@@ -1068,6 +1068,8 @@ int main(int argc, char **argv) {
 	int loc = -1;
 	long int total = 0;
 
+
+
 	for (long int all_count = 0; all_count < 8000000000; all_count++) {
 		loc = compare_all();
 		bkup_pos = loc;

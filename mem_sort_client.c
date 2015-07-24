@@ -898,6 +898,8 @@ int main(int argc, char **argv) {
 //			fprintf(log_file, "Writing %ld \n", i);
 //			fflush(log_file);
 //		}
+
+
 		if (i < NUM_ELE) {
 			write_long(sockfd_client, (char *) &temp[i]);
 		} else {
