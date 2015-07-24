@@ -607,11 +607,11 @@ bool check_blocked(int uid, int tid) {
 }
 
 void shout_msg(int uid) {
-	char *cmd, *msg , *rest;
+	char *cmd, *msg, *rest;
 	char temp_cmd[MSGSIZE];
 	strcpy(temp_cmd, usr_msg);
 	cmd = __strtok_r(temp_cmd, " ", &rest);
-	msg = __strtok_r(NULL, " ", &rest);
+	msg = __strtok_r(NULL, "\n", &rest);
 
 	if (msg == NULL) {
 		sprintf(ret_msg, "Please enter a message\n");
@@ -635,19 +635,19 @@ void shout_msg(int uid) {
 }
 
 void tell_msg(int uid) {
-	char *username, *cmd, *msg , *rest;
+	char *username, *cmd, *msg, *rest;
 	char temp_cmd[MSGSIZE];
 	strcpy(temp_cmd, usr_msg);
 	username = __strtok_r(temp_cmd, " ", &rest);
 	username = __strtok_r(NULL, " ", &rest);
-	msg = __strtok_r(NULL, " ", &rest);
+	msg = __strtok_r(NULL, "\n", &rest);
 
 	if (msg == NULL) {
 		sprintf(ret_msg, "Please enter a message\n");
 		write_return(reg_users[uid].sockfd);
 		return;
 	}
-	printf("%d\n",msg[0]);
+	printf("%d\n", msg[0]);
 	printf("Telling username = %s\t msg = %s\n", username, msg);
 	fflush(stdout);
 
@@ -762,6 +762,10 @@ void register_new_user(int sockfd) {
 	strcpy(reg_table[ret].username, username);
 	strcpy(reg_table[ret].password, password);
 	strcpy(reg_users[ret].username, username);
+
+	sprintf(ret_msg, "User created sucessfully\n");
+	write_return(sockfd);
+	return;
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -995,11 +999,13 @@ void setup_match(int uid) {
 				reg_users[uid].playing = true;
 				reg_users[ret].playing = true;
 				if (reg_users[ret].trying_to_match_color == 0) {
+					printf("P1 first\n");
 					game_list[i].p1_start = time(0);
 					game_list[i].p1_move = true;
 					game_list[i].p1_color = 0;
 					game_list[i].p2_color = 1;
 				} else {
+					printf("P2 first\n");
 					game_list[i].p2_start = time(0);
 					game_list[i].p2_move = true;
 					game_list[i].p1_color = 1;
@@ -1009,6 +1015,8 @@ void setup_match(int uid) {
 				/*Timing stuff*/
 				game_list[i].p1_time = game_time;
 				game_list[i].p2_time = game_time;
+				reg_users[uid].gameid = i;
+				reg_users[ret].gameid = i;
 				printf("request = %d , response = %d\n", ret, uid);
 				print_game_table(i, 1, -1);
 				write_client_id(reg_users[ret].sockfd, reg_users[ret].username, reg_users[ret].cmd_counter);
@@ -1022,7 +1030,7 @@ void setup_match(int uid) {
 				reg_users[ret].trying_to_match = false;
 				reg_users[ret].trying_to_match_color = -1;
 				reg_users[ret].trying_to_match_time = 0;
-				reg_users[uid].trying_to_match_player = -1;
+				reg_users[ret].trying_to_match_player = -1;
 				return;
 			}
 		}
@@ -1166,6 +1174,7 @@ void refresh_game(int uid) {
 
 void reset_game(int gid) {
 	/*Reset the game if someone was playing*/
+	printf("%s\n", __func__);
 	game_list[gid].in_use = false;
 	game_list[gid].num_moves = 0;
 	game_list[gid].player1 = -1;
@@ -1190,8 +1199,8 @@ void reset_game(int gid) {
 			/*Remove gid from persons list*/
 			int pid = game_list[gid].observers[j];
 			for (int k = 0; k < MAXCONN; k++) {
-				if (reg_users[k].observeids[k] == gid) {
-					reg_users[k].observeids[k] = -1;
+				if (reg_users[pid].observeids[k] == gid) {
+					reg_users[pid].observeids[k] = -1;
 				}
 			}
 		}
@@ -1251,18 +1260,28 @@ void make_move(int uid) {
 		return;
 	}
 
+	printf("1: Here\n");
+	fflush(0);
 	int gid = reg_users[uid].gameid;
-
+	printf("Game is %d\n", gid);
 	if (game_list[gid].p1_move == true) {
+		printf("P1 sub\n");
+		fflush(0);
 		game_list[gid].p1_time -= difftime(time(0), game_list[gid].p1_start);
 		game_list[gid].p1_start = time(0);
 	} else {
+		printf("P2 sub\n");
+		fflush(0);
 		game_list[gid].p2_time -= difftime(time(0), game_list[gid].p2_start);
 		game_list[gid].p2_start = time(0);
 	}
 
+	printf("2: Here\n");
+	fflush(0);
 	if (game_list[gid].p1_time < 0) {
 		/*Player 2 has won*/
+		printf("2: Here IN 1\n");
+		fflush(0);
 		print_game_table(gid, 1, -1);
 		sprintf(ret_msg, "\n%s has won game %d due to timeout\n", reg_users[game_list[gid].player2].username, gid);
 		reg_users[game_list[gid].player1].losses++;
@@ -1277,16 +1296,26 @@ void make_move(int uid) {
 
 		write_return(reg_users[game_list[gid].player1].sockfd);
 		write_return(reg_users[game_list[gid].player2].sockfd);
-		write_client_id(reg_users[game_list[gid].player1].sockfd, reg_users[game_list[gid].player1].username, reg_users[game_list[gid].player1].cmd_counter);
-		write_client_id(reg_users[game_list[gid].player2].sockfd, reg_users[game_list[gid].player2].username, reg_users[game_list[gid].player2].cmd_counter);
+		reg_users[game_list[gid].player1].trying_to_match = false;
+		reg_users[game_list[gid].player1].trying_to_match_player = -1;
+		reg_users[game_list[gid].player1].trying_to_match_color = -1;
+		reg_users[game_list[gid].player1].trying_to_match_time = 0;
 		reg_users[game_list[gid].player1].playing = false;
+		reg_users[game_list[gid].player2].trying_to_match = false;
+		reg_users[game_list[gid].player2].trying_to_match_player = -1;
+		reg_users[game_list[gid].player2].trying_to_match_color = -1;
+		reg_users[game_list[gid].player2].trying_to_match_time = 0;
 		reg_users[game_list[gid].player2].playing = false;
+		reg_users[game_list[gid].player1].gameid = -1;
+		reg_users[game_list[gid].player2].gameid = -1;
 		set_rating(game_list[gid].player1);
 		set_rating(game_list[gid].player2);
 		reset_game(gid);
 		return;
 	} else if (game_list[gid].p2_time < 0) {
 		/*Player 1 has won*/
+		printf("2: Here IN 2\n");
+		fflush(0);
 		print_game_table(gid, 1, -1);
 		sprintf(ret_msg, "\n%s has won game %d due to timeout\n", reg_users[game_list[gid].player1].username, gid);
 		reg_users[game_list[gid].player1].wins++;
@@ -1302,14 +1331,26 @@ void make_move(int uid) {
 
 		write_return(reg_users[game_list[gid].player1].sockfd);
 		write_return(reg_users[game_list[gid].player2].sockfd);
+		reg_users[game_list[gid].player1].trying_to_match = false;
+		reg_users[game_list[gid].player1].trying_to_match_player = -1;
+		reg_users[game_list[gid].player1].trying_to_match_color = -1;
+		reg_users[game_list[gid].player1].trying_to_match_time = 0;
 		reg_users[game_list[gid].player1].playing = false;
+		reg_users[game_list[gid].player2].trying_to_match = false;
+		reg_users[game_list[gid].player2].trying_to_match_player = -1;
+		reg_users[game_list[gid].player2].trying_to_match_color = -1;
+		reg_users[game_list[gid].player2].trying_to_match_time = 0;
 		reg_users[game_list[gid].player2].playing = false;
+		reg_users[game_list[gid].player1].gameid = -1;
+		reg_users[game_list[gid].player2].gameid = -1;
 		set_rating(game_list[gid].player1);
 		set_rating(game_list[gid].player2);
 		reset_game(gid);
 		return;
 	}
 
+	printf("3: Here\n");
+	fflush(0);
 	if ((game_list[gid].player1 == uid && game_list[gid].p1_move == false) || (game_list[gid].player2 == uid && game_list[gid].p2_move == false)) {
 		/*Not the players turn*/
 		sprintf(ret_msg, "Its not your turn.\n");
@@ -1317,6 +1358,8 @@ void make_move(int uid) {
 		return;
 	}
 
+	printf("4: Here\n");
+	fflush(0);
 	int pos1 = -1, pos2 = -1;
 	switch (cmd[0]) {
 	case 'a':
@@ -1372,6 +1415,8 @@ void make_move(int uid) {
 		break;
 	}
 
+	printf("5: Here\n");
+	fflush(0);
 	if (game_list[gid].game_table[pos1][pos2] != -1) {
 		/*Position already full*/
 		sprintf(ret_msg, "<Position is occupied>.\n");
@@ -1382,6 +1427,8 @@ void make_move(int uid) {
 	int p_color = ((game_list[gid].player1 == uid) ? game_list[gid].p1_color : game_list[gid].p2_color);
 	game_list[gid].game_table[pos1][pos2] = p_color;
 
+	printf("6: Here\n");
+	fflush(0);
 	printf("Player %s played pos1 = %d pos2 = %d", reg_users[uid].username, pos1, pos2);
 	if ((game_list[gid].player1 == uid)) {
 		game_list[gid].p1_move = false;
@@ -1393,6 +1440,8 @@ void make_move(int uid) {
 		game_list[gid].p1_start = time(0);
 	}
 
+	printf("7: Here\n");
+	fflush(0);
 	printf("\n%s moving %d to (%d,%d)\n", reg_users[uid].username, p_color, pos1, pos2);
 	int stat = test_game_condition(gid);
 	print_game_table(gid, 1, -1);
@@ -1418,12 +1467,23 @@ void make_move(int uid) {
 			reg_users[game_list[gid].player2].wins++;
 			reg_users[game_list[gid].player1].losses++;
 		}
+		write_return(reg_users[game_list[gid].player1].sockfd);
+		write_return(reg_users[game_list[gid].player2].sockfd);
+		reg_users[game_list[gid].player1].trying_to_match = false;
+		reg_users[game_list[gid].player1].trying_to_match_player = -1;
+		reg_users[game_list[gid].player1].trying_to_match_color = -1;
+		reg_users[game_list[gid].player1].trying_to_match_time = 0;
 		reg_users[game_list[gid].player1].playing = false;
+		reg_users[game_list[gid].player2].trying_to_match = false;
+		reg_users[game_list[gid].player2].trying_to_match_player = -1;
+		reg_users[game_list[gid].player2].trying_to_match_color = -1;
+		reg_users[game_list[gid].player2].trying_to_match_time = 0;
 		reg_users[game_list[gid].player2].playing = false;
+		reg_users[game_list[gid].player1].gameid = -1;
+		reg_users[game_list[gid].player2].gameid = -1;
 		set_rating(game_list[gid].player1);
 		set_rating(game_list[gid].player2);
 		reset_game(gid);
-		return;
 	} else if (stat == 1) {
 		/*Player 1 has won*/
 		sprintf(ret_msg, "\n%s has won game %d\n", ((game_list[gid].p1_color == 1) ? (reg_users[game_list[gid].player1].username) : (reg_users[game_list[gid].player2].username)), gid);
@@ -1445,12 +1505,23 @@ void make_move(int uid) {
 			reg_users[game_list[gid].player2].wins++;
 			reg_users[game_list[gid].player1].losses++;
 		}
+		write_return(reg_users[game_list[gid].player1].sockfd);
+		write_return(reg_users[game_list[gid].player2].sockfd);
+		reg_users[game_list[gid].player1].trying_to_match = false;
+		reg_users[game_list[gid].player1].trying_to_match_player = -1;
+		reg_users[game_list[gid].player1].trying_to_match_color = -1;
+		reg_users[game_list[gid].player1].trying_to_match_time = 0;
 		reg_users[game_list[gid].player1].playing = false;
+		reg_users[game_list[gid].player2].trying_to_match = false;
+		reg_users[game_list[gid].player2].trying_to_match_player = -1;
+		reg_users[game_list[gid].player2].trying_to_match_color = -1;
+		reg_users[game_list[gid].player2].trying_to_match_time = 0;
 		reg_users[game_list[gid].player2].playing = false;
+		reg_users[game_list[gid].player1].gameid = -1;
+		reg_users[game_list[gid].player2].gameid = -1;
 		set_rating(game_list[gid].player1);
 		set_rating(game_list[gid].player2);
 		reset_game(gid);
-		return;
 	} else if (stat == 2) {
 		/*The game has drawn*/
 		sprintf(ret_msg, "\nThe game %d has drawn\n", gid);
@@ -1471,12 +1542,23 @@ void make_move(int uid) {
 		/*Update stats*/
 		reg_users[game_list[gid].player1].draws++;
 		reg_users[game_list[gid].player2].draws++;
+		write_return(reg_users[game_list[gid].player1].sockfd);
+		write_return(reg_users[game_list[gid].player2].sockfd);
+		reg_users[game_list[gid].player1].trying_to_match = false;
+		reg_users[game_list[gid].player1].trying_to_match_player = -1;
+		reg_users[game_list[gid].player1].trying_to_match_color = -1;
+		reg_users[game_list[gid].player1].trying_to_match_time = 0;
 		reg_users[game_list[gid].player1].playing = false;
+		reg_users[game_list[gid].player2].trying_to_match = false;
+		reg_users[game_list[gid].player2].trying_to_match_player = -1;
+		reg_users[game_list[gid].player2].trying_to_match_color = -1;
+		reg_users[game_list[gid].player2].trying_to_match_time = 0;
 		reg_users[game_list[gid].player2].playing = false;
+		reg_users[game_list[gid].player1].gameid = -1;
+		reg_users[game_list[gid].player2].gameid = -1;
 		set_rating(game_list[gid].player1);
 		set_rating(game_list[gid].player2);
 		reset_game(gid);
-		return;
 	} else {
 		/*Nothing fancy happened*/
 		game_list[gid].num_moves++;
@@ -1505,7 +1587,6 @@ void resign_game(int uid) {
 		/*Player 2 has quit*/
 		reg_users[game_list[gid].player1].wins++;
 		reg_users[game_list[gid].player2].losses++;
-		return;
 	}
 	sprintf(ret_msg, "\n<%s resigned>\n", reg_users[uid].username);
 	for (int i = 0; i < MAXCONN; i++) {
@@ -1516,7 +1597,15 @@ void resign_game(int uid) {
 	}
 	write_return(reg_users[game_list[gid].player1].sockfd);
 	write_return(reg_users[game_list[gid].player2].sockfd);
+	reg_users[game_list[gid].player1].trying_to_match = false;
+	reg_users[game_list[gid].player1].trying_to_match_player = -1;
+	reg_users[game_list[gid].player1].trying_to_match_color = -1;
+	reg_users[game_list[gid].player1].trying_to_match_time = 0;
 	reg_users[game_list[gid].player1].playing = false;
+	reg_users[game_list[gid].player2].trying_to_match = false;
+	reg_users[game_list[gid].player2].trying_to_match_player = -1;
+	reg_users[game_list[gid].player2].trying_to_match_color = -1;
+	reg_users[game_list[gid].player2].trying_to_match_time = 0;
 	reg_users[game_list[gid].player2].playing = false;
 	reg_users[game_list[gid].player1].gameid = -1;
 	reg_users[game_list[gid].player2].gameid = -1;
@@ -2006,8 +2095,18 @@ void reset_client(int uid) {
 
 			write_return(reg_users[game_list[gid].player2].sockfd);
 			write_client_id(reg_users[game_list[gid].player2].sockfd, reg_users[game_list[gid].player2].username, reg_users[game_list[gid].player2].cmd_counter);
+			reg_users[game_list[gid].player1].trying_to_match = false;
+			reg_users[game_list[gid].player1].trying_to_match_player = -1;
+			reg_users[game_list[gid].player1].trying_to_match_color = -1;
+			reg_users[game_list[gid].player1].trying_to_match_time = 0;
 			reg_users[game_list[gid].player1].playing = false;
+			reg_users[game_list[gid].player2].trying_to_match = false;
+			reg_users[game_list[gid].player2].trying_to_match_player = -1;
+			reg_users[game_list[gid].player2].trying_to_match_color = -1;
+			reg_users[game_list[gid].player2].trying_to_match_time = 0;
 			reg_users[game_list[gid].player2].playing = false;
+			reg_users[game_list[gid].player1].gameid = -1;
+			reg_users[game_list[gid].player2].gameid = -1;
 			set_rating(game_list[gid].player1);
 			set_rating(game_list[gid].player2);
 			reset_game(gid);
@@ -2028,8 +2127,19 @@ void reset_client(int uid) {
 
 			write_return(reg_users[game_list[gid].player1].sockfd);
 			write_client_id(reg_users[game_list[gid].player1].sockfd, reg_users[game_list[gid].player1].username, reg_users[game_list[gid].player1].cmd_counter);
+
+			reg_users[game_list[gid].player1].trying_to_match = false;
+			reg_users[game_list[gid].player1].trying_to_match_player = -1;
+			reg_users[game_list[gid].player1].trying_to_match_color = -1;
+			reg_users[game_list[gid].player1].trying_to_match_time = 0;
 			reg_users[game_list[gid].player1].playing = false;
+			reg_users[game_list[gid].player2].trying_to_match = false;
+			reg_users[game_list[gid].player2].trying_to_match_player = -1;
+			reg_users[game_list[gid].player2].trying_to_match_color = -1;
+			reg_users[game_list[gid].player2].trying_to_match_time = 0;
 			reg_users[game_list[gid].player2].playing = false;
+			reg_users[game_list[gid].player1].gameid = -1;
+			reg_users[game_list[gid].player2].gameid = -1;
 			set_rating(game_list[gid].player1);
 			set_rating(game_list[gid].player2);
 			reset_game(gid);
@@ -2045,13 +2155,7 @@ void reset_client(int uid) {
 	reg_users[uid].temp_sending_to = -1;
 	strcpy(reg_users[uid].temp_title, "");
 	strcpy(reg_users[uid].temp_timestamp, "");
-	reg_users[uid].trying_to_match = false;
-	reg_users[uid].trying_to_match_player = -1;
-	reg_users[uid].trying_to_match_color = -1;
-	reg_users[uid].trying_to_match_time = 0;
-	reg_users[uid].playing = false;
 	reg_users[uid].isobserving = false;
-	reg_users[uid].gameid = -1;
 	for (int i = 0; i < MAXCONN; i++) {
 		if (reg_users[uid].observeids[i] != -1) {
 			int gid = reg_users[uid].observeids[i];
