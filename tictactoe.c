@@ -1288,9 +1288,9 @@ void make_move(int uid) {
 		reg_users[game_list[gid].player2].wins++;
 
 		for (int i = 0; i < MAXCONN; i++) {
-			if (game_list[i].observers[i] != -1) {
-				write_return(reg_users[game_list[i].observers[i]].sockfd);
-				write_client_id(reg_users[game_list[i].observers[i]].sockfd, reg_users[game_list[i].observers[i]].username, reg_users[game_list[i].observers[i]].cmd_counter);
+			if (game_list[gid].observers[i] != -1) {
+				write_return(reg_users[game_list[gid].observers[i]].sockfd);
+				write_client_id(reg_users[game_list[gid].observers[i]].sockfd, reg_users[game_list[gid].observers[i]].username, reg_users[game_list[gid].observers[i]].cmd_counter);
 			}
 		}
 
@@ -1322,9 +1322,9 @@ void make_move(int uid) {
 		reg_users[game_list[gid].player2].losses++;
 
 		for (int i = 0; i < MAXCONN; i++) {
-			if (game_list[i].observers[i] != -1) {
-				write_return(reg_users[game_list[i].observers[i]].sockfd);
-				write_client_id(reg_users[game_list[i].observers[i]].sockfd, reg_users[game_list[i].observers[i]].username, reg_users[game_list[i].observers[i]].cmd_counter);
+			if (game_list[gid].observers[i] != -1) {
+				write_return(reg_users[game_list[gid].observers[i]].sockfd);
+				write_client_id(reg_users[game_list[gid].observers[i]].sockfd, reg_users[game_list[gid].observers[i]].username, reg_users[game_list[gid].observers[i]].cmd_counter);
 
 			}
 		}
@@ -2087,9 +2087,9 @@ void reset_client(int uid) {
 			reg_users[game_list[gid].player2].wins++;
 
 			for (int i = 0; i < MAXCONN; i++) {
-				if (game_list[i].observers[i] != -1) {
-					write_return(reg_users[game_list[i].observers[i]].sockfd);
-					write_client_id(reg_users[game_list[i].observers[i]].sockfd, reg_users[game_list[i].observers[i]].username, reg_users[game_list[i].observers[i]].cmd_counter);
+				if (game_list[gid].observers[i] != -1) {
+					write_return(reg_users[game_list[gid].observers[i]].sockfd);
+					write_client_id(reg_users[game_list[gid].observers[i]].sockfd, reg_users[game_list[gid].observers[i]].username, reg_users[game_list[gid].observers[i]].cmd_counter);
 				}
 			}
 
@@ -2119,9 +2119,9 @@ void reset_client(int uid) {
 			reg_users[game_list[gid].player2].losses++;
 
 			for (int i = 0; i < MAXCONN; i++) {
-				if (game_list[i].observers[i] != -1) {
-					write_return(reg_users[game_list[i].observers[i]].sockfd);
-					write_client_id(reg_users[game_list[i].observers[i]].sockfd, reg_users[game_list[i].observers[i]].username, reg_users[game_list[i].observers[i]].cmd_counter);
+				if (game_list[gid].observers[i] != -1) {
+					write_return(reg_users[game_list[gid].observers[i]].sockfd);
+					write_client_id(reg_users[game_list[gid].observers[i]].sockfd, reg_users[game_list[gid].observers[i]].username, reg_users[game_list[gid].observers[i]].cmd_counter);
 				}
 			}
 
