@@ -19,12 +19,12 @@
 #include <arpa/inet.h>
 FILE *log_file;
 
+#define SOCKET_BLK 100000000
 #define BUFFERSIZ 8192
 #define NAME_LEN 1000
 #define NUM_THREADS 16
 #define MAXCONN 7
 #define SWAP(x,y,lo) if (data[lo+y] < data[lo+x]) { long int tmp = data[lo+x]; data[lo+x] = data[lo+y]; data[lo+y] = tmp; }
-
 
 struct timeval t;
 long int *data;
@@ -466,27 +466,26 @@ void set_time(int timer) {
 	}
 }
 
-void write_long(int sockfd_client, char *num) {
+void write_long_chunk(int sockfd_client, char *num) {
 	set_time(3);
-	unsigned int size = sizeof(long int);
+	unsigned int size = sizeof(long int) * SOCKET_BLK;
 	int rlen = 0;
 	int ret;
 
 	while (rlen < size) {
 		if ((ret = write(sockfd_client, (num + rlen), size - rlen)) == -1) {
-//			fprintf(log_file, "write_long\n");
-//			fflush(log_file);
+			fprintf(log_file, "write_long\n");
+			fflush(log_file);
 			exit(1);
 		}
 
 		if (ret <= 0) {
-//			fprintf(log_file, "socket closed before consumptionn");
-//			fflush(log_file);
+			fprintf(log_file, "socket closed before consumptionn");
+			fflush(log_file);
 			exit(1);
 		}
 		rlen += ret;
 	}
-
 
 	set_time(4);
 	total_time_write += (write_timer_end - write_timer_start);
@@ -648,7 +647,10 @@ void k_way_single() {
 
 int main(int argc, char **argv) {
 	log_file = fopen("log", "w+");
-
+	if (argc < 2) {
+		printf("Usage ./mem_sort_client IP_server PORT_server\n");
+		exit(1);
+	}
 	set_time(2);
 	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	/*Creating and connecting sockets here*/
@@ -656,8 +658,8 @@ int main(int argc, char **argv) {
 	struct sockaddr_in saddr_client;
 
 	if ((sockfd_client = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
-//		fprintf(log_file, "Socket failed!\n");
-//		fflush(log_file);
+		fprintf(log_file, "Socket failed!\n");
+		fflush(log_file);
 		exit(1);
 	}
 
@@ -667,15 +669,14 @@ int main(int argc, char **argv) {
 	saddr_client.sin_addr.s_addr = inet_addr(argv[1]);
 
 	if (connect(sockfd_client, (struct sockaddr *) &saddr_client, sizeof(saddr_client)) == -1) {
-//		fprintf(log_file, "Connect failed!\n");
-//		fflush(log_file);
+		fprintf(log_file, "Connect failed!\n");
+		fflush(log_file);
 		exit(1);
 	}
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	/*PHASE 1 STARTED*/
 	char outfile[100];
 	FILE *in_file = fopen("temp", "r");
-	setvbuf(in_file, NULL, _IOFBF, BUFFERSIZ);
 	if (!in_file) {
 		printf("Input file missing\n");
 		exit(1);
@@ -683,7 +684,6 @@ int main(int argc, char **argv) {
 
 	sprintf(outfile, "temp_lvl%d", 0);
 	FILE *out_file = fopen(outfile, "w+");
-	setvbuf(out_file, NULL, _IOFBF, BUFFERSIZ);
 	if (!out_file) {
 		printf("Unable to create output file\n");
 		exit(1);
@@ -695,9 +695,9 @@ int main(int argc, char **argv) {
 	fclose(in_file);
 	SIZE = (FSIZE / 8) / NUM_BLK;
 	RSIZE = FSIZE / NUM_BLK;
-//	fprintf(log_file, "RSIZE = %ld \tBUFSIZ = %d\t NUM_THREADS = %d\t FSIZE = %ld\t SIZE = %ld\t NUM_BLK = %ld \t FITTING %f\n", RSIZE, BUFSIZ, NUM_THREADS, FSIZE, SIZE, NUM_BLK,
-//			(SIZE * 1.0f) / (NUM_THREADS * 1.0f));
-//	fflush(log_file);
+	fprintf(log_file, "RSIZE = %ld \tBUFSIZ = %d\t NUM_THREADS = %d\t FSIZE = %ld\t SIZE = %ld\t NUM_BLK = %ld \t FITTING %f\n", RSIZE, BUFSIZ, NUM_THREADS, FSIZE, SIZE, NUM_BLK,
+			(SIZE * 1.0f) / (NUM_THREADS * 1.0f));
+	fflush(log_file);
 
 	data = malloc(sizeof(long int) * SIZE);
 	temp = malloc(sizeof(long int) * SIZE);
@@ -707,12 +707,11 @@ int main(int argc, char **argv) {
 	}
 
 	for (int blk = 0; blk < NUM_BLK; blk++) {
-//		fprintf(log_file, "\nStarting with BLK = %d\n", blk);
-//		fflush(log_file);
+		fprintf(log_file, "\nStarting with BLK = %d\n", blk);
+		fflush(log_file);
 		set_time(0);
 
 		FILE *in_file = fopen("temp", "r");
-		setvbuf(in_file, NULL, _IOFBF, BUFFERSIZ);
 		fseek(in_file, blk * RSIZE, SEEK_SET);
 		long int count = 0;
 		long int buf_num = BUFSIZ / 8;
@@ -726,9 +725,9 @@ int main(int argc, char **argv) {
 		fclose(in_file);
 
 		set_time(1);
-//		fprintf(log_file, "Reading data completed \t Execution time =  %lf seconds\n", end_time - start_time);
-//
-//		fflush(log_file);
+		fprintf(log_file, "Reading data completed \t Execution time =  %lf seconds\n", end_time - start_time);
+		fflush(log_file);
+
 		set_time(0);
 		for (int i = 0; i < NUM_THREADS; i++) {
 			myid[i] = i;
@@ -739,14 +738,17 @@ int main(int argc, char **argv) {
 			pthread_join(tid[i], NULL);
 		}
 		set_time(1);
-//		fprintf(log_file, "Split Merge Sort completed \t Execution time =  %lf seconds\n", end_time - start_time);
-//		fflush(log_file);
+
+		fprintf(log_file, "Split Merge Sort completed \t Execution time =  %lf seconds\n", end_time - start_time);
+		fflush(log_file);
+
 		set_time(0);
 		k_way_single();
 		set_time(1);
-//		fprintf(log_file, "K-Way Merge completed \t Execution time =  %lf seconds\n", end_time - start_time);
-//
-//		fflush(log_file);
+
+		fprintf(log_file, "K-Way Merge completed \t Execution time =  %lf seconds\n", end_time - start_time);
+
+		fflush(log_file);
 		set_time(0);
 
 //		if (is_sorted(0, SIZE - 1) == true) {
@@ -757,8 +759,8 @@ int main(int argc, char **argv) {
 //		}
 
 		set_time(1);
-//		fprintf(log_file, "Testing completed \t Execution time =  %lf seconds\n", end_time - start_time);
-//		fflush(log_file);
+		fprintf(log_file, "Testing completed \t Execution time =  %lf seconds\n", end_time - start_time);
+		fflush(log_file);
 
 		set_time(0);
 		count = 0;
@@ -776,14 +778,14 @@ int main(int argc, char **argv) {
 		} else if (blk == 1) {
 			/*Instead of writing the second block , we can directly merge the 1st block using temp*/
 		}
-//		fprintf(log_file, "Writing completed to file %s\t Execution time =  %lf seconds\n", outfile, end_time - start_time);
-//		fflush(log_file);
+		fprintf(log_file, "Writing completed to file %s\t Execution time =  %lf seconds\n", outfile, end_time - start_time);
+		fflush(log_file);
 	}
 	fclose(out_file);
 
 	set_time(1);
-//	fprintf(log_file, "PHASE 1 Completed\t Execution time =  %lf seconds \n\n\n", end_time - orig_time);
-//	fflush(log_file);
+	fprintf(log_file, "PHASE 1 Completed\t Execution time =  %lf seconds \n\n\n", end_time - orig_time);
+	fflush(log_file);
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	/*PHASE 2 STARTED*/
 
@@ -794,7 +796,6 @@ int main(int argc, char **argv) {
 	char remove_fn[100];
 	sprintf(f1, "temp_lvl%d", LVL);
 	FILE *first_file = fopen(f1, "r");
-	setvbuf(first_file, NULL, _IOFBF, BUFFERSIZ);
 	NUM_ELE = ELE_PER_PC >> 1;
 
 	long int count1 = 0;
@@ -803,8 +804,8 @@ int main(int argc, char **argv) {
 	long int num1;
 	long int loc1 = 0;
 	fseek(first_file, loc1, SEEK_SET);
-//	fprintf(log_file, "ST : first_file = %ld\t NUM_ELE = %ld\n", ftell(first_file), NUM_ELE);
-//	fflush(log_file);
+	fprintf(log_file, "ST : first_file = %ld\t NUM_ELE = %ld\n", ftell(first_file), NUM_ELE);
+	fflush(log_file);
 	int ret = -1;
 	if ((ret = fread(&num1, sizeof(long int), 1, first_file)) != 1) {
 		printf("fread  : ret = %d\tcount1 = %ld\tcount2 = %ld\n", ret, count1, count2);
@@ -868,60 +869,50 @@ int main(int argc, char **argv) {
 			break;
 	}
 
-//	fprintf(log_file, "EN : first_file = %ld\t NUM_ELE = %ld\n", ftell(first_file), NUM_ELE);
-//	fflush(log_file);
+	fprintf(log_file, "EN : first_file = %ld\t NUM_ELE = %ld\n", ftell(first_file), NUM_ELE);
+	fflush(log_file);
 	fclose(first_file);
 	set_time(1);
 
-
 	/*Remove all temporary files*/
-//	if (system("rm -f temp_lvl*") == -1) {
-//		printf("Removing file failed\n");
-//	}
-	if( remove( "temp_lvl0" ) != 0 ){
-		perror( "Error deleting file" );
+	if (remove("temp_lvl0") != 0) {
+		perror("Error deleting file");
 	}
 
-//	fprintf(log_file, "Merge LVL = %d Completed\t Execution time =  %lf seconds \n\n\n", LVL + 1, end_time - start_time);
-//	fflush(log_file);
+	fprintf(log_file, "Merge LVL = %d Completed\t Execution time =  %lf seconds \n\n\n", LVL + 1, end_time - start_time);
+	fflush(log_file);
 
 	set_time(1);
 
-//	fprintf(log_file, "PHASE 2 Completed\t Execution time =  %lf seconds \n", end_time - orig_time);
-//	fflush(log_file);
+	fprintf(log_file, "PHASE 2 Completed\t Execution time =  %lf seconds \n", end_time - orig_time);
+	fflush(log_file);
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	/*PHASE 3 STARTED*/
 //	long int tem_num;
-	for (long int i = 0; i < ELE_PER_PC; i++) {
-//		if (i % 500000000 == 0) {
-//			fprintf(log_file, "Writing %ld \n", i);
-//			fflush(log_file);
-//		}
+	for (long int i = 0; i < ELE_PER_PC / SOCKET_BLK; i++) {
+		if (i % 10 == 0) {
+			fprintf(log_file, "Writing %ld \n", i);
+			fflush(log_file);
+		}
 
-
-		if (i < NUM_ELE) {
-			write_long(sockfd_client, (char *) &temp[i]);
+		if (i * SOCKET_BLK < NUM_ELE) {
+			write_long_chunk(sockfd_client, (char *) &temp[i * SOCKET_BLK]);
 		} else {
-			write_long(sockfd_client, (char *) &data[i % NUM_ELE]);
+			write_long_chunk(sockfd_client, (char *) &data[(i * SOCKET_BLK) % NUM_ELE]);
 		}
 	}
 
-	fprintf(log_file,"Port = %d\tTotal time wasted writing = %f\n", total_time_write);
+	fprintf(log_file, "Total time wasted writing = %f\n", total_time_write);
 	fprintf(log_file, "Completed correctly!\n");
 	fflush(log_file);
 
 	free(temp);
 	free(data);
 
-
 	/*Cleaning the files here*/
 //	if (system("rm -f temp answer sort_client sort_client.c log") == -1)
 //		perror("System");
-
-
-
-
 	return 0;
 
 }

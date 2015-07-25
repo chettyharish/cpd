@@ -19,6 +19,7 @@
 #include <arpa/inet.h>
 #include <limits.h>
 
+#define SOCKET_BLK 25000
 #define BUFFERSIZ 8192
 #define START_SOCK 5555
 #define NAME_LEN 1000
@@ -26,8 +27,6 @@
 #define MAXCONN 7
 #define SWAP(x,y,lo) if (data[lo+y] < data[lo+x]) { long int tmp = data[lo+x]; data[lo+x] = data[lo+y]; data[lo+y] = tmp; }
 
-int bkup_pos;
-bool started_merge = false;
 struct timeval t;
 long int *data;
 long int *temp;
@@ -477,9 +476,9 @@ static __inline__ void set_time(int timer) {
 	}
 }
 
-static __inline__ void read_long(int sockfd_client, char *num) {
+static __inline__ void read_long_chunk(int sockfd_client, char *num) {
 	set_time(3);
-	unsigned int size = sizeof(long int);
+	unsigned int size = sizeof(long int) * SOCKET_BLK;
 	int rlen = 0;
 	int ret;
 	while (rlen < size) {
@@ -696,9 +695,9 @@ void k_way_single() {
 }
 
 int main(int argc, char **argv) {
-
 	if (argc < 4) {
-		printf("Usage ./sort_server large_file_name current_ip_address machinefile\n");
+		printf("Usage ./mem_sort_server large_file_name current_ip_address machinefile\n");
+		fflush(0);
 		exit(1);
 	}
 	set_time(2);
@@ -783,24 +782,16 @@ int main(int argc, char **argv) {
 			close(sockfd_server);
 			long int skip = i * 8000000000l;
 
-//			/bin/dd if=../cop5570a/test1 bs=32M  iflag=skip_bytes,count_bytes skip=0 count=8000000000 | ssh m1 'cat > temp'
-//			/bin/dd if=../cop5570a/test1 bs=32M  iflag=skip_bytes,count_bytes skip=8000000000 count=8000000000 | ssh m2 'cat > temp'
-//			/bin/dd if=../cop5570a/test1 bs=32M  iflag=skip_bytes,count_bytes skip=32000000000 count=8000000000 | ssh m5 'cat > temp'
-//			/bin/dd if=../cop5570a/test1 bs=32M  iflag=skip_bytes,count_bytes skip=24000000000 count=8000000000 | ssh m4 'cat > temp'
-//			/bin/dd if=../cop5570a/test1 bs=32M  iflag=skip_bytes,count_bytes skip=16000000000 count=8000000000 | ssh m3 'cat > temp'
-//			/bin/dd if=../cop5570a/test1 bs=32M  iflag=skip_bytes,count_bytes skip=40000000000 count=8000000000 | ssh m6 'cat > temp'
-//			/bin/dd if=../cop5570a/test1 bs=32M  iflag=skip_bytes,count_bytes skip=48000000000 count=8000000000 | ssh m8 'cat > temp'
-//			/bin/dd if=../cop5570a/test1 bs=32M  iflag=skip_bytes,count_bytes skip=56000000000 count=8000000000  > temp
-			sprintf(buffer_temp, "/bin/dd if=%s bs=32M  iflag=skip_bytes,count_bytes skip=%ld count=8000000000 | ssh %s 'cat > temp'", argv[1], skip, mac_list[i]);
+			sprintf(buffer_temp, "/bin/dd if=%s bs=64M  iflag=skip_bytes,count_bytes skip=%ld count=8000000000 | ssh %s 'cat > temp'", argv[1], skip, mac_list[i]);
 			printf("%s\n", buffer_temp);
 			if (system(buffer_temp) == -1)
 				perror("System");
 
-			sprintf(buffer_temp, "scp sort_client.c %s:", mac_list[i]);
+			sprintf(buffer_temp, "scp mem_sort_client.c %s:", mac_list[i]);
 			printf("%s\n", buffer_temp);
 			if (system(buffer_temp) == -1)
 				perror("System");
-			sprintf(buffer_temp, "ssh %s gcc -o sort_client sort_client.c "
+			sprintf(buffer_temp, "ssh %s gcc -o mem_sort_client mem_sort_client.c "
 					"-march=native -Ofast -std=c99 -lm -pedantic "
 					"-pthread -fopenmp -funroll-loops", mac_list[i]);
 			printf("%s\n", buffer_temp);
@@ -822,7 +813,7 @@ int main(int argc, char **argv) {
 			}
 			close(sockfd_client);
 			close(sockfd_server);
-			sprintf(buffer_temp, "/usr/bin/ssh %s ./sort_client %s %d ", mac_list[i], argv[2], (START_SOCK + i));
+			sprintf(buffer_temp, "/usr/bin/ssh %s ./mem_sort_client %s %d ", mac_list[i], argv[2], (START_SOCK + i));
 			printf("%s\n", buffer_temp);
 			tokenize(buffer_temp, exec_args);
 			if (execv(exec_args[0], exec_args) == -1) {
@@ -854,7 +845,6 @@ int main(int argc, char **argv) {
 	/*PHASE 2 STARTED*/
 	char outfile[100];
 	FILE *in_file = fopen(argv[1], "r");
-	setvbuf(in_file, NULL, _IOFBF, BUFFERSIZ);
 	if (!in_file) {
 		printf("Input file missing\n");
 		exit(1);
@@ -862,7 +852,6 @@ int main(int argc, char **argv) {
 
 	sprintf(outfile, "temp_lvl%d", 0);
 	FILE *out_file = fopen(outfile, "w+");
-	setvbuf(out_file, NULL, _IOFBF, BUFFERSIZ);
 	if (!out_file) {
 		printf("Unable to create output file\n");
 		exit(1);
@@ -886,7 +875,6 @@ int main(int argc, char **argv) {
 		printf("\nStarting with BLK = %d\n", blk);
 		set_time(0);
 		FILE *in_file = fopen(argv[1], "r");
-		setvbuf(in_file, NULL, _IOFBF, BUFFERSIZ);
 		/*Adjusting in large file*/
 		fseek(in_file, (blk + 14) * RSIZE, SEEK_SET);
 
@@ -896,7 +884,6 @@ int main(int argc, char **argv) {
 				exit(1);
 			}
 		}
-
 
 		fclose(in_file);
 
@@ -957,7 +944,6 @@ int main(int argc, char **argv) {
 	char remove_fn[100];
 	sprintf(f1, "temp_lvl%d", LVL);
 	FILE *first_file = fopen(f1, "r");
-	setvbuf(first_file, NULL, _IOFBF, BUFFERSIZ);
 	/*Adjusting for less elements by changing it to >> 6*/
 	NUM_ELE = ELE_PER_PC >> 1;
 
@@ -1039,8 +1025,8 @@ int main(int argc, char **argv) {
 
 	/*Remove all temporary files*/
 
-	if( remove( "temp_lvl0" ) != 0 ){
-		perror( "Error deleting file" );
+	if (remove("temp_lvl0") != 0) {
+		perror("Error deleting file");
 	}
 
 	set_time(1);
@@ -1049,36 +1035,40 @@ int main(int argc, char **argv) {
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	/*PHASE 4 STARTED*/
+
+	long int **data_chunks = (long int **) malloc(7 * sizeof(long int *));
+	for (int i = 0; i < 7; i++)
+		data_chunks[i] = (long int *) malloc(SOCKET_BLK * sizeof(long int));
+//	long int *data_chunks = malloc(sizeof(long int) * MAXCONN * SOCKET_BLK);
 	set_time(0);
 	FILE *final = fopen("final_answer", "w+");
-	setvbuf(final, NULL, _IOFBF, BUFFERSIZ);
 	printf("Done creating the files\n");
 	fflush(stdout);
 
 	printf("Waiting for all machines\n");
 	for (long int i = 0; i < 8; i++)
 		consumed[i] = 0;
-	for (int i = 0; i < 7; i++) {
-		read_long(sfd_client[i], (char *) &nums[i]);
+	for (int i = 0; i < MAXCONN; i++) {
+		read_long_chunk(sfd_client[i], (char *) data_chunks[i]);
+		nums[i] = data_chunks[i][0];
+//		read_long_chunk(sfd_client[i], (char *) &data_chunks[i * SOCKET_BLK]);
+//		nums[i] = data_chunks[i * SOCKET_BLK];
+		printf("Machine %d has started transmitting \n", i);
 	}
+
 	nums[7] = temp[0];
-	started_merge = true;
 	printf("Initialization done\n");
 	fflush(stdout);
 	int loc = -1;
 	long int total = 0;
 
-
-
 	for (long int all_count = 0; all_count < 8000000000; all_count++) {
 		loc = compare_all();
-		bkup_pos = loc;
 		if (all_count % 10 == 0) {
 			fprintf(final, "%ld\n", nums[loc]);
 		}
-		consumed[loc]++;
 
-		if (all_count % 1000000000 == 0) {
+		if (all_count % (1000000000 - 1) == 0) {
 			set_time(1);
 			total = 0;
 			printf("all_count = %ld   reached at %lf seconds \n", all_count, end_time - start_time);
@@ -1089,6 +1079,7 @@ int main(int argc, char **argv) {
 			printf("Total elements consumed = %ld\n", total);
 			fflush(stdout);
 		}
+		consumed[loc]++;
 
 		switch (loc) {
 		case 0:
@@ -1099,7 +1090,13 @@ int main(int argc, char **argv) {
 		case 5:
 		case 6:
 			if (consumed[loc] < ELE_PER_PC) {
-				read_long(sfd_client[loc], (char *) &nums[loc]);
+				if (consumed[loc] % SOCKET_BLK == 0) {
+					/*Getting the next chunk*/
+					read_long_chunk(sfd_client[loc], (char *) data_chunks[loc]);
+//					read_long_chunk(sfd_client[loc], (char *) &data[loc * SOCKET_BLK]);
+				}
+				nums[loc] = data_chunks[loc][consumed[loc] % SOCKET_BLK];
+//				nums[loc] = data_chunks[loc * SOCKET_BLK + consumed[loc] % SOCKET_BLK];
 			} else {
 				printf("Pos = %d is done    consumed = %ld\n", loc, consumed[loc]);
 			}
