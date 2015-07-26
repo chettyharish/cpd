@@ -35,7 +35,7 @@ int main(int argc, char **argv) {
 		fscanf(f1, "%ld\n", &num1);
 		fscanf(f2, "%ld\n", &num2);
 		if (num1 != num2) {
-			printf("Error due to %ld and %ld\n", num1, num2);
+			printf("Error due to %ld and %ld at location = %ld\n", num1, num2 , i);
 			exit(1);
 		}
 //
