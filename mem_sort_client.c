@@ -19,7 +19,7 @@
 #include <arpa/inet.h>
 FILE *log_file;
 
-#define SOCKET_BLK 25000
+#define SOCKET_BLK 5000
 #define BUFFERSIZ 8192
 #define NAME_LEN 1000
 #define NUM_THREADS 16
@@ -509,9 +509,6 @@ bool is_sorted(long int start, long int end) {
 void merge(long int lo, long int mid, long int hi) {
 	long int i, j, k;
 	memcpy(&temp[lo], &data[lo], (hi - lo + 1) * sizeof(long int));
-//	for (long int i = lo; i <= hi; i++) {
-//		temp[i] = data[i];
-//	}
 	i = lo, j = mid + 1;
 
 	for (k = lo; k <= hi; k++) {
@@ -642,7 +639,6 @@ void k_way_single() {
 
 		CURR_THREADS = CURR_THREADS >> 1;
 	}
-
 }
 
 int main(int argc, char **argv) {
@@ -911,8 +907,8 @@ int main(int argc, char **argv) {
 	free(data);
 
 	/*Cleaning the files here*/
-	if (system("rm -f temp mem_sort_client mem_sort_client.c log") == -1)
-		perror("System");
+//	if (system("rm -f temp mem_sort_client mem_sort_client.c log") == -1)
+//		perror("System");
 	return 0;
 
 }
