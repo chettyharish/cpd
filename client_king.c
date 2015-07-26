@@ -23,7 +23,7 @@ FILE *log_file;
 #define NAME_LEN 1000
 #define NUM_THREADS 16
 #define ELE_PER_PC 890000000
-#define ELE_PER_BLK 445000000
+#define ELE_PER_BLK ELE_PER_PC/2
 #define SWAP(x,y,lo) if (data[lo+y] < data[lo+x]) { long int tmp = data[lo+x]; data[lo+x] = data[lo+y]; data[lo+y] = tmp; }
 
 struct timeval t;
