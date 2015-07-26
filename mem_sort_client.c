@@ -19,7 +19,7 @@
 #include <arpa/inet.h>
 FILE *log_file;
 
-#define SOCKET_BLK 100000000
+#define SOCKET_BLK 25000
 #define BUFFERSIZ 8192
 #define NAME_LEN 1000
 #define NUM_THREADS 16
@@ -891,7 +891,7 @@ int main(int argc, char **argv) {
 	/*PHASE 3 STARTED*/
 //	long int tem_num;
 	for (long int i = 0; i < ELE_PER_PC / SOCKET_BLK; i++) {
-		if (i % 10 == 0) {
+		if (i % 100 == 0) {
 			fprintf(log_file, "Writing %ld \n", i);
 			fflush(log_file);
 		}
@@ -911,8 +911,8 @@ int main(int argc, char **argv) {
 	free(data);
 
 	/*Cleaning the files here*/
-//	if (system("rm -f temp answer sort_client sort_client.c log") == -1)
-//		perror("System");
+	if (system("rm -f temp mem_sort_client mem_sort_client.c log") == -1)
+		perror("System");
 	return 0;
 
 }

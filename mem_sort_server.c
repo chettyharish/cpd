@@ -19,7 +19,7 @@
 #include <arpa/inet.h>
 #include <limits.h>
 
-#define SOCKET_BLK 25000
+#define SOCKET_BLK 100
 #define BUFFERSIZ 8192
 #define START_SOCK 5555
 #define NAME_LEN 1000
@@ -454,7 +454,7 @@ static __inline__ void sort15(long int * data, long int lo) {
 	SWAP(6, 7, lo);
 }
 
-double start_time, end_time, orig_time, read_timer_start, read_timer_end, compare_start, compare_end;
+double start_time = 0, end_time = 0, orig_time = 0, read_timer_start = 0, read_timer_end = 0, compare_start = 0, compare_end = 0;
 double total_time_read = 0, total_time_min = 0;
 
 static __inline__ void set_time(int timer) {
@@ -1099,6 +1099,7 @@ int main(int argc, char **argv) {
 //				nums[loc] = data_chunks[loc * SOCKET_BLK + consumed[loc] % SOCKET_BLK];
 			} else {
 				printf("Pos = %d is done    consumed = %ld\n", loc, consumed[loc]);
+				nums[loc] = LONG_MAX;
 			}
 			break;
 		case 7:
