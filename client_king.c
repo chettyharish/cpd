@@ -22,9 +22,14 @@ FILE *log_file;
 #define SOCKET_BLK 25000
 #define NAME_LEN 1000
 #define NUM_THREADS 16
-#define ELE_PER_PC 890000000
-#define ELE_PER_BLK 445000000
+//#define ELE_PER_PC 890000000
+//#define ELE_PER_BLK 445000000
+#define ELE_PER_PC 850000000
+#define ELE_PER_BLK 425000000
+#define FRSIZE 100000
 #define SWAP(x,y,lo) if (data[lo+y] < data[lo+x]) { long int tmp = data[lo+x]; data[lo+x] = data[lo+y]; data[lo+y] = tmp; }
+#define likely(x) __builtin_expect((x),1)
+#define unlikely(x) __builtin_expect((x),0)
 
 struct timeval t;
 long int *data;
@@ -448,15 +453,15 @@ static __inline__ void sort15(long int * data, long int lo) {
 double start_time, end_time, orig_time, write_timer_start, write_timer_end, total_time_write;
 void set_time(int timer) {
 	gettimeofday(&t, NULL);
-	if (timer == 0) {
+	if (likely(timer == 0)) {
 		start_time = 1.0e-6 * t.tv_usec + t.tv_sec;
-	} else if (timer == 1) {
+	} else if (likely(timer == 1)) {
 		end_time = 1.0e-6 * t.tv_usec + t.tv_sec;
-	} else if (timer == 2) {
+	} else if (unlikely(timer == 2)) {
 		orig_time = 1.0e-6 * t.tv_usec + t.tv_sec;
-	} else if (timer == 3) {
+	} else if (likely(timer == 3)) {
 		write_timer_start = 1.0e-6 * t.tv_usec + t.tv_sec;
-	} else if (timer == 4) {
+	} else if (likely(timer == 4)) {
 		write_timer_end = 1.0e-6 * t.tv_usec + t.tv_sec;
 	}
 }
@@ -466,12 +471,12 @@ void write_long_chunk(int sockfd_client, char *num) {
 	unsigned int size = sizeof(long int) * SOCKET_BLK;
 	int rlen = 0, ret = 0;
 	while (rlen < size) {
-		if ((ret = write(sockfd_client, (num + rlen), size - rlen)) == -1) {
+		if (unlikely((ret = write(sockfd_client, (num + rlen), size - rlen)) == -1)) {
 			fprintf(log_file, "write_long\n");
 			fflush(log_file);
 			exit(1);
 		}
-		if (ret <= 0) {
+		if (unlikely(ret <= 0)) {
 			fprintf(log_file, "socket closed before consumptionn");
 			fflush(log_file);
 			exit(1);
@@ -582,7 +587,7 @@ void sort_blk() {
 
 void *k_way_merger_single(void *arg) {
 	int myid = *(int *) arg;
-	long int num_ele = ceil((ELE_PER_BLK* 1.0f) / CURR_THREADS);
+	long int num_ele = ceil((ELE_PER_BLK * 1.0f) / CURR_THREADS);
 	long int start1 = myid * num_ele;
 	long int end1 = myid * num_ele + num_ele / 2 - 1;
 	long int start2 = myid * num_ele + num_ele / 2;
@@ -680,11 +685,18 @@ int main(int argc, char **argv) {
 	fprintf(log_file, "\nStarting with BLK = 0\n");
 	set_time(0);
 	for (long int count = 0; count < ELE_PER_BLK; count++) {
-		if (fread(&data[count], sizeof(long int), 1, in_file) == -1) {
+		if (unlikely(fread(&data[count], sizeof(long int), 1, in_file) == -1)) {
 			perror("fread");
 			exit(1);
 		}
 	}
+
+//	for (long int count = 0; count < ELE_PER_BLK; count += FRSIZE) {
+//		if (unlikely(fread(&data[count], sizeof(long int), FRSIZE, in_file) == -1)) {
+//			perror("fread");
+//			exit(1);
+//		}
+//	}
 	set_time(1);
 	fprintf(log_file, "Reading blk = 0 completed \t Execution time =  %lf seconds\n", end_time - start_time);
 	fflush(log_file);
@@ -714,11 +726,18 @@ int main(int argc, char **argv) {
 	set_time(0);
 
 	for (long int count = 0; count < ELE_PER_BLK; count++) {
-		if (fread(&data[count], sizeof(long int), 1, in_file) == -1) {
+		if (unlikely(fread(&data[count], sizeof(long int), 1, in_file) == -1)) {
 			perror("fread");
 			exit(1);
 		}
 	}
+
+//	for (long int count = 0; count < ELE_PER_BLK; count += FRSIZE) {
+//		if (unlikely(fread(&data[count], sizeof(long int), FRSIZE, in_file) == -1)) {
+//			perror("fread");
+//			exit(1);
+//		}
+//	}
 	set_time(1);
 	fprintf(log_file, "Reading blk = 1 completed \t Execution time =  %lf seconds\n", end_time - start_time);
 	fflush(log_file);
@@ -736,15 +755,6 @@ int main(int argc, char **argv) {
 	fflush(log_file);
 	fprintf(log_file, "PHASE 1 Completed\t Execution time =  %lf seconds \n\n\n", end_time - orig_time);
 	fflush(log_file);
-
-//	FILE *f2 = fopen("ans2", "w+");
-//	for (long int i = 0; i < ELE_PER_PC; i++) {
-//		if (i < ELE_PER_BLK)
-//			fprintf(f2, "%ld\n", data2[i]);
-//		else
-//			fprintf(f2, "%ld\n", data[(i) % ELE_PER_BLK]);
-//
-//	}
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	/*PHASE 2 STARTED*/
@@ -799,15 +809,6 @@ int main(int argc, char **argv) {
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	/*PHASE 3 STARTED*/
 	set_time(0);
-
-//	FILE *f = fopen("ans", "w+");
-//	for (long int i = 0; i < ELE_PER_PC; i++) {
-//		if (i < ELE_PER_BLK)
-//			fprintf(f, "%ld\n", temp[i]);
-//		else
-//			fprintf(f, "%ld\n", data[(i) % ELE_PER_BLK]);
-//
-//	}
 
 	for (long int i = 0; i < ELE_PER_PC / SOCKET_BLK; i++) {
 		if (i % 100 == 0) {

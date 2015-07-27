@@ -19,17 +19,25 @@
 #include <arpa/inet.h>
 #include <limits.h>
 
-#define SOCKET_BLK 100
-#define START_SOCK 5555
+#define NCPORT 61001
+#define DDSIZE 64
+#define SOCKET_BLK 50
+#define START_SOCK 21000
 #define NAME_LEN 1000
 #define NUM_THREADS 16
-#define ELE_PER_CLIENT 890000000
-#define ELE_PER_SERVER 880000000
-#define ELE_PER_BLK 440000000
+//#define ELE_PER_CLIENT 890000000
+//#define ELE_PER_SERVER 880000000
+//#define ELE_PER_BLK 440000000
+
+#define ELE_PER_CLIENT 850000000
+#define ELE_PER_SERVER 1200000000
+#define ELE_PER_BLK 600000000
 #define MAXCONN 8
 #define TOTAL_PROCS 9
+#define FRSIZE 100000
 #define SWAP(x,y,lo) if (data[lo+y] < data[lo+x]) { long int tmp = data[lo+x]; data[lo+x] = data[lo+y]; data[lo+y] = tmp; }
-#define MINSWAP(p1,p2) if(nums[pos[p2]] < nums[pos[p1]]){ long int tmp = pos[p1]; pos[p1] = pos[p2]; pos[p2] = tmp;}
+#define likely(x) __builtin_expect((x),1)
+#define unlikely(x) __builtin_expect((x),0)
 
 struct timeval t;
 long int *data;
@@ -43,13 +51,11 @@ long int consumed[TOTAL_PROCS];
 static __inline__ void sort2(long int * data, long int lo) {
 	SWAP(0, 1, lo);
 }
-
 static __inline__ void sort3(long int * data, long int lo) {
 	SWAP(1, 2, lo);
 	SWAP(0, 2, lo);
 	SWAP(0, 1, lo);
 }
-
 static __inline__ void sort4(long int * data, long int lo) {
 	SWAP(0, 1, lo);
 	SWAP(2, 3, lo);
@@ -122,7 +128,6 @@ static __inline__ void sort8(long int * data, long int lo) {
 	SWAP(3, 5, lo);
 	SWAP(3, 4, lo);
 }
-
 static __inline__ void sort9(long int * data, long int lo) {
 	SWAP(0, 1, lo);
 	SWAP(2, 3, lo);
@@ -155,7 +160,6 @@ static __inline__ void sort9(long int * data, long int lo) {
 	SWAP(3, 5, lo);
 	SWAP(3, 4, lo);
 }
-
 static __inline__ void sort10(long int * data, long int lo) {
 	SWAP(0, 1, lo);
 	SWAP(3, 4, lo);
@@ -230,7 +234,6 @@ static __inline__ void sort11(long int * data, long int lo) {
 	SWAP(3, 5, lo);
 	SWAP(4, 5, lo);
 }
-
 static __inline__ void sort12(long int * data, long int lo) {
 	SWAP(1, 2, lo);
 	SWAP(4, 5, lo);
@@ -275,7 +278,6 @@ static __inline__ void sort12(long int * data, long int lo) {
 	SWAP(4, 6, lo);
 	SWAP(5, 6, lo);
 }
-
 static __inline__ void sort13(long int * data, long int lo) {
 	SWAP(1, 2, lo);
 	SWAP(4, 5, lo);
@@ -456,19 +458,19 @@ double total_time_read = 0, total_time_min = 0;
 
 static __inline__ void set_time(int timer) {
 	gettimeofday(&t, NULL);
-	if (timer == 0) {
+	if (likely(timer == 0)) {
 		start_time = 1.0e-6 * t.tv_usec + t.tv_sec;
-	} else if (timer == 1) {
+	} else if (likely(timer == 1)) {
 		end_time = 1.0e-6 * t.tv_usec + t.tv_sec;
-	} else if (timer == 2) {
+	} else if (unlikely(timer == 2)) {
 		orig_time = 1.0e-6 * t.tv_usec + t.tv_sec;
-	} else if (timer == 3) {
+	} else if (likely(timer == 3)) {
 		read_timer_start = 1.0e-6 * t.tv_usec + t.tv_sec;
-	} else if (timer == 4) {
+	} else if (likely(timer == 4)) {
 		read_timer_end = 1.0e-6 * t.tv_usec + t.tv_sec;
-	} else if (timer == 5) {
+	} else if (likely(timer == 5)) {
 		compare_start = 1.0e-6 * t.tv_usec + t.tv_sec;
-	} else if (timer == 6) {
+	} else if (likely(timer == 6)) {
 		compare_end = 1.0e-6 * t.tv_usec + t.tv_sec;
 	}
 }
@@ -479,12 +481,12 @@ static __inline__ void read_long_chunk(int sockfd_client, char *num) {
 	int rlen = 0;
 	int ret;
 	while (rlen < size) {
-		if ((ret = read(sockfd_client, (num + rlen), size - rlen)) == -1) {
+		if (unlikely((ret = read(sockfd_client, (num + rlen), size - rlen)) == -1)) {
 			perror("read_long");
 			exit(1);
 		}
 
-		if (ret < 0) {
+		if (unlikely(ret < 0)) {
 			perror("socket closed before consumption");
 			exit(1);
 		}
@@ -501,7 +503,6 @@ static __inline__ int compare_all(long int *nums) {
 	int pos = -1;
 	for (int i = 0; i < TOTAL_PROCS; i++) {
 		/*Since both machines have different file sizes */
-//		if ((i < MAXCONN && consumed[i] < ELE_PER_CLIENT) || (i == TOTAL_PROCS - 1 && consumed[i] < ELE_PER_SERVER)) {
 		if (nums[i] < min) {
 			min = nums[i];
 			pos = i;
@@ -510,23 +511,6 @@ static __inline__ int compare_all(long int *nums) {
 	set_time(6);
 	total_time_min += (compare_end - compare_start);
 	return pos;
-}
-
-static __inline__ int compare_all_macro(long int *nums) {
-	/*Looks at the 9 elements in the array for 9 way socket merge*/
-	set_time(5);
-	int pos[9] = { 0, 1, 2, 3, 4, 5, 6, 7, 8 };
-	MINSWAP(0, 1);
-	MINSWAP(2, 3);
-	MINSWAP(4, 5);
-	MINSWAP(6, 7);
-	MINSWAP(0, 2);
-	MINSWAP(4, 6);
-	MINSWAP(0, 4);
-	MINSWAP(0, 8);
-	set_time(6);
-	total_time_min += (compare_end - compare_start);
-	return pos[0];
 }
 
 void tokenize(char *buffer_temp, char *exec_args[]) {
@@ -539,6 +523,7 @@ void tokenize(char *buffer_temp, char *exec_args[]) {
 	}
 	exec_args[counter] = NULL;
 }
+
 void merge(long int lo, long int mid, long int hi) {
 	long int i, j, k;
 	memcpy(&temp[lo], &data[lo], (hi - lo + 1) * sizeof(long int));
@@ -612,7 +597,7 @@ void mergesort(long int lo, long int hi) {
 	long int mid = lo + (hi - lo) / 2;
 	mergesort(lo, mid);
 	mergesort(mid + 1, hi);
-	if (!(data[mid] < data[mid + 1])) {
+	if (likely(!(data[mid] < data[mid + 1]))) {
 		/*Merge only if data is sorted*/
 		merge(lo, mid, hi);
 	}
@@ -672,11 +657,9 @@ void *k_way_merger_single(void *arg) {
 }
 
 void k_way_single() {
-//	printf("%s\n", __func__);
 	CURR_THREADS = NUM_THREADS >> 1;
 	while (CURR_THREADS != 0) {
 		for (int i = 0; i < CURR_THREADS; i++) {
-//			printf("INSIDE\n");
 			myid[i] = i;
 			pthread_create(&tid[i], NULL, &k_way_merger_single, &myid[i]);
 		}
@@ -699,7 +682,7 @@ int main(int argc, char **argv) {
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	/*Get the 8 machines from machinefile*/
 	FILE *file = fopen(argv[3], "r");
-	char mac_list[MAXCONN][1000];
+	char mac_list[MAXCONN][NAME_LEN];
 	int num_machines = 0;
 	char buffer_machines[NAME_LEN];
 	while (fgets(buffer_machines, sizeof buffer_machines, file)) {
@@ -766,13 +749,45 @@ int main(int argc, char **argv) {
 	char buffer_temp[NAME_LEN];
 	char *exec_args[NAME_LEN];
 
+//	const char *ip_add[] = { "192.168.28.125", "192.168.28.126", "192.168.28.127", "192.168.28.128", "192.168.28.131", "192.168.28.132", "192.168.28.133", "192.168.28.134", };
+//	for (int i = 0; i < MAXCONN; i++) {
+//		if (fork() == 0) {
+//
+//			long int skip = i * ELE_PER_CLIENT * 8l;
+//			sprintf(buffer_temp, "/bin/bash -c \"ssh %s 'nc -l %d|dd bs=%dM of=temp ' & disown ; /bin/dd if=%s bs=%dM  iflag=skip_bytes,count_bytes skip=%ld count=%ld |nc %s %d\" ", mac_list[i],
+//					NCPORT, DDSIZE, argv[1],
+//					DDSIZE, skip, ELE_PER_CLIENT * sizeof(long int), ip_add[i], NCPORT);
+//			printf("%s\n", buffer_temp);
+//			if (system(buffer_temp) == -1)
+//				perror("System");
+//
+////			sleep(2);
+////			sprintf(buffer_temp, "/bin/dd if=%s bs=%dM  iflag=skip_bytes,count_bytes skip=%ld count=%ld |nc %s %d", argv[1],
+////			DDSIZE, skip, ELE_PER_CLIENT * sizeof(long int), ip_add[i], NCPORT);
+////			printf("%s\n", buffer_temp);
+////			if (system(buffer_temp) == -1)
+////				perror("System");
+//
+//			exit(0);
+//
+//		}
+//	}
+//
+//	while (wait(NULL) > 0)
+//		;
+//
+//	set_time(1);
+//	printf("PHASE 1 Completed\t Execution time =  %lf seconds \n\n\n", end_time - orig_time);
+//	set_time(2);
+//	exit(0);
+
 	for (int i = 0; i < MAXCONN; i++) {
 		if (fork() == 0) {
 			long int skip = i * ELE_PER_CLIENT * 8l;
 			sprintf(buffer_temp, "/bin/dd if=%s bs=64M  iflag=skip_bytes,count_bytes skip=%ld count=%ld | ssh %s 'cat > temp'", argv[1], skip, ELE_PER_CLIENT * sizeof(long int), mac_list[i]);
 			printf("%s\n", buffer_temp);
-//			if (system(buffer_temp) == -1)
-//				perror("System");
+			if (system(buffer_temp) == -1)
+				perror("System");
 
 			sprintf(buffer_temp, "scp client_king.c %s:", mac_list[i]);
 			printf("%s\n", buffer_temp);
@@ -785,24 +800,32 @@ int main(int argc, char **argv) {
 			if (system(buffer_temp) == -1)
 				perror("System");
 
-			exit(0);
-		}
-	}
-
-	while (wait(NULL) > 0)
-		;
-
-	for (int i = 0; i < MAXCONN; i++) {
-		if (fork() == 0) {
 			sprintf(buffer_temp, "/usr/bin/ssh %s ./client_king %s %d ", mac_list[i], argv[2], (START_SOCK + i));
 			printf("%s\n", buffer_temp);
 			tokenize(buffer_temp, exec_args);
 			if (execv(exec_args[0], exec_args) == -1) {
 				printf("Command execution error!\n");
+				exit(1);
 			}
+
 			exit(0);
 		}
 	}
+
+//	while (wait(NULL) > 0)
+//		;
+//
+//	for (int i = 0; i < MAXCONN; i++) {
+//		if (fork() == 0) {
+//			sprintf(buffer_temp, "/usr/bin/ssh %s ./client_king %s %d ", mac_list[i], argv[2], (START_SOCK + i));
+//			printf("%s\n", buffer_temp);
+//			tokenize(buffer_temp, exec_args);
+//			if (execv(exec_args[0], exec_args) == -1) {
+//				printf("Command execution error!\n");
+//				exit(1);
+//			}
+//		}
+//	}
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	/*Accepting the connection here*/
@@ -842,11 +865,19 @@ int main(int argc, char **argv) {
 	set_time(0);
 	fseek(in_file, ELE_PER_CLIENT * sizeof(long int) * MAXCONN, SEEK_SET);
 	for (long int count = 0; count < ELE_PER_BLK; count++) {
-		if (fread(&data[count], sizeof(long int), 1, in_file) == -1) {
+		if (unlikely(fread(&data[count], sizeof(long int), 1, in_file) == -1)) {
 			perror("fread");
 			exit(1);
 		}
 	}
+
+//	for (long int count = 0; count < ELE_PER_BLK; count += FRSIZE) {
+//		if (unlikely(fread(&data[count], sizeof(long int), FRSIZE, in_file) == -1)) {
+//			perror("fread");
+//			exit(1);
+//		}
+//	}
+
 	set_time(1);
 	printf("Reading blk = 0 completed \t Execution time =  %lf seconds\n", end_time - start_time);
 
@@ -872,11 +903,18 @@ int main(int argc, char **argv) {
 	set_time(0);
 	fseek(in_file, (ELE_PER_CLIENT * 1l * MAXCONN * 1l + ELE_PER_BLK * 1l) * sizeof(long int), SEEK_SET);
 	for (long int count = 0; count < ELE_PER_BLK; count++) {
-		if (fread(&data[count], sizeof(long int), 1, in_file) == -1) {
+		if (unlikely(fread(&data[count], sizeof(long int), 1, in_file) == -1)) {
 			perror("fread");
 			exit(1);
 		}
 	}
+
+//	for (long int count = 0; count < ELE_PER_BLK; count += FRSIZE) {
+//		if (unlikely(fread(&data[count], sizeof(long int), FRSIZE, in_file) == -1)) {
+//			perror("fread");
+//			exit(1);
+//		}
+//	}
 	set_time(1);
 	printf("Reading blk = 1 completed \t Execution time =  %lf seconds\n", end_time - start_time);
 
@@ -976,7 +1014,7 @@ int main(int argc, char **argv) {
 			fprintf(final, "%ld\n", nums[loc]);
 		}
 
-		if (all_count % (1000000000 - 1) == 0) {
+		if (unlikely(all_count % (1000000000 - 1) == 0)) {
 			set_time(1);
 			total = 0;
 			printf("all_count = %ld   reached at %lf seconds \n", all_count, end_time - start_time);
