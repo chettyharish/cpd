@@ -31,10 +31,6 @@
 #define MAXCONN 8
 #define TOTAL_PROCS 9
 
-#define SWAP(x,y,lo) if (data[lo+y] < data[lo+x]) { long int tmp = data[lo+x]; data[lo+x] = data[lo+y]; data[lo+y] = tmp; }
-#define likely(x) __builtin_expect((x),1)
-#define unlikely(x) __builtin_expect((x),0)
-
 struct timeval t;
 long int *data;
 long int *data2;
@@ -65,6 +61,11 @@ static __inline__ void set_time(int timer) {
 	}
 }
 
+#define SWAP(x,y,lo) if (data[lo+y] < data[lo+x]) { long int tmp = data[lo+x]; data[lo+x] = data[lo+y]; data[lo+y] = tmp; }
+#define likely(x) __builtin_expect((x),1)
+#define unlikely(x) __builtin_expect((x),0)
+//#define likely(x) (x)
+//#define unlikely(x) (x)
 //#define printf(...)
 //#define set_time(...)
 
