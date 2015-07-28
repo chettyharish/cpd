@@ -18,6 +18,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <limits.h>
+#include <fcntl.h>
 
 #define NCPORT 61001
 #define DDSIZE 64
@@ -30,9 +31,9 @@
 //#define ELE_PER_SERVER 880000000
 //#define ELE_PER_BLK 440000000
 
-#define ELE_PER_CLIENT 850000000
-#define ELE_PER_SERVER 1200000000
-#define ELE_PER_BLK 600000000
+#define ELE_PER_CLIENT 850000000l
+#define ELE_PER_SERVER 1200000000l
+#define ELE_PER_BLK 600000000l
 #define MAXCONN 8
 #define TOTAL_PROCS 9
 #define FRSIZE 100000
@@ -478,9 +479,8 @@ static __inline__ void set_time(int timer) {
 
 static __inline__ void read_long_chunk(int sockfd_client, char *num) {
 	set_time(3);
-	unsigned int size = sizeof(long int) * SOCKET_BLK;
-	int rlen = 0;
-	int ret;
+	long  int size = sizeof(long int) * SOCKET_BLK;
+	long int rlen = 0, ret = 0;
 	while (rlen < size) {
 		if (unlikely((ret = read(sockfd_client, (num + rlen), size - rlen)) == -1)) {
 			perror("read_long");
@@ -498,8 +498,8 @@ static __inline__ void read_long_chunk(int sockfd_client, char *num) {
 }
 
 void write_long_chunk(int sockfd_client, char *num) {
-	unsigned int size = sizeof(long int) * SEND_SOCKET_BLK;
-	int rlen = 0, ret = 0;
+	long int size = sizeof(long int) * SEND_SOCKET_BLK;
+	long int rlen = 0, ret = 0;
 	while (rlen < size) {
 		if (unlikely((ret = write(sockfd_client, (num + rlen), size - rlen)) == -1)) {
 			perror("Write long");
