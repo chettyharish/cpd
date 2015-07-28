@@ -20,12 +20,12 @@
 
 #define ELE_PER_PC 850000000l
 #define ELE_PER_BLK 425000000l
-#define SOCKET_BLK ELE_PER_BLK
+#define REC_SOCKET_BLK ELE_PER_BLK
 #define likely(x) __builtin_expect((x),1)
 #define unlikely(x) __builtin_expect((x),0)
 
 static __inline__ void read_long_chunk(int sockfd_client, char *num) {
-	unsigned long int size = sizeof(long int) * SOCKET_BLK;
+	unsigned long int size = sizeof(long int) * REC_SOCKET_BLK;
 	long int rlen = 0;
 	long int ret;
 	while (rlen < size) {
@@ -68,14 +68,8 @@ int main(int argc, char **argv) {
 
 	long int *data = malloc(sizeof(long int) * ELE_PER_BLK);
 	long int *data2 = malloc(sizeof(long int) * ELE_PER_BLK);
-
-	for(long int count = 0 ; count < ELE_PER_BLK ; count += SOCKET_BLK){
-		read_long_chunk(sockfd_client , (char *) &data[count]);
-	}
-
-	for(long int count = 0 ; count < ELE_PER_BLK ; count += SOCKET_BLK){
-		read_long_chunk(sockfd_client , (char *) &data2[count]);
-	}
+	read_long_chunk(sockfd_client , (char *) data);
+	read_long_chunk(sockfd_client , (char *) data2);
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 }

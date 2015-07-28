@@ -19,13 +19,14 @@
 #include <arpa/inet.h>
 FILE *log_file;
 
-#define SOCKET_BLK 25000
 #define NAME_LEN 1000
 #define NUM_THREADS 16
 //#define ELE_PER_PC 890000000
 //#define ELE_PER_BLK 445000000
 #define ELE_PER_PC 850000000
 #define ELE_PER_BLK 425000000
+#define SOCKET_BLK 25000
+#define REC_SOCKET_BLK ELE_PER_BLK
 #define FRSIZE 100000
 #define SWAP(x,y,lo) if (data[lo+y] < data[lo+x]) { long int tmp = data[lo+x]; data[lo+x] = data[lo+y]; data[lo+y] = tmp; }
 #define likely(x) __builtin_expect((x),1)
@@ -466,6 +467,24 @@ void set_time(int timer) {
 	}
 }
 
+static __inline__ void read_long_chunk(int sockfd_client, char *num) {
+	unsigned long int size = sizeof(long int) * REC_SOCKET_BLK;
+	long int rlen = 0;
+	long int ret;
+	while (rlen < size) {
+		if (unlikely((ret = read(sockfd_client, (num + rlen), size - rlen)) == -1)) {
+			perror("read_long");
+			exit(1);
+		}
+
+		if (unlikely(ret < 0)) {
+			perror("socket closed before consumption");
+			exit(1);
+		}
+		rlen += ret;
+	}
+}
+
 void write_long_chunk(int sockfd_client, char *num) {
 	set_time(3);
 	unsigned int size = sizeof(long int) * SOCKET_BLK;
@@ -663,43 +682,23 @@ int main(int argc, char **argv) {
 		exit(1);
 	}
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	/*PHASE 1 STARTED*/
-
-	/*Blk 1 processing*/
-	FILE *in_file = fopen("temp", "r");
-	if (!in_file) {
-		printf("Input file missing\n");
-		exit(1);
-	}
-
+	/*Allocating and getting data from the sockets*/
 	data = malloc(sizeof(long int) * ELE_PER_BLK);
 	temp = malloc(sizeof(long int) * ELE_PER_BLK);
 	data2 = malloc(sizeof(long int) * ELE_PER_BLK);
-
 	if (data == NULL || data2 == NULL || temp == NULL) {
 		perror("Malloc :");
 		exit(1);
 	}
 
-	fprintf(log_file, "\nStarting with BLK = 0\n");
 	set_time(0);
-	for (long int count = 0; count < ELE_PER_BLK; count++) {
-		if (unlikely(fread(&data[count], sizeof(long int), 1, in_file) == -1)) {
-			perror("fread");
-			exit(1);
-		}
-	}
-
-//	for (long int count = 0; count < ELE_PER_BLK; count += FRSIZE) {
-//		if (unlikely(fread(&data[count], sizeof(long int), FRSIZE, in_file) == -1)) {
-//			perror("fread");
-//			exit(1);
-//		}
-//	}
+	read_long_chunk(sockfd_client, (char *) data);
 	set_time(1);
-	fprintf(log_file, "Reading blk = 0 completed \t Execution time =  %lf seconds\n", end_time - start_time);
+	fprintf(log_file, "Done receiving part 1 Execution time =  %lf seconds\n", end_time - start_time);
 	fflush(log_file);
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	/*PHASE 2 STARTED*/
 
 	set_time(0);
 	sort_blk();
@@ -714,34 +713,22 @@ int main(int argc, char **argv) {
 	fflush(log_file);
 
 	set_time(0);
-	for (long int i = 0; i < ELE_PER_BLK; i++) {
-		data2[i] = data[i];
-	}
+	/*Pointer trickery :P*/
+	long int *ptr_trick = data;
+	data = data2;
+	data2 = ptr_trick;
 	set_time(1);
 	fprintf(log_file, "Copying data completed\t Execution time =  %lf seconds\n", end_time - start_time);
 	fflush(log_file);
 
-	/*Blk 2 processing*/
-	fprintf(log_file, "\nStarting with BLK = 1\n");
+	/*Get data 2 now :P */
 	set_time(0);
-
-	for (long int count = 0; count < ELE_PER_BLK; count++) {
-		if (unlikely(fread(&data[count], sizeof(long int), 1, in_file) == -1)) {
-			perror("fread");
-			exit(1);
-		}
-	}
-
-//	for (long int count = 0; count < ELE_PER_BLK; count += FRSIZE) {
-//		if (unlikely(fread(&data[count], sizeof(long int), FRSIZE, in_file) == -1)) {
-//			perror("fread");
-//			exit(1);
-//		}
-//	}
+	read_long_chunk(sockfd_client, (char *) data);
 	set_time(1);
-	fprintf(log_file, "Reading blk = 1 completed \t Execution time =  %lf seconds\n", end_time - start_time);
+	fprintf(log_file, "Done receiving part 2 Execution time =  %lf seconds\n", end_time - start_time);
 	fflush(log_file);
 
+	/*Blk 2 processing*/
 	set_time(0);
 	sort_blk();
 	set_time(1);
@@ -753,11 +740,11 @@ int main(int argc, char **argv) {
 	set_time(1);
 	fprintf(log_file, "K-Way Merge completed \t Execution time =  %lf seconds\n", end_time - start_time);
 	fflush(log_file);
-	fprintf(log_file, "PHASE 1 Completed\t Execution time =  %lf seconds \n\n\n", end_time - orig_time);
+	fprintf(log_file, "PHASE 2 Completed\t Execution time =  %lf seconds \n\n\n", end_time - orig_time);
 	fflush(log_file);
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	/*PHASE 2 STARTED*/
+	/*PHASE 3 STARTED*/
 	long int count1 = 0;
 	long int count2 = 0;
 	long int pos = 0;
@@ -803,7 +790,7 @@ int main(int argc, char **argv) {
 	}
 
 	set_time(1);
-	fprintf(log_file, "PHASE 2 Completed\t Execution time =  %lf seconds \n", end_time - orig_time);
+	fprintf(log_file, "PHASE 3 Completed\t Execution time =  %lf seconds \n", end_time - orig_time);
 	fflush(log_file);
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -830,11 +817,11 @@ int main(int argc, char **argv) {
 	free(temp);
 	free(data);
 	set_time(1);
-	fprintf(log_file, "PHASE 3 Completed\t Execution time =  %lf seconds \n", end_time - orig_time);
+	fprintf(log_file, "PHASE 4 Completed\t Execution time =  %lf seconds \n", end_time - orig_time);
 	fflush(log_file);
 	/*Cleaning the files here*/
-//	if (system("rm -f temp mem_sort_client mem_sort_client.c log") == -1)
-//		perror("System");
+	if (system("rm -f client_king client_king.c log") == -1)
+		perror("System");
 	return 0;
 }
 

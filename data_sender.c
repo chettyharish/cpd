@@ -19,7 +19,7 @@
 #include <arpa/inet.h>
 #include <limits.h>
 
-#define SOCKET_BLK 25000
+#define SEND_SOCKET_BLK 25000
 #define START_SOCK 21000
 #define ELE_PER_CLIENT 850000000
 #define ELE_PER_SERVER 1200000000
@@ -43,7 +43,7 @@ void tokenize(char *buffer_temp, char *exec_args[]) {
 }
 
 void write_long_chunk(int sockfd_client, char *num) {
-	unsigned int size = sizeof(long int) * SOCKET_BLK;
+	unsigned int size = sizeof(long int) * SEND_SOCKET_BLK;
 	int rlen = 0, ret = 0;
 	while (rlen < size) {
 		if (unlikely((ret = write(sockfd_client, (num + rlen), size - rlen)) == -1)) {
@@ -165,7 +165,7 @@ int main(int argc, char **argv) {
 		printf("client[%d] is remote machine = %s, port = %d.\n", i, inet_ntoa(saddr_client.sin_addr), ntohs(saddr_client.sin_port));
 	}
 
-	long int *op_data = malloc(sizeof(long) * SOCKET_BLK);
+	long int *op_data = malloc(sizeof(long) * SEND_SOCKET_BLK);
 	int pid[8];
 	for (int i = 0; i < MAXCONN; i++) {
 		if ((pid[i] = fork()) == 0) {
@@ -179,11 +179,11 @@ int main(int argc, char **argv) {
 
 			fseek(in_file, skip, SEEK_SET);
 
-			for (long int total = 0; total < ELE_PER_CLIENT; total += SOCKET_BLK) {
+			for (long int total = 0; total < ELE_PER_CLIENT; total += SEND_SOCKET_BLK) {
 				if (total % 100000000 == 0) {
 					printf("Working at %ld in process %d  time = %ld\n", total, i, time(0) - start);
 				}
-				if (fread(op_data, sizeof(long int), SOCKET_BLK, in_file) == -1) {
+				if (fread(op_data, sizeof(long int), SEND_SOCKET_BLK, in_file) == -1) {
 					perror("fread");
 					exit(1);
 				}
@@ -220,6 +220,8 @@ int main(int argc, char **argv) {
 			printf("%d\t%d\n", stat, stat);
 		}
 	}
+
+	free(op_data);
 
 	while (wait(NULL) > 0)
 		;

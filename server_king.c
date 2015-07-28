@@ -21,7 +21,8 @@
 
 #define NCPORT 61001
 #define DDSIZE 64
-#define SOCKET_BLK 50
+#define SOCKET_BLK 100
+#define SEND_SOCKET_BLK 50000000
 #define START_SOCK 21000
 #define NAME_LEN 1000
 #define NUM_THREADS 16
@@ -496,13 +497,27 @@ static __inline__ void read_long_chunk(int sockfd_client, char *num) {
 	total_time_read += (read_timer_end - read_timer_start);
 }
 
+void write_long_chunk(int sockfd_client, char *num) {
+	unsigned int size = sizeof(long int) * SEND_SOCKET_BLK;
+	int rlen = 0, ret = 0;
+	while (rlen < size) {
+		if (unlikely((ret = write(sockfd_client, (num + rlen), size - rlen)) == -1)) {
+			perror("Write long");
+			exit(1);
+		}
+		if (unlikely(ret <= 0)) {
+			exit(1);
+		}
+		rlen += ret;
+	}
+}
+
 static __inline__ int compare_all(long int *nums) {
 	/*Looks at the 9 elements in the array for 9 way socket merge*/
 	set_time(5);
 	long int min = LONG_MAX;
 	int pos = -1;
 	for (int i = 0; i < TOTAL_PROCS; i++) {
-		/*Since both machines have different file sizes */
 		if (nums[i] < min) {
 			min = nums[i];
 			pos = i;
@@ -745,50 +760,12 @@ int main(int argc, char **argv) {
 	}
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	/*Sending files to all the machines*/
+	/*Sending client executables to all the machines*/
 	char buffer_temp[NAME_LEN];
 	char *exec_args[NAME_LEN];
 
-//	const char *ip_add[] = { "192.168.28.125", "192.168.28.126", "192.168.28.127", "192.168.28.128", "192.168.28.131", "192.168.28.132", "192.168.28.133", "192.168.28.134", };
-//	for (int i = 0; i < MAXCONN; i++) {
-//		if (fork() == 0) {
-//
-//			long int skip = i * ELE_PER_CLIENT * 8l;
-//			sprintf(buffer_temp, "/bin/bash -c \"ssh %s 'nc -l %d|dd bs=%dM of=temp ' & disown ; /bin/dd if=%s bs=%dM  iflag=skip_bytes,count_bytes skip=%ld count=%ld |nc %s %d\" ", mac_list[i],
-//					NCPORT, DDSIZE, argv[1],
-//					DDSIZE, skip, ELE_PER_CLIENT * sizeof(long int), ip_add[i], NCPORT);
-//			printf("%s\n", buffer_temp);
-//			if (system(buffer_temp) == -1)
-//				perror("System");
-//
-////			sleep(2);
-////			sprintf(buffer_temp, "/bin/dd if=%s bs=%dM  iflag=skip_bytes,count_bytes skip=%ld count=%ld |nc %s %d", argv[1],
-////			DDSIZE, skip, ELE_PER_CLIENT * sizeof(long int), ip_add[i], NCPORT);
-////			printf("%s\n", buffer_temp);
-////			if (system(buffer_temp) == -1)
-////				perror("System");
-//
-//			exit(0);
-//
-//		}
-//	}
-//
-//	while (wait(NULL) > 0)
-//		;
-//
-//	set_time(1);
-//	printf("PHASE 1 Completed\t Execution time =  %lf seconds \n\n\n", end_time - orig_time);
-//	set_time(2);
-//	exit(0);
-
 	for (int i = 0; i < MAXCONN; i++) {
 		if (fork() == 0) {
-			long int skip = i * ELE_PER_CLIENT * 8l;
-			sprintf(buffer_temp, "/bin/dd if=%s bs=64M  iflag=skip_bytes,count_bytes skip=%ld count=%ld | ssh %s 'cat > temp'", argv[1], skip, ELE_PER_CLIENT * sizeof(long int), mac_list[i]);
-			printf("%s\n", buffer_temp);
-			if (system(buffer_temp) == -1)
-				perror("System");
-
 			sprintf(buffer_temp, "scp client_king.c %s:", mac_list[i]);
 			printf("%s\n", buffer_temp);
 			if (system(buffer_temp) == -1)
@@ -812,22 +789,6 @@ int main(int argc, char **argv) {
 		}
 	}
 
-//	while (wait(NULL) > 0)
-//		;
-//
-//	for (int i = 0; i < MAXCONN; i++) {
-//		if (fork() == 0) {
-//			sprintf(buffer_temp, "/usr/bin/ssh %s ./client_king %s %d ", mac_list[i], argv[2], (START_SOCK + i));
-//			printf("%s\n", buffer_temp);
-//			tokenize(buffer_temp, exec_args);
-//			if (execv(exec_args[0], exec_args) == -1) {
-//				printf("Command execution error!\n");
-//				exit(1);
-//			}
-//		}
-//	}
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	/*Accepting the connection here*/
 	for (int i = 0; i < MAXCONN; i++) {
 		if ((sockfd_client = accept(sfd_server[i], (struct sockaddr *) (&saddr_client), &len)) < 0) {
@@ -840,6 +801,52 @@ int main(int argc, char **argv) {
 	}
 
 	fflush(stdout);
+
+	/*Sending data to the receivers*/
+	long int *op_data = malloc(sizeof(long) * SEND_SOCKET_BLK);
+	int pid[8];
+	for (int i = 0; i < MAXCONN; i++) {
+		if ((pid[i] = fork()) == 0) {
+			long int start = time(0);
+			FILE *in_file = fopen(argv[1], "r");
+			if (!in_file) {
+				printf("Input file missing\n");
+				exit(1);
+			}
+			long int skip = i * ELE_PER_CLIENT * 8l;
+			fseek(in_file, skip, SEEK_SET);
+			bool f1 = false, f2 = false, f3 = false, f4 = false;
+			for (long int total = 0; total < ELE_PER_CLIENT; total += SEND_SOCKET_BLK) {
+				if (total >= ELE_PER_CLIENT && f1 ==false) {
+					printf("Done transmitting 100 percent in process %d  time = %ld\n", i, time(0) - start);
+					f1 = true;
+				} else if (total >= ELE_PER_CLIENT * 0.75&& f2 ==false) {
+					printf("Done transmitting 75 percent  in process %d  time = %ld\n", i, time(0) - start);
+					f2 = true;
+				} else if (total >= ELE_PER_CLIENT * 0.50&& f3 ==false) {
+					printf("Done transmitting 50 percent  in process %d  time = %ld\n", i, time(0) - start);
+					f3 = true;
+				} else if (total >= ELE_PER_CLIENT * 0.25&& f4 ==false) {
+					printf("Done transmitting 25 percent  in process %d  time = %ld\n", i, time(0) - start);
+					f4 = true;
+				}
+
+				if (fread(op_data, sizeof(long int), SEND_SOCKET_BLK, in_file) == -1) {
+					perror("fread");
+					exit(1);
+				}
+				write_long_chunk(sfd_client[i], (char *) op_data);
+			}
+
+			printf("Process %d  Done sending at %ld\n", i, time(0) - start);
+			exit(0);
+		}
+	}
+
+	free(op_data);
+	for (int i = 0; i < MAXCONN; i++) {
+		waitpid(pid[i], NULL, 0);
+	}
 
 	set_time(1);
 	printf("PHASE 1 Completed\t Execution time =  %lf seconds \n\n\n", end_time - orig_time);
@@ -870,14 +877,6 @@ int main(int argc, char **argv) {
 			exit(1);
 		}
 	}
-
-//	for (long int count = 0; count < ELE_PER_BLK; count += FRSIZE) {
-//		if (unlikely(fread(&data[count], sizeof(long int), FRSIZE, in_file) == -1)) {
-//			perror("fread");
-//			exit(1);
-//		}
-//	}
-
 	set_time(1);
 	printf("Reading blk = 0 completed \t Execution time =  %lf seconds\n", end_time - start_time);
 
@@ -892,9 +891,10 @@ int main(int argc, char **argv) {
 	printf("K-Way Merge completed \t Execution time =  %lf seconds\n", end_time - start_time);
 
 	set_time(0);
-	for (long int i = 0; i < ELE_PER_BLK; i++) {
-		data2[i] = data[i];
-	}
+	/*Pointer trickery :P*/
+	long int *ptr_trick = data;
+	data = data2;
+	data2 = ptr_trick;
 	set_time(1);
 	printf("Copying data completed\t Execution time =  %lf seconds\n", end_time - start_time);
 
@@ -908,13 +908,6 @@ int main(int argc, char **argv) {
 			exit(1);
 		}
 	}
-
-//	for (long int count = 0; count < ELE_PER_BLK; count += FRSIZE) {
-//		if (unlikely(fread(&data[count], sizeof(long int), FRSIZE, in_file) == -1)) {
-//			perror("fread");
-//			exit(1);
-//		}
-//	}
 	set_time(1);
 	printf("Reading blk = 1 completed \t Execution time =  %lf seconds\n", end_time - start_time);
 
@@ -983,7 +976,6 @@ int main(int argc, char **argv) {
 	/*PHASE 4 STARTED*/
 
 	long int nums[TOTAL_PROCS];
-//	bool totally_consumed[TOTAL_PROCS];
 	static long int data_chunks[MAXCONN][SOCKET_BLK];
 //	long int **data_chunks = (long int **) malloc(MAXCONN * sizeof(long int *));
 //	for (int i = 0; i < MAXCONN; i++)
@@ -995,7 +987,6 @@ int main(int argc, char **argv) {
 
 	for (long int i = 0; i < TOTAL_PROCS; i++) {
 		consumed[i] = 0;
-//		totally_consumed[i] = false;
 	}
 	for (int i = 0; i < MAXCONN; i++) {
 		read_long_chunk(sfd_client[i], (char *) data_chunks[i]);
