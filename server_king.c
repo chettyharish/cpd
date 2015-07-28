@@ -20,23 +20,17 @@
 #include <limits.h>
 #include <fcntl.h>
 
-#define NCPORT 61001
-#define DDSIZE 64
 #define SOCKET_BLK 100
 #define SEND_SOCKET_BLK 50000000
 #define START_SOCK 21000
 #define NAME_LEN 1000
 #define NUM_THREADS 16
-//#define ELE_PER_CLIENT 890000000
-//#define ELE_PER_SERVER 880000000
-//#define ELE_PER_BLK 440000000
-
 #define ELE_PER_CLIENT 850000000l
 #define ELE_PER_SERVER 1200000000l
 #define ELE_PER_BLK 600000000l
 #define MAXCONN 8
 #define TOTAL_PROCS 9
-#define FRSIZE 100000
+
 #define SWAP(x,y,lo) if (data[lo+y] < data[lo+x]) { long int tmp = data[lo+x]; data[lo+x] = data[lo+y]; data[lo+y] = tmp; }
 #define likely(x) __builtin_expect((x),1)
 #define unlikely(x) __builtin_expect((x),0)
@@ -49,6 +43,30 @@ long int CURR_THREADS;
 int myid[NUM_THREADS];
 pthread_t tid[NUM_THREADS];
 long int consumed[TOTAL_PROCS];
+
+double start_time = 0, end_time = 0, orig_time = 0, read_timer_start = 0, read_timer_end = 0, compare_start = 0, compare_end = 0;
+double total_time_read = 0, total_time_min = 0;
+static __inline__ void set_time(int timer) {
+	gettimeofday(&t, NULL);
+	if (likely(timer == 0)) {
+		start_time = 1.0e-6 * t.tv_usec + t.tv_sec;
+	} else if (likely(timer == 1)) {
+		end_time = 1.0e-6 * t.tv_usec + t.tv_sec;
+	} else if (unlikely(timer == 2)) {
+		orig_time = 1.0e-6 * t.tv_usec + t.tv_sec;
+	} else if (likely(timer == 3)) {
+		read_timer_start = 1.0e-6 * t.tv_usec + t.tv_sec;
+	} else if (likely(timer == 4)) {
+		read_timer_end = 1.0e-6 * t.tv_usec + t.tv_sec;
+	} else if (likely(timer == 5)) {
+		compare_start = 1.0e-6 * t.tv_usec + t.tv_sec;
+	} else if (likely(timer == 6)) {
+		compare_end = 1.0e-6 * t.tv_usec + t.tv_sec;
+	}
+}
+
+//#define printf(...)
+//#define set_time(...)
 
 static __inline__ void sort2(long int * data, long int lo) {
 	SWAP(0, 1, lo);
@@ -455,27 +473,6 @@ static __inline__ void sort15(long int * data, long int lo) {
 	SWAP(6, 7, lo);
 }
 
-double start_time = 0, end_time = 0, orig_time = 0, read_timer_start = 0, read_timer_end = 0, compare_start = 0, compare_end = 0;
-double total_time_read = 0, total_time_min = 0;
-
-static __inline__ void set_time(int timer) {
-	gettimeofday(&t, NULL);
-	if (likely(timer == 0)) {
-		start_time = 1.0e-6 * t.tv_usec + t.tv_sec;
-	} else if (likely(timer == 1)) {
-		end_time = 1.0e-6 * t.tv_usec + t.tv_sec;
-	} else if (unlikely(timer == 2)) {
-		orig_time = 1.0e-6 * t.tv_usec + t.tv_sec;
-	} else if (likely(timer == 3)) {
-		read_timer_start = 1.0e-6 * t.tv_usec + t.tv_sec;
-	} else if (likely(timer == 4)) {
-		read_timer_end = 1.0e-6 * t.tv_usec + t.tv_sec;
-	} else if (likely(timer == 5)) {
-		compare_start = 1.0e-6 * t.tv_usec + t.tv_sec;
-	} else if (likely(timer == 6)) {
-		compare_end = 1.0e-6 * t.tv_usec + t.tv_sec;
-	}
-}
 
 static __inline__ void read_long_chunk(int sockfd_client, char *num) {
 	set_time(3);
@@ -689,6 +686,9 @@ void k_way_single() {
 int main(int argc, char **argv) {
 	if (argc < 4) {
 		printf("Usage ./server_king large_file_name current_ip_address machinefile\n");
+		printf("large_file_name : the full path with filename for the file with 8B elements\n");
+		printf("current_ip_address: The IP address of the computer where you are running the code\n");
+		printf("machinefile: List of 8 machines which are authenticated for direct ssh\n");
 		fflush(0);
 		exit(1);
 	}
@@ -817,21 +817,21 @@ int main(int argc, char **argv) {
 			fseek(in_file, skip, SEEK_SET);
 			bool f1 = false, f2 = false, f3 = false, f4 = false;
 			for (long int total = 0; total < ELE_PER_CLIENT; total += SEND_SOCKET_BLK) {
-				if (total >= ELE_PER_CLIENT && f1 ==false) {
+				if (unlikely(total >= ELE_PER_CLIENT && f1 ==false)) {
 					printf("Done transmitting 100 percent in process %d  time = %ld\n", i, time(0) - start);
 					f1 = true;
-				} else if (total >= ELE_PER_CLIENT * 0.75&& f2 ==false) {
+				} else if (unlikely(total >= ELE_PER_CLIENT * 0.75&& f2 ==false)) {
 					printf("Done transmitting 75 percent  in process %d  time = %ld\n", i, time(0) - start);
 					f2 = true;
-				} else if (total >= ELE_PER_CLIENT * 0.50&& f3 ==false) {
+				} else if (unlikely(total >= ELE_PER_CLIENT * 0.50&& f3 ==false)) {
 					printf("Done transmitting 50 percent  in process %d  time = %ld\n", i, time(0) - start);
 					f3 = true;
-				} else if (total >= ELE_PER_CLIENT * 0.25&& f4 ==false) {
+				} else if (unlikely(total >= ELE_PER_CLIENT * 0.25&& f4 ==false)) {
 					printf("Done transmitting 25 percent  in process %d  time = %ld\n", i, time(0) - start);
 					f4 = true;
 				}
 
-				if (fread(op_data, sizeof(long int), SEND_SOCKET_BLK, in_file) == -1) {
+				if (unlikely(fread(op_data, sizeof(long int), SEND_SOCKET_BLK, in_file) == -1)) {
 					perror("fread");
 					exit(1);
 				}
@@ -871,12 +871,18 @@ int main(int argc, char **argv) {
 	printf("\nStarting with BLK = 0\n");
 	set_time(0);
 	fseek(in_file, ELE_PER_CLIENT * sizeof(long int) * MAXCONN, SEEK_SET);
-	for (long int count = 0; count < ELE_PER_BLK; count++) {
-		if (unlikely(fread(&data[count], sizeof(long int), 1, in_file) == -1)) {
+	for (long int count = 0; count < ELE_PER_BLK; count += SEND_SOCKET_BLK ) {
+		if (unlikely(fread(&data[count], sizeof(long int), SEND_SOCKET_BLK, in_file) == -1)) {
 			perror("fread");
 			exit(1);
 		}
 	}
+//	for (long int count = 0; count < ELE_PER_BLK; count++) {
+//		if (unlikely(fread(&data[count], sizeof(long int), 1, in_file) == -1)) {
+//			perror("fread");
+//			exit(1);
+//		}
+//	}
 	set_time(1);
 	printf("Reading blk = 0 completed \t Execution time =  %lf seconds\n", end_time - start_time);
 
@@ -901,13 +907,19 @@ int main(int argc, char **argv) {
 	/*Blk 2 processing*/
 	printf("\nStarting with BLK = 1\n");
 	set_time(0);
-	fseek(in_file, (ELE_PER_CLIENT * 1l * MAXCONN * 1l + ELE_PER_BLK * 1l) * sizeof(long int), SEEK_SET);
-	for (long int count = 0; count < ELE_PER_BLK; count++) {
-		if (unlikely(fread(&data[count], sizeof(long int), 1, in_file) == -1)) {
+	fseek(in_file, (ELE_PER_CLIENT * 1l * MAXCONN + ELE_PER_BLK * 1l) * sizeof(long int), SEEK_SET);
+	for (long int count = 0; count < ELE_PER_BLK; count += SEND_SOCKET_BLK ) {
+		if (unlikely(fread(&data[count], sizeof(long int), SEND_SOCKET_BLK, in_file) == -1)) {
 			perror("fread");
 			exit(1);
 		}
 	}
+//	for (long int count = 0; count < ELE_PER_BLK; count++) {
+//		if (unlikely(fread(&data[count], sizeof(long int), 1, in_file) == -1)) {
+//			perror("fread");
+//			exit(1);
+//		}
+//	}
 	set_time(1);
 	printf("Reading blk = 1 completed \t Execution time =  %lf seconds\n", end_time - start_time);
 
@@ -1005,7 +1017,7 @@ int main(int argc, char **argv) {
 			fprintf(final, "%ld\n", nums[loc]);
 		}
 
-		if (unlikely(all_count % (1000000000 - 1) == 0)) {
+		if (unlikely(all_count % 1000000000 == 0)) {
 			set_time(1);
 			total = 0;
 			printf("all_count = %ld   reached at %lf seconds \n", all_count, end_time - start_time);
@@ -1047,7 +1059,6 @@ int main(int argc, char **argv) {
 					nums[loc] = data[(consumed[loc]) % ELE_PER_BLK];
 				}
 			} else {
-//				totally_consumed[loc] = true;
 				nums[loc] = LONG_MAX;
 				printf("Pos = %d is done     consumed = %ld\n", loc, consumed[loc]);
 			}

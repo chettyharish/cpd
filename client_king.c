@@ -656,6 +656,7 @@ int main(int argc, char **argv) {
 	log_file = fopen("log", "w+");
 	if (argc < 2) {
 		printf("Usage ./client_king IP_server PORT_server\n");
+		printf("You are not supposed to run this . It is called automatically by the server code\n");
 		exit(1);
 	}
 	set_time(2);
