@@ -21,8 +21,6 @@ FILE *log_file;
 
 #define NAME_LEN 1000
 #define NUM_THREADS 16
-//#define ELE_PER_PC 890000000
-//#define ELE_PER_BLK 445000000
 #define ELE_PER_PC 850000000
 #define ELE_PER_BLK 425000000
 #define SOCKET_BLK 25000
@@ -31,6 +29,8 @@ FILE *log_file;
 #define SWAP(x,y,lo) if (data[lo+y] < data[lo+x]) { long int tmp = data[lo+x]; data[lo+x] = data[lo+y]; data[lo+y] = tmp; }
 #define likely(x) __builtin_expect((x),1)
 #define unlikely(x) __builtin_expect((x),0)
+//#define likely(x) (x)
+//#define unlikely(x) (x)
 
 struct timeval t;
 long int *data;
@@ -692,10 +692,18 @@ int main(int argc, char **argv) {
 		exit(1);
 	}
 
+	/*Data part 1 */
 	set_time(0);
 	read_long_chunk(sockfd_client, (char *) data);
 	set_time(1);
 	fprintf(log_file, "Done receiving part 1 Execution time =  %lf seconds\n", end_time - start_time);
+	fflush(log_file);
+
+	/*Data part 2 */
+	set_time(0);
+	read_long_chunk(sockfd_client, (char *) data2);
+	set_time(1);
+	fprintf(log_file, "Done receiving part 2 Execution time =  %lf seconds\n", end_time - start_time);
 	fflush(log_file);
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -720,13 +728,6 @@ int main(int argc, char **argv) {
 	data2 = ptr_trick;
 	set_time(1);
 	fprintf(log_file, "Copying data completed\t Execution time =  %lf seconds\n", end_time - start_time);
-	fflush(log_file);
-
-	/*Get data 2 now :P */
-	set_time(0);
-	read_long_chunk(sockfd_client, (char *) data);
-	set_time(1);
-	fprintf(log_file, "Done receiving part 2 Execution time =  %lf seconds\n", end_time - start_time);
 	fflush(log_file);
 
 	/*Blk 2 processing*/

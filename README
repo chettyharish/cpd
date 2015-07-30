@@ -1,0 +1,57 @@
+##README
+
+Files:
+server_king : The main executable which you have to run
+client_king : The clients run this (Do not run this executable)
+answertester : A code which compares two ascii answer files
+
+Compiling:
+Use make to compile both the client and the server code.
+
+Cleaning:
+Use make clean to remove all the executable files
+
+Requirements:
+Requires 9 sockets numbers in sequence which are free.
+Requires machinefile with 8 rsa-authenticate machine (It would be easier to use cop5570c, as
+	it already has all the machines authenticated named m1 to m9.)
+
+Running the code:
+use the following syntax to run the code
+./server_king large_file_name current_ip_address machinefile start_socket
+	large_file_name : the full path with filename for the file with 8 Billion long int's.
+	current_ip_address: The IP address of the computer where you are running the code.
+	machinefile: List of 8 machines which are authenticated for direct ssh.
+	start_socket: Uses sockets from the start_socket value to start_socket + 8 for the 9 machines.
+Example: time  ./server_king ../cop5570a/test0 192.168.28.124 machinefile
+
+Output:
+-->The server_king writes back every 10th element to create the file final_answer.
+-->The code will not output anything ( Since it causes a wastage of 2 minutes).
+	It is possible to turn them ON by uncommenting two lines in the server_king code.
+	//#define printf(...)
+	//#define set_time(...)
+	These lines force printf and set_time change to empty lines. By uncommenting, they will print
+	a lot of data and timing information.
+-->The client_king's generate a log while executing (which is removed at termination)
+
+
+Useful information:
+All the authentications are for cop5570c:
+HostName c5570-1.cs.fsu.edu		Alias : m1 		IP addr = 192.168.28.124
+HostName c5570-2.cs.fsu.edu		Alias : m2 		IP addr = 192.168.28.125
+HostName c5570-3.cs.fsu.edu		Alias : m3 		IP addr = 192.168.28.126
+HostName c5570-4.cs.fsu.edu		Alias : m4 		IP addr = 192.168.28.127
+HostName c5570-5.cs.fsu.edu		Alias : m5 		IP addr = 192.168.28.128
+HostName c5570-6.cs.fsu.edu		Alias : m6 		IP addr = 192.168.28.131
+HostName c5570-7.cs.fsu.edu		Alias : m7 		IP addr = 192.168.28.132
+HostName c5570-8.cs.fsu.edu		Alias : m8 		IP addr = 192.168.28.133
+HostName c5570-9.cs.fsu.edu		Alias : m9 		IP addr = 192.168.28.134
+
+
+Working:
+The server_king code acts as the data reader and distributor to clients. 
+It reads the file parallely and trasfers chunks of 850M elements to each of the clients.
+The clients carry out the task of sorting their part and sending it back to the server.
+The server itself works as a client and processes 1.2B elements. (1.2B + 850M*8 = 8B).
+Finally the server carries out the job of carrying out a 9 way merge ( 8 from sockets one from memory).

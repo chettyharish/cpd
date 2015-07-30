@@ -22,7 +22,8 @@
 
 #define SOCKET_BLK 100
 #define SEND_SOCKET_BLK 50000000
-#define START_SOCK 21000
+//#define START_SOCK 23000
+int START_SOCK;
 #define NAME_LEN 1000
 #define NUM_THREADS 16
 #define ELE_PER_CLIENT 850000000l
@@ -39,6 +40,13 @@ long int CURR_THREADS;
 int myid[NUM_THREADS];
 pthread_t tid[NUM_THREADS];
 long int consumed[TOTAL_PROCS];
+
+
+#define SWAP(x,y,lo) if (data[lo+y] < data[lo+x]) { long int tmp = data[lo+x]; data[lo+x] = data[lo+y]; data[lo+y] = tmp; }
+//#define likely(x) __builtin_expect((x),1)
+//#define unlikely(x) __builtin_expect((x),0)
+#define likely(x) (x)
+#define unlikely(x) (x)
 
 double start_time = 0, end_time = 0, orig_time = 0, read_timer_start = 0, read_timer_end = 0, compare_start = 0, compare_end = 0;
 double total_time_read = 0, total_time_min = 0;
@@ -61,11 +69,7 @@ static __inline__ void set_time(int timer) {
 	}
 }
 
-#define SWAP(x,y,lo) if (data[lo+y] < data[lo+x]) { long int tmp = data[lo+x]; data[lo+x] = data[lo+y]; data[lo+y] = tmp; }
-#define likely(x) __builtin_expect((x),1)
-#define unlikely(x) __builtin_expect((x),0)
-//#define likely(x) (x)
-//#define unlikely(x) (x)
+
 //#define printf(...)
 //#define set_time(...)
 
@@ -685,16 +689,17 @@ void k_way_single() {
 	}
 }
 int main(int argc, char **argv) {
-	if (argc < 4) {
-		printf("Usage ./server_king large_file_name current_ip_address machinefile\n");
+	if (argc < 5) {
+		printf("Usage ./server_king large_file_name current_ip_address machine_file start_socket\n");
 		printf("large_file_name : the full path with filename for the file with 8B elements\n");
 		printf("current_ip_address: The IP address of the computer where you are running the code\n");
-		printf("machinefile: List of 8 machines which are authenticated for direct ssh\n");
+		printf("machine_file: List of 8 machines which are authenticated for direct ssh\n");
+		printf("start_socket: Uses sockets from the start_socket to start_socket+8 for the 9 machines\n");
 		fflush(0);
 		exit(1);
 	}
 	set_time(2);
-
+	START_SOCK = atoi(argv[4]);
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	/*Get the 8 machines from machinefile*/
 	FILE *file = fopen(argv[3], "r");
@@ -1071,6 +1076,11 @@ int main(int argc, char **argv) {
 	printf("PHASE 4 Completed\t Execution time =  %lf seconds \n", end_time - orig_time);
 	printf("Total time wasted reading = %f\n", total_time_read);
 	printf("Total time wasted min = %f\n", total_time_min);
+
+	for(int i = 0 ; i < MAXCONN ; i++){
+		printf("Closing connection : %d\n" , i);
+		close(sfd_client[i]);
+	}
 	return 0;
 
 }

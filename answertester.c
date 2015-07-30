@@ -20,7 +20,7 @@
 #include <limits.h>
 
 int main(int argc, char **argv) {
-	if (argc < 2) {
+	if (argc < 3) {
 		printf("Usage ./a.out f1 f2\n");
 		fflush(0);
 		exit(1);
@@ -32,8 +32,8 @@ int main(int argc, char **argv) {
 	long int num1;
 	long int num2;
 	for (long int i = 0; i < 800000000; i++) {
-		fscanf(f1, "%ld\n", &num1);
-		fscanf(f2, "%ld\n", &num2);
+		int ret = fscanf(f1, "%ld\n", &num1);
+		int ret2 = fscanf(f2, "%ld\n", &num2);
 		if (num1 != num2) {
 			printf("Error due to %ld and %ld at location = %ld\n", num1, num2 , i);
 			exit(1);
