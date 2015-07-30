@@ -70,8 +70,8 @@ static __inline__ void set_time(int timer) {
 }
 
 
-//#define printf(...)
-//#define set_time(...)
+#define printf(...)
+#define set_time(...)
 
 static __inline__ void sort2(long int * data, long int lo) {
 	SWAP(0, 1, lo);
